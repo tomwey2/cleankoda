@@ -62,10 +62,7 @@ def _find_first_human_message(messages: list[BaseMessage]) -> int:
 def _find_safe_start_boundary(messages: list[BaseMessage], recent_start_idx: int) -> int:
     """
     Find a safe starting point by scanning forward from the cutoff.
-    Safe boundaries are:
-    - HumanMessage (always safe)
-    - AIMessage without tool_calls (stands alone)
-    - AIMessage with tool_calls only if all ToolMessages follow
+    Safe boundaries are: HumanMessage or AIMessage
     """
     adjusted_start_idx = recent_start_idx
     
@@ -74,30 +71,9 @@ def _find_safe_start_boundary(messages: list[BaseMessage], recent_start_idx: int
         msg = messages[idx]
         
         # HumanMessages are always safe starting points (no dependent tool responses)
-        if isinstance(msg, HumanMessage):
+        if isinstance(msg, HumanMessage) or isinstance(msg, AIMessage):
             adjusted_start_idx = idx
             break
-        elif isinstance(msg, AIMessage):
-            has_tool_calls = bool(getattr(msg, 'tool_calls', None))
-            # AIMessage without tool calls is safe (stands alone)
-            if not has_tool_calls:
-                adjusted_start_idx = idx
-                break
-            else:
-                # AIMessage with tool calls: verify all ToolMessages are present
-                # This prevents breaking AI→Tool pairs which would violate API constraints
-                num_tool_calls = len(getattr(msg, 'tool_calls', []))
-                all_tools_present = True
-                # Check if the next N messages are all ToolMessages
-                for j in range(1, num_tool_calls + 1):
-                    if idx + j >= len(messages) or not isinstance(messages[idx + j], ToolMessage):
-                        all_tools_present = False
-                        break
-                
-                # Only use this AI message as start if all its tool responses follow
-                if all_tools_present:
-                    adjusted_start_idx = idx
-                    break
     
     return adjusted_start_idx
 
