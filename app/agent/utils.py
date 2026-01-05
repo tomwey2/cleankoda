@@ -4,7 +4,7 @@ import re
 import shutil
 
 from git import Repo
-from langchain_core.messages import AIMessage
+from langchain_core.messages import AIMessage, BaseMessage, HumanMessage, ToolMessage
 
 logger = logging.getLogger(__name__)
 
@@ -36,6 +36,141 @@ def load_system_prompt(stack: str, role: str) -> str:
         # Fallback, falls Datei fehlt (wichtig für Robustheit!)
         logger.warning(f"WARNUNG: System Prompt not found: {file_path}")
         return "You are a helpful coding assistent."
+
+
+def _estimate_tokens(messages: list[BaseMessage]) -> int:
+    """Rough estimate of token count for messages (avg ~4 chars per token)."""
+    total_chars = 0
+    for msg in messages:
+        if hasattr(msg, 'content') and msg.content:
+            total_chars += len(str(msg.content))
+        if hasattr(msg, 'tool_calls') and msg.tool_calls:
+            total_chars += len(str(msg.tool_calls))
+    return total_chars // 4
+
+
+def _find_first_human_message(messages: list[BaseMessage]) -> int:
+    """Find index of first HumanMessage (original task)."""
+    # Scan through messages to locate the first HumanMessage
+    # This represents the original user task/request
+    for idx, msg in enumerate(messages):
+        if isinstance(msg, HumanMessage):
+            return idx
+    return None
+
+
+def _find_safe_start_boundary(messages: list[BaseMessage], recent_start_idx: int) -> int:
+    """
+    Find a safe starting point by scanning forward from the cutoff.
+    Safe boundaries are: HumanMessage or AIMessage
+    """
+    adjusted_start_idx = recent_start_idx
+    
+    # Scan forward from the naive cutoff point to find a valid conversation boundary
+    for idx in range(recent_start_idx, len(messages)):
+        msg = messages[idx]
+        
+        # HumanMessages are always safe starting points (no dependent tool responses)
+        if isinstance(msg, HumanMessage) or isinstance(msg, AIMessage):
+            adjusted_start_idx = idx
+            break
+    
+    return adjusted_start_idx
+
+
+def _trim_trailing_invalid_ai_messages(messages: list[BaseMessage]) -> list[BaseMessage]:
+    """
+    Remove trailing AIMessages without tool_calls.
+    Mistral API requires last message to be User, Tool, or Assistant with tool_calls.
+    """
+    # Remove any trailing AI messages that don't have tool calls
+    # Mistral API enforces: last message must be user/tool/assistant-with-tool-calls
+    while messages and isinstance(messages[-1], AIMessage):
+        ai_msg = messages[-1]
+        # If this AI message has tool calls, it's valid as the last message
+        if getattr(ai_msg, 'tool_calls', None):
+            break
+        # Otherwise, remove it and check the previous message
+        messages = messages[:-1]
+    return messages
+
+
+def _log_token_savings(original_count: int, original_tokens: int, 
+                       filtered_count: int, filtered_tokens: int) -> None:
+    """Log token savings statistics."""
+    # Calculate absolute and percentage token savings
+    saved_tokens = original_tokens - filtered_tokens
+    saved_percentage = (saved_tokens / original_tokens * 100) if original_tokens > 0 else 0
+    
+    # Log the filtering results for monitoring token optimization
+    logger.info(
+        f"Message filter: {original_count} → {filtered_count} messages "
+        f"(~{original_tokens} → ~{filtered_tokens} tokens, "
+        f"saved ~{saved_tokens} tokens / {saved_percentage:.1f}%)"
+    )
+
+
+def filter_messages_for_llm(messages: list[BaseMessage], max_messages: int = 10) -> list[BaseMessage]:
+    """
+    Filters messages to keep only the most recent and relevant ones for LLM context.
+    This reduces token usage by limiting the message history.
+    
+    Strategy:
+    - Always keep the first HumanMessage (original task)
+    - Keep the most recent complete conversation turns
+    - Never break AI→Tool message pairs to maintain valid message order
+    - Prevent orphaned ToolMessages that would violate API constraints
+    
+    :param messages: List of messages from state
+    :param max_messages: Maximum number of messages to keep (excluding first task message)
+    :return: Filtered list of messages
+    """
+    # Early exit for empty list
+    if not messages:
+        return []
+    
+    # Track original metrics for logging
+    original_count = len(messages)
+    original_tokens = _estimate_tokens(messages)
+    
+    # Skip filtering if message count is already within limits
+    if len(messages) <= max_messages + 1:
+        logger.debug(f"Message filter: {original_count} messages, ~{original_tokens} tokens (no filtering needed)")
+        return messages
+    
+    # Step 1: Find the original user task (first HumanMessage)
+    first_human_idx = _find_first_human_message(messages)
+    
+    # Step 2: Calculate naive cutoff and find safe conversation boundary
+    recent_start_idx = max(0, len(messages) - max_messages)
+    adjusted_start_idx = _find_safe_start_boundary(messages, recent_start_idx)
+    
+    # Step 3: Extract recent messages and trim invalid trailing AI messages
+    recent_messages = messages[adjusted_start_idx:]
+    recent_messages = _trim_trailing_invalid_ai_messages(recent_messages)
+    
+    # Step 4: Fallback if everything was filtered out
+    if not recent_messages and messages:
+        # Try to return at least the last HumanMessage
+        for msg in reversed(messages):
+            if isinstance(msg, HumanMessage):
+                return [msg]
+        # Ultimate fallback: return last message
+        return [messages[-1]] if messages else []
+    
+    # Step 5: Prepend original task if it was filtered out
+    if first_human_idx is not None and first_human_idx < adjusted_start_idx:
+        first_task = [messages[first_human_idx]]
+        filtered_messages = first_task + recent_messages
+    else:
+        filtered_messages = recent_messages
+    
+    # Step 6: Log token savings
+    filtered_count = len(filtered_messages)
+    filtered_tokens = _estimate_tokens(filtered_messages)
+    _log_token_savings(original_count, original_tokens, filtered_count, filtered_tokens)
+    
+    return filtered_messages
 
 
 def sanitize_response(response: AIMessage) -> AIMessage:
