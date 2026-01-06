@@ -64,21 +64,17 @@ def log_agent_state(
     """
     Logs a snapshot of the AgentState, including a detailed message dump.
     """
-    if state is None:
-        logger_obj.info("AgentState: <empty>")
-        return
-
     logger_obj.info("\n=== AGENT STATE SNAPSHOT ===")
-    logger_obj.info("next_step        : %s", state.get("next_step"))
-    logger_obj.info("agent_stack      : %s", state.get("agent_stack"))
-    logger_obj.info("retry_count      : %s", state.get("retry_count"))
-    logger_obj.info("test_result      : %s", state.get("test_result"))
-    logger_obj.info("error_log        : %s", state.get("error_log"))
-    logger_obj.info("trello_card_id   : %s", state.get("trello_card_id"))
-    logger_obj.info("trello_list_id   : %s", state.get("trello_list_id"))
+    logger_obj.info("next_step         : %s", state.get("next_step"))
+    logger_obj.info("agent_stack       : %s", state.get("agent_stack"))
+    logger_obj.info("retry_count       : %s", state.get("retry_count"))
+    logger_obj.info("test_result       : %s", state.get("test_result"))
+    logger_obj.info("error_log         : %s", state.get("error_log"))
+    logger_obj.info("trello_card_id    : %s", state.get("trello_card_id"))
+    logger_obj.info("trello_list_id    : %s", state.get("trello_list_id"))
     logger_obj.info("trello_in_progress: %s", state.get("trello_in_progress"))
 
-    messages = state.get("messages") or []
+    messages = state.get("messages", [])
     logger_obj.info("\n--- Messages (%d) ---", len(messages))
     for idx, message in enumerate(messages, start=1):
         msg_type = getattr(message, "type", message.__class__.__name__)
@@ -86,41 +82,33 @@ def log_agent_state(
 
         content = getattr(message, "content", None)
         if content is not None:
-            logger_obj.info("     content       : %s", safe_truncate(content, content_limit))
+            logger_obj.info("     content      : %s", safe_truncate(content, content_limit))
 
         name = getattr(message, "name", None)
         if name:
-            logger_obj.info("     name          : %s", name)
+            logger_obj.info("     name         : %s", name)
 
         tool_call_id = getattr(message, "tool_call_id", None)
         if tool_call_id:
-            logger_obj.info("     tool_call_id  : %s", tool_call_id)
+            logger_obj.info("     tool_call_id : %s", tool_call_id)
 
-        additional_kwargs = getattr(message, "additional_kwargs", None) or {}
+        additional_kwargs = getattr(message, "additional_kwargs", {})
         if additional_kwargs:
             logger_obj.info("     additional_kwargs:")
             for key, value in additional_kwargs.items():
                 logger_obj.info("         %s: %s", key, safe_truncate(value, arg_limit))
 
-        tool_calls = getattr(message, "tool_calls", None) or []
+        tool_calls = getattr(message, "tool_calls", [])
         if tool_calls:
             logger_obj.info("     tool_calls:")
             for tool_idx, tool_call in enumerate(tool_calls, start=1):
-                name = tool_call.get("name", "unknown")
-                logger_obj.info("         (%d) %s", tool_idx, name)
-                args = tool_call.get("args", {}) or {}
+                tool_name = tool_call.get("name", "unknown")
+                logger_obj.info("         (%d) %s", tool_idx, tool_name)
+                args = tool_call.get("args", {})
                 for key, value in args.items():
                     logger_obj.info(
                         "             %s: %s", key, safe_truncate(value, arg_limit)
                     )
-
-        if isinstance(message, ToolMessage):
-            tool_payload = getattr(message, "tool_call_results", None)
-            if tool_payload is not None:
-                logger_obj.info(
-                    "     tool_call_results: %s",
-                    safe_truncate(tool_payload, arg_limit),
-                )
 
     logger_obj.info("=== END OF STATE SNAPSHOT ===")
 
