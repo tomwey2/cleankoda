@@ -19,6 +19,7 @@ from agent.utils import (
     ensure_repository_exists,
     get_workbench,
     get_workspace,
+    log_agent_state,
     save_graph_as_mermaid,
     save_graph_as_png,
 )
@@ -110,8 +111,9 @@ async def run_agent_cycle_async(app: Flask, encryption_key: Fernet) -> None:
                     "trello_list_id": None,
                     "agent_stack": agent_stack,
                 },
-                {"recursion_limit": 150},
+                {"recursion_limit": 100},
             )
+            log_agent_state(logger, final_state)
 
 
 def run_agent_cycle(app: Flask, encryption_key: Fernet) -> None:
