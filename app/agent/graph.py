@@ -1,10 +1,13 @@
-from langchain.chat_models import BaseChatModel
-from langchain_core.messages import AIMessage
-from langgraph.graph import END, StateGraph
-from langgraph.prebuilt import ToolNode
-
-# Imports deiner Tools
-from agent.local_tools import (
+from agent.nodes.analyst import create_analyst_node
+from agent.nodes.bugfixer import create_bugfixer_node
+from agent.nodes.coder import create_coder_node
+from agent.nodes.correction import create_correction_node
+from agent.nodes.router import create_router_node
+from agent.nodes.tester import create_tester_node
+from agent.nodes.trello_fetch_node import create_trello_fetch_node
+from agent.nodes.trello_update_node import create_trello_update_node
+from agent.state import AgentState
+from agent.tools.local_tools import (
     create_github_pr,
     finish_task,
     git_add,
@@ -18,18 +21,10 @@ from agent.local_tools import (
     run_java_command,
     write_to_file,
 )
-
-# WICHTIG: TesterResult muss importiert werden, falls es als Klasse existiert,
-# oder wir gehen davon aus, dass es dynamisch im Node erzeugt wird.
-from agent.nodes.analyst import create_analyst_node
-from agent.nodes.bugfixer import create_bugfixer_node
-from agent.nodes.coder import create_coder_node
-from agent.nodes.correction import create_correction_node
-from agent.nodes.router import create_router_node
-from agent.nodes.tester import create_tester_node
-from agent.nodes.trello_fetch_node import create_trello_fetch_node
-from agent.nodes.trello_update_node import create_trello_update_node
-from agent.state import AgentState
+from langchain.chat_models import BaseChatModel
+from langchain_core.messages import AIMessage
+from langgraph.graph import END, StateGraph
+from langgraph.prebuilt import ToolNode
 
 
 def router_tester_old(state):

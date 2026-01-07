@@ -1,14 +1,13 @@
 import logging
 from typing import Literal
 
-from agent.local_tools import report_test_result
 from agent.state import AgentState
+from agent.tools.local_tools import report_test_result
 from agent.utils import (
     filter_messages_for_llm,
     load_system_prompt,
     log_agent_response,
 )
-from agent.local_tools import report_test_result
 from langchain_core.messages import SystemMessage
 from pydantic import BaseModel, Field
 
@@ -26,6 +25,7 @@ class TesterResult(BaseModel):
         ...,
         description="A short summary of what happened (e.g. 'PR created at xyz' or 'Tests failed because of NPE').",
     )
+
 
 def create_tester_node(llm, tools, repo_url, agent_stack):
     sys_msg = load_system_prompt(agent_stack, "tester")
