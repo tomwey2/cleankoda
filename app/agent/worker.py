@@ -1,4 +1,5 @@
 import asyncio
+from gettext import install
 import json
 import logging
 import os
@@ -23,6 +24,7 @@ from agent.utils import (
     save_graph_as_mermaid,
     save_graph_as_png,
 )
+from agent.state import AgentState
 
 logger = logging.getLogger(__name__)
 
@@ -114,8 +116,7 @@ async def run_agent_cycle_async(app: Flask, encryption_key: Fernet) -> None:
                 },
                 {"recursion_limit": 200},
             )
-            if isinstance(final_state, AgentState):
-                log_agent_state(logger, final_state)
+            log_agent_state(logger, final_state)
 
 
 def run_agent_cycle(app: Flask, encryption_key: Fernet) -> None:

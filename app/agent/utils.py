@@ -5,7 +5,6 @@ import shutil
 from typing import Any, Optional
 from urllib.parse import urlparse, urlunparse
 
-from agent.state import AgentState
 from git import Repo
 from git.exc import GitCommandError
 from langchain_core.messages import AIMessage, BaseMessage, HumanMessage
@@ -58,7 +57,7 @@ def log_agent_response(
 
 def log_agent_state(
     logger_obj: logging.Logger,
-    state: AgentState,
+    state: dict,
     content_limit: int = 100,
     arg_limit: int = 250,
 ) -> None:

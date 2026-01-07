@@ -1,4 +1,5 @@
 import logging
+from datetime import datetime, timezone
 
 from langchain_core.messages import HumanMessage
 
@@ -7,6 +8,7 @@ from agent.trello_client import (
     get_all_trello_cards,
     get_all_trello_lists,
     get_trello_card_comments,
+    get_trello_card_list_moves,
     move_trello_card_to_named_list,
 )
 
@@ -49,6 +51,13 @@ def create_trello_fetch_node(sys_config: dict):
             trello_in_progress = card_context["trello_in_progress"]
 
             comments = await get_trello_card_comments(card["id"], sys_config)
+            review_list_name = sys_config.get("trello_moveto_list")
+
+            review_cutoff = await get_review_transition_timestamp(
+                card["id"], review_list_name, sys_config
+            )
+            if review_cutoff:
+                comments = filter_comments_after_timestamp(comments, review_cutoff)
             
             content = card.get("name", "") + "\n" + card.get("desc", "")
             if comments:
@@ -68,7 +77,7 @@ def create_trello_fetch_node(sys_config: dict):
                 github_repo_url = sys_config.get("github_repo_url")
                 checkout_branch(github_repo_url, git_branch, get_workspace())
             
-            logger.info("Content: " + content)
+            logger.info("Initial messages content: " + content)
             return {
                 "trello_card_id": card["id"],
                 "trello_card_name": card.get("name", ""),
@@ -168,3 +177,58 @@ async def get_existing_branch_for_card(card_id: str, sys_config: dict) -> str | 
     except Exception as e:
         logger.warning(f"Failed to retrieve branch for card {card_id}: {e}")
         return None
+
+
+async def get_review_transition_timestamp(
+    card_id: str, review_list_name: str, sys_config: dict
+) -> datetime | None:
+    try:
+        list_moves = await get_trello_card_list_moves(card_id, sys_config)
+    except Exception as exc:
+        logger.warning(
+            f"Failed to fetch list moves for card {card_id}: {exc}. Including all comments."
+        )
+        return None
+
+    review_timestamps = [
+        parse_trello_timestamp(move.get("date"))
+        for move in list_moves
+        if move.get("list_after") == review_list_name
+    ]
+    review_timestamps = [ts for ts in review_timestamps if ts]
+    if not review_timestamps:
+        return None
+
+    latest_review = max(review_timestamps)
+    logger.info(
+        f"Card {card_id} last moved to '{review_list_name}' at {latest_review.isoformat()}."
+    )
+    return latest_review
+
+
+def filter_comments_after_timestamp(
+    comments: list[dict], cutoff: datetime
+) -> list[dict]:
+    filtered_comments = []
+    for comment in comments:
+        comment_ts = parse_trello_timestamp(comment.get("date"))
+        if not comment_ts or comment_ts >= cutoff:
+            filtered_comments.append(comment)
+    return filtered_comments
+
+
+def parse_trello_timestamp(value: str | None) -> datetime | None:
+    if not value:
+        return None
+
+    normalized = value.replace("Z", "+00:00") if value.endswith("Z") else value
+    try:
+        parsed = datetime.fromisoformat(normalized)
+    except ValueError:
+        logger.warning(f"Failed to parse Trello timestamp '{value}'")
+        return None
+
+    if parsed.tzinfo is None:
+        parsed = parsed.replace(tzinfo=timezone.utc)
+
+    return parsed

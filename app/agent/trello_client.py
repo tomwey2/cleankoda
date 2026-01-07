@@ -164,3 +164,42 @@ async def get_trello_card_comments(card_id: str, sys_config: dict) -> list[dict]
         }
         for action in data
     ]
+
+
+async def get_trello_card_list_moves(card_id: str, sys_config: dict) -> list[dict]:
+    """
+    Fetches all list move actions (updateCard:idList) for the provided Trello card ID.
+    """
+    env = sys_config.get("env")
+    if not env:
+        raise ValueError("Environment not found in sys_config")
+
+    url = f"https://api.trello.com/1/cards/{card_id}/actions"
+    headers = {"Accept": "application/json"}
+    query = {
+        "filter": "updateCard:idList",
+        "key": env.get("TRELLO_API_KEY"),
+        "token": env.get("TRELLO_TOKEN"),
+    }
+
+    logger.info(f"Trello GET: {get_safe_url(url, query)}")
+    async with httpx.AsyncClient() as client:
+        response = await client.get(url, headers=headers, params=query)
+
+    if response.status_code != 200:
+        raise Exception(
+            f"Failed to fetch list moves for card {card_id}: {response.text}"
+        )
+
+    data = response.json()
+    return [
+        {
+            "id": action.get("id"),
+            "date": action.get("date"),
+            "list_before": action.get("data", {})
+            .get("listBefore", {})
+            .get("name"),
+            "list_after": action.get("data", {}).get("listAfter", {}).get("name"),
+        }
+        for action in data
+    ]
