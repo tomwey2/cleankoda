@@ -184,13 +184,15 @@ def write_to_file(filepath: str, content: str):
 
 
 @tool
-def git_create_branch(branch_name: str):
+def git_create_branch(branch_name: str, card_id: str = None, card_name: str = None):
     """
     Creates a new git branch and switches to it immediately.
+    If card_id and card_name are provided, persists the card-branch relationship in the database.
     Example: 'feature/login-page' or 'fix/bug-123'.
     """
     WORKSPACE = get_workspace()
     try:
+        logger.info(f"Creating branch '{branch_name}' in workspace '{WORKSPACE}'")
         # 'checkout -b' erstellt und wechselt in einem Schritt
         subprocess.run(
             ["git", "checkout", "-b", branch_name],
@@ -199,6 +201,21 @@ def git_create_branch(branch_name: str):
             capture_output=True,
             text=True,
         )
+        
+        if card_id and card_name:
+            try:
+                from flask import current_app
+                from core.repositories import upsert_issue
+                
+                with current_app.app_context():
+                    remote_url = subprocess.check_output(
+                        ["git", "remote", "get-url", "origin"], cwd=WORKSPACE, text=True
+                    ).strip()
+                    upsert_issue(card_id, card_name, branch_name, remote_url)
+                    logger.info(f"Persisted Issue: card_id={card_id}, branch={branch_name}")
+            except Exception as e:
+                logger.warning(f"Failed to persist Issue relationship: {e}")
+        
         return f"Successfully created and switched to branch '{branch_name}'."
     except subprocess.CalledProcessError as e:
         return f"ERROR creating branch: {e.stderr}"

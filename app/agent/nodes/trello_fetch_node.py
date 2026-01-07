@@ -10,6 +10,8 @@ from agent.trello_client import (
     move_trello_card_to_named_list,
 )
 
+from agent.utils import checkout_branch, get_workspace
+
 
 logger = logging.getLogger(__name__)
 
@@ -50,7 +52,7 @@ def create_trello_fetch_node(sys_config: dict):
             
             content = card.get("name", "") + "\n" + card.get("desc", "")
             if comments:
-                content += "\n\n--- Recent Trello Comments ---\n"
+                content += "\n\n--- The Pull Request was rejected with the following comments: ---\n"
                 for comment in reversed(comments):
                     author = comment.get("member_creator", "Unknown")
                     text = comment.get("text", "")
@@ -58,14 +60,24 @@ def create_trello_fetch_node(sys_config: dict):
                     content += f"\n[{date}] {author}:\n{text}\n"
             
             logger.info(f"Processing card ID: {card['id']} - {card.get('name', '')}")
+            
+            git_branch = await get_existing_branch_for_card(card["id"], sys_config)
+            
+            if git_branch:
+                logger.info(f"Checking out existing git branch: {git_branch} for card {card['id']} - {card.get('name', '')}")
+                github_repo_url = sys_config.get("github_repo_url")
+                checkout_branch(github_repo_url, git_branch, get_workspace())
+            
             logger.info("Content: " + content)
             return {
                 "trello_card_id": card["id"],
+                "trello_card_name": card.get("name", ""),
                 "messages": [
                     HumanMessage(content=content)
                 ],
                 "trello_list_id": trello_list_id,
                 "trello_in_progress": trello_in_progress,
+                "git_branch": git_branch,
             }
         except Exception as e:
             logger.error(f"Error fetching Trello cards: {e}")
@@ -139,3 +151,20 @@ async def move_card_to_in_progress(card_id: str, current_list_id: str, sys_confi
             logger.error(f"Failed to move card to in-progress list: {exc}")
 
     return {"trello_list_id": current_list_id, "trello_in_progress": False}
+
+
+async def get_existing_branch_for_card(card_id: str, sys_config: dict) -> str | None:
+    """
+    Retrieves the existing git branch for a Trello card from the database.
+    Returns None if no branch exists for this card.
+    """
+    try:
+        from flask import current_app
+        from core.repositories import get_branch_for_issue
+        
+        with current_app.app_context():
+            branch_name = get_branch_for_issue(card_id)
+            return branch_name
+    except Exception as e:
+        logger.warning(f"Failed to retrieve branch for card {card_id}: {e}")
+        return None
