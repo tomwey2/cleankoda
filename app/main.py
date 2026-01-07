@@ -1,18 +1,17 @@
 import os
 
 from agent.worker import run_agent_cycle
+from core.extensions import db, scheduler
+from core.models import AgentConfig
 from cryptography.fernet import Fernet
 from dotenv import load_dotenv
-from extensions import db, scheduler
-from models import AgentConfig
-from webapp import create_app
+from web import create_app
 
 load_dotenv()
 
 # Main entry point
 if __name__ == "__main__":
     import logging
-
 
     def _mask_secret(value: str) -> str:
         if len(value) <= 4:
@@ -21,9 +20,8 @@ if __name__ == "__main__":
         tail = value[-2:]
         return f"{head}{'*' * (len(value) - 4)}{tail}"
 
-
     def _log_secret(env_name: str) -> str:
-        value = os.environ.get(env_name)
+        value = os.environ.get(env_name, "")
         if value:
             logger.info(f"{env_name}: {_mask_secret(value)}")
         else:
@@ -45,12 +43,12 @@ if __name__ == "__main__":
     OPENROUTER_API_KEY = _log_secret("OPENROUTER_API_KEY")
     ANTHROPIC_API_KEY = _log_secret("ANTHROPIC_API_KEY")
     OLLAMA_API_KEY = _log_secret("OLLAMA_API_KEY")
-    
+
     OLLAMA_BASE_URL = os.environ.get("OLLAMA_BASE_URL")
     logger.info(f"OLLAMA_BASE_URL: {OLLAMA_BASE_URL}")
     if not OLLAMA_BASE_URL:
         logger.info("OLLAMA_BASE_URL is not set")
-    
+
     if not os.environ.get("GITHUB_TOKEN"):
         raise ValueError("GITHUB_TOKEN is not set. Application cannot start.")
 

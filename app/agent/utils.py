@@ -5,10 +5,9 @@ import shutil
 from typing import Any, Optional
 from urllib.parse import urlparse, urlunparse
 
-from git import Repo
-from langchain_core.messages import AIMessage, BaseMessage, HumanMessage, ToolMessage
-
 from agent.state import AgentState
+from git import Repo
+from langchain_core.messages import AIMessage, BaseMessage, HumanMessage
 
 logger = logging.getLogger(__name__)
 
@@ -83,7 +82,9 @@ def log_agent_state(
 
         content = getattr(message, "content", None)
         if content is not None:
-            logger_obj.info("     content      : %s", safe_truncate(content, content_limit))
+            logger_obj.info(
+                "     content      : %s", safe_truncate(content, content_limit)
+            )
 
         name = getattr(message, "name", None)
         if name:
@@ -112,6 +113,7 @@ def log_agent_state(
                     )
 
     logger_obj.info("=== END OF STATE SNAPSHOT ===")
+
 
 # Hilfsfunktion, um Redundanz zu vermeiden
 def get_workspace():
@@ -146,14 +148,17 @@ def _estimate_tokens(messages: list[BaseMessage]) -> int:
     """Rough estimate of token count for messages (avg ~4 chars per token)."""
     total_chars = 0
     for msg in messages:
-        if hasattr(msg, 'content') and msg.content:
+        if hasattr(msg, "content") and msg.content:
             total_chars += len(str(msg.content))
-        if hasattr(msg, 'tool_calls') and msg.tool_calls:
-            total_chars += len(str(msg.tool_calls))
+
+        if type(msg) is AIMessage:
+            if hasattr(msg, "tool_calls") and msg.tool_calls:
+                tool_calls = getattr(msg, "tool_calls", []) or []
+                total_chars += len(str(tool_calls))
     return total_chars // 4
 
 
-def _find_first_human_message(messages: list[BaseMessage]) -> int:
+def _find_first_human_message(messages: list[BaseMessage]) -> int | None:
     """Find index of first HumanMessage (original task)."""
     # Scan through messages to locate the first HumanMessage
     # This represents the original user task/request
@@ -163,26 +168,30 @@ def _find_first_human_message(messages: list[BaseMessage]) -> int:
     return None
 
 
-def _find_safe_start_boundary(messages: list[BaseMessage], recent_start_idx: int) -> int:
+def _find_safe_start_boundary(
+    messages: list[BaseMessage], recent_start_idx: int
+) -> int:
     """
     Find a safe starting point by scanning forward from the cutoff.
     Safe boundaries are: HumanMessage or AIMessage
     """
     adjusted_start_idx = recent_start_idx
-    
+
     # Scan forward from the naive cutoff point to find a valid conversation boundary
     for idx in range(recent_start_idx, len(messages)):
         msg = messages[idx]
-        
+
         # HumanMessages are always safe starting points (no dependent tool responses)
         if isinstance(msg, HumanMessage) or isinstance(msg, AIMessage):
             adjusted_start_idx = idx
             break
-    
+
     return adjusted_start_idx
 
 
-def _trim_trailing_invalid_ai_messages(messages: list[BaseMessage]) -> list[BaseMessage]:
+def _trim_trailing_invalid_ai_messages(
+    messages: list[BaseMessage],
+) -> list[BaseMessage]:
     """
     Remove trailing AIMessages without tool_calls.
     Mistral API requires last message to be User, Tool, or Assistant with tool_calls.
@@ -192,20 +201,23 @@ def _trim_trailing_invalid_ai_messages(messages: list[BaseMessage]) -> list[Base
     while messages and isinstance(messages[-1], AIMessage):
         ai_msg = messages[-1]
         # If this AI message has tool calls, it's valid as the last message
-        if getattr(ai_msg, 'tool_calls', None):
+        if getattr(ai_msg, "tool_calls", None):
             break
         # Otherwise, remove it and check the previous message
         messages = messages[:-1]
     return messages
 
 
-def _log_token_savings(original_count: int, original_tokens: int, 
-                       filtered_count: int, filtered_tokens: int) -> None:
+def _log_token_savings(
+    original_count: int, original_tokens: int, filtered_count: int, filtered_tokens: int
+) -> None:
     """Log token savings statistics."""
     # Calculate absolute and percentage token savings
     saved_tokens = original_tokens - filtered_tokens
-    saved_percentage = (saved_tokens / original_tokens * 100) if original_tokens > 0 else 0
-    
+    saved_percentage = (
+        (saved_tokens / original_tokens * 100) if original_tokens > 0 else 0
+    )
+
     # Log the filtering results for monitoring token optimization
     logger.info(
         f"Message filter: {original_count} → {filtered_count} messages "
@@ -214,17 +226,19 @@ def _log_token_savings(original_count: int, original_tokens: int,
     )
 
 
-def filter_messages_for_llm(messages: list[BaseMessage], max_messages: int = 10) -> list[BaseMessage]:
+def filter_messages_for_llm(
+    messages: list[BaseMessage], max_messages: int = 10
+) -> list[BaseMessage]:
     """
     Filters messages to keep only the most recent and relevant ones for LLM context.
     This reduces token usage by limiting the message history.
-    
+
     Strategy:
     - Always keep the first HumanMessage (original task)
     - Keep the most recent complete conversation turns
     - Never break AI→Tool message pairs to maintain valid message order
     - Prevent orphaned ToolMessages that would violate API constraints
-    
+
     :param messages: List of messages from state
     :param max_messages: Maximum number of messages to keep (excluding first task message)
     :return: Filtered list of messages
@@ -232,27 +246,29 @@ def filter_messages_for_llm(messages: list[BaseMessage], max_messages: int = 10)
     # Early exit for empty list
     if not messages:
         return []
-    
+
     # Track original metrics for logging
     original_count = len(messages)
     original_tokens = _estimate_tokens(messages)
-    
+
     # Skip filtering if message count is already within limits
     if len(messages) <= max_messages + 1:
-        logger.debug(f"Message filter: {original_count} messages, ~{original_tokens} tokens (no filtering needed)")
+        logger.debug(
+            f"Message filter: {original_count} messages, ~{original_tokens} tokens (no filtering needed)"
+        )
         return messages
-    
+
     # Step 1: Find the original user task (first HumanMessage)
     first_human_idx = _find_first_human_message(messages)
-    
+
     # Step 2: Calculate naive cutoff and find safe conversation boundary
     recent_start_idx = max(0, len(messages) - max_messages)
     adjusted_start_idx = _find_safe_start_boundary(messages, recent_start_idx)
-    
+
     # Step 3: Extract recent messages and trim invalid trailing AI messages
     recent_messages = messages[adjusted_start_idx:]
     recent_messages = _trim_trailing_invalid_ai_messages(recent_messages)
-    
+
     # Step 4: Fallback if everything was filtered out
     if not recent_messages and messages:
         # Try to return at least the last HumanMessage
@@ -261,19 +277,19 @@ def filter_messages_for_llm(messages: list[BaseMessage], max_messages: int = 10)
                 return [msg]
         # Ultimate fallback: return last message
         return [messages[-1]] if messages else []
-    
+
     # Step 5: Prepend original task if it was filtered out
     if first_human_idx is not None and first_human_idx < adjusted_start_idx:
         first_task = [messages[first_human_idx]]
         filtered_messages = first_task + recent_messages
     else:
         filtered_messages = recent_messages
-    
+
     # Step 6: Log token savings
     filtered_count = len(filtered_messages)
     filtered_tokens = _estimate_tokens(filtered_messages)
     _log_token_savings(original_count, original_tokens, filtered_count, filtered_tokens)
-    
+
     return filtered_messages
 
 
@@ -332,10 +348,12 @@ def normalize_git_url(url):
     """
     try:
         parsed = urlparse(url)
-        normalized = parsed._replace(netloc=parsed.hostname + (f":{parsed.port}" if parsed.port else ""))
+        normalized = parsed._replace(
+            netloc=parsed.hostname + (f":{parsed.port}" if parsed.port else "")
+        )
         return urlunparse(normalized)
     except Exception:
-        return url.split('@')[-1] if '@' in url else url
+        return url.split("@")[-1] if "@" in url else url
 
 
 def ensure_repository_exists(repo_url, work_dir):
@@ -344,6 +362,7 @@ def ensure_repository_exists(repo_url, work_dir):
     - Re-clone when a different repository is detected.
     - Otherwise, commit local changes, fetch origin, and leave a clean checkout.
     """
+
     def clean_and_clone():
         for filename in os.listdir(work_dir):
             file_path = os.path.join(work_dir, filename)
@@ -357,51 +376,57 @@ def ensure_repository_exists(repo_url, work_dir):
         logger.info(f"Cloning repository {repo_url} into {work_dir}")
         Repo.clone_from(repo_url, work_dir)
 
-    git_dir = os.path.join(work_dir, '.git')
-    
+    git_dir = os.path.join(work_dir, ".git")
+
     if not os.path.isdir(git_dir):
         logger.info(f"No git repository found in {work_dir}, cloning...")
         clean_and_clone()
         return
-    
+
     try:
         repo = Repo(work_dir)
-        
+
         try:
             origin_url = repo.remotes.origin.url
         except AttributeError:
             logger.warning(f"No origin remote found in {work_dir}, re-cloning...")
             clean_and_clone()
             return
-        
+
         normalized_origin = normalize_git_url(origin_url)
         normalized_requested = normalize_git_url(repo_url)
-        
+
         if normalized_origin != normalized_requested:
-            logger.info(f"Different repository detected (current: {normalized_origin}, requested: {normalized_requested}), re-cloning...")
+            logger.info(
+                f"Different repository detected (current: {normalized_origin}, requested: {normalized_requested}), re-cloning..."
+            )
             clean_and_clone()
             return
-        
+
         logger.info(f"Repository {repo_url} already exists in {work_dir}, updating...")
-        
+
         if repo.is_dirty(untracked_files=True):
             logger.info("Committing local changes...")
             repo.git.add(A=True)
             repo.index.commit("Auto-commit: local changes before fetch")
-        
+
         logger.info("Fetching origin...")
         repo.remotes.origin.fetch()
-        
+
         try:
-            default_branch = repo.remotes.origin.refs.HEAD.ref.name.replace('origin/', '')
+            default_branch = repo.remotes.origin.refs.HEAD.ref.name.replace(
+                "origin/", ""
+            )
             logger.info(f"Checking out default branch: {default_branch}")
             repo.git.checkout(default_branch)
             repo.git.reset("--hard", f"origin/{default_branch}")
         except Exception as e:
-            logger.warning(f"Could not checkout default branch: {e}, staying on current branch")
-        
+            logger.warning(
+                f"Could not checkout default branch: {e}, staying on current branch"
+            )
+
         logger.info("Repository is ready with clean checkout")
-        
+
     except Exception as e:
         logger.error(f"Error managing repository in {work_dir}: {e}, re-cloning...")
         clean_and_clone()
