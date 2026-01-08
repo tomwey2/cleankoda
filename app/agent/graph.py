@@ -135,7 +135,7 @@ def route_after_tools_coder(state: AgentState) -> str:
 def route_after_tools_analyst(state: AgentState) -> str:
     """
     Spezial-Router für Analyst:
-    - finish_task -> trello_update (Nicht Tester!)
+    - finish_task -> task_update (Nicht Tester!)
     - Sonst -> Loop zurück zum Analyst
     """
     messages = state["messages"]
@@ -144,7 +144,7 @@ def route_after_tools_analyst(state: AgentState) -> str:
         ai_msg = messages[-2]
         if isinstance(ai_msg, AIMessage) and ai_msg.tool_calls:
             if ai_msg.tool_calls[0]["name"] == "finish_task":
-                return "finish"  # Geht zu trello_update
+                return "finish"  # Geht zu task_update
 
     return "analyst"
 
@@ -181,7 +181,7 @@ def create_workflow(
     # --- Graph Nodes ---
     workflow = StateGraph(AgentState)
 
-    workflow.add_node("trello_fetch", create_trello_fetch_node(sys_config))
+    workflow.add_node("task_fetch", create_trello_fetch_node(sys_config))
     workflow.add_node("router", create_router_node(llm_small))
 
     workflow.add_node(
@@ -204,15 +204,15 @@ def create_workflow(
     workflow.add_node("tools_tester", ToolNode(tester_tools))
 
     workflow.add_node("correction", create_correction_node())
-    workflow.add_node("trello_update", create_trello_update_node(sys_config))
+    workflow.add_node("task_update", create_trello_update_node(sys_config))
 
-    workflow.set_entry_point("trello_fetch")
+    workflow.set_entry_point("task_fetch")
 
     # --- Edges ---
 
     # 1. Start -> Router
     workflow.add_conditional_edges(
-        "trello_fetch",
+        "task_fetch",
         lambda state: "router" if state.get("trello_card_id") else END,
         {END: END, "router": "router"},
     )
@@ -269,24 +269,14 @@ def create_workflow(
     )
 
     # Für Analyst:
-    # Prüft auf finish_task -> Trello Update. Sonst -> Loop.
+    # Prüft auf finish_task -> Task Update. Sonst -> Loop.
     workflow.add_conditional_edges(
         "tools_analyst",
         route_after_tools_analyst,
-        {"analyst": "analyst", "finish": "trello_update"},
+        {"analyst": "analyst", "finish": "task_update"},
     )
 
     # 7. Tester Logik
-    # workflow.add_conditional_edges(
-    #    "tester",
-    #    router_tester,
-    #    {
-    #        "tools": "tools_tester",  # git/java tools ausführen
-    #        "pass": "trello_update",  # Testergebnis grün
-    #        "coder failed": "coder",  # Zurück zur Arbeit
-    #        "bugfixer failed": "bugfixer",  # Zurück zur Arbeit
-    #    },
-    # )
     # 7.1. Tester -> Tools
     workflow.add_conditional_edges(
         "tester",
@@ -300,7 +290,7 @@ def create_workflow(
         route_after_tools_tester,
         {
             "tester": "tester",  # Loop (für git, mvn)
-            "pass": "trello_update",  # Erfolg
+            "pass": "task_update",  # Erfolg
             "coder failed": "coder",  # Tests failed back to coder or bugfixer
             "bugfixer failed": "bugfixer",
         },
@@ -313,6 +303,6 @@ def create_workflow(
         {"coder": "coder", "bugfixer": "bugfixer", "analyst": "analyst"},
     )
 
-    workflow.add_edge("trello_update", END)
+    workflow.add_edge("task_update", END)
 
     return workflow

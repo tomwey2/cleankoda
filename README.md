@@ -4,7 +4,7 @@
 
 [![Python][Python]][Python-url] [![LangChain][LangChain]][LangChain-url] [![Docker][Docker]][Docker-url] [![Flask][Flask]][Flask-url]
 
-This project demonstrates a POC for an autonomous, containerized AI coding agent (CAIASE) that lives in your Docker environment. 
+This project demonstrates a POC for an autonomous, containerized AI coding agent that lives in your Docker environment. 
 It operates completely unsupervised to:
 
 - **Connect** to your task management system (Trello is currently supported).
