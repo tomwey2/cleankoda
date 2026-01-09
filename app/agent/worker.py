@@ -75,6 +75,9 @@ async def run_agent_cycle_async(app: Flask, encryption_key: Fernet) -> None:
         if not sys_config:
             return
 
+        # Add the remote repo url to the sys_config
+        sys_config["github_repo_url"] = config.github_repo_url
+
         task_env = os.environ.copy()
         task_env.update(sys_config.get("env", {}))
 

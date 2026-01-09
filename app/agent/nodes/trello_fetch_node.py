@@ -5,6 +5,8 @@ Fetches tasks from a Trello board, preparing them for processing by the agent.
 """
 
 import logging
+import subprocess
+
 from datetime import datetime, timezone
 
 from core.repositories import get_branch_for_issue
@@ -98,6 +100,15 @@ def create_trello_fetch_node(sys_config: dict):
                 github_repo_url = sys_config.get("github_repo_url")
                 if github_repo_url:
                     checkout_branch(github_repo_url, git_branch, get_workspace())
+                else:
+                    logger.warning("No github_repo_url configured, skipping checkout")
+
+                real_git_branch = subprocess.check_output(
+                    ["git", "rev-parse", "--abbrev-ref", "HEAD"],
+                    cwd=get_workspace(),
+                    text=True,
+                ).strip()
+                logger.info("Current branch: %s", real_git_branch)
 
             logger.info("Initial messages content: %s", content)
             return {

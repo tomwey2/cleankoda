@@ -348,6 +348,7 @@ def create_or_update_github_pr(title: str, body: str):
         ).strip()
 
         if current_branch in ["main", "master"]:
+            logger.warning("You are on main/master. Create a feature branch first!")
             return "ERROR: You are on main/master. Create a feature branch first!"
 
         headers = {
@@ -360,7 +361,9 @@ def create_or_update_github_pr(title: str, body: str):
 
         # 4. If PR exists, update it
         if existing_pr:
-            _update_existing_pr(existing_pr, owner, repo, headers, body)
+            response = _update_existing_pr(existing_pr, owner, repo, headers, body)
+            logger.info("Updated existing PR response: %s", response)
+            return response
 
         # 5. Create new PR if none exists
         url = f"https://api.github.com/repos/{owner}/{repo}/pulls"
@@ -440,6 +443,7 @@ def git_status():
             capture_output=True,
             text=True,
         )
+        logger.info("git status: %s", result.stdout)
         return result.stdout
     except Exception as e:  # pylint: disable=broad-exception-caught
         return str(e)
