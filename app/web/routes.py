@@ -1,6 +1,16 @@
+"""The routes for the web application.
+
+This module uses a Flask Blueprint to organize the routes. It includes
+the main route for the application, which displays and handles the
+configuration form for the AI agent. This includes logic for saving
+and retrieving settings for task management systems, repositories,
+and LLM providers, as well as handling encryption of sensitive data.
+"""
+
 import json
 import os
 
+from core.constants import LLM_PROVIDER_API_ENV
 from core.extensions import db, scheduler
 from core.models import AgentConfig
 from cryptography.fernet import InvalidToken
@@ -19,24 +29,12 @@ from flask import (
 # __name__ = Damit Flask weiß, wo Templates/Static files für diesen Blueprint liegen
 web_bp = Blueprint("web", __name__, template_folder="templates")
 
-LLM_PROVIDER_API_ENV = {
-    "mistral": "MISTRAL_API_KEY",
-    "openai": "OPENAI_API_KEY",
-    "google": "GOOGLE_API_KEY",
-    "gemini": "GOOGLE_API_KEY",
-    "openrouter": "OPENROUTER_API_KEY",
-    "ollama": "OLLAMA_API_KEY",
-    "anthropic": "ANTHROPIC_API_KEY",
-}
-
 
 def _missing_provider_env(provider: str) -> str | None:
     if provider == "ollama":
         return None
     env_name = LLM_PROVIDER_API_ENV.get(provider)
-    if not env_name:
-        return None
-    if os.environ.get(env_name):
+    if not env_name or not os.environ.get(env_name):
         return None
     return env_name
 
@@ -44,6 +42,7 @@ def _missing_provider_env(provider: str) -> str | None:
 # 2. Routen definieren (ACHTUNG: @web_bp statt @app)
 @web_bp.route("/", methods=["GET", "POST"])
 def index():
+    """Handles the main configuration page."""
     encryption_key = current_app.config["FERNET_KEY"]
     config = AgentConfig.query.first()
     if not config:
@@ -181,7 +180,8 @@ def index():
 
         except (InvalidToken, TypeError, AttributeError, json.JSONDecodeError):
             flash(
-                "Could not parse or decrypt existing configuration. It may be legacy data. Re-saving will fix it.",
+                "Could not parse or decrypt existing configuration. It may be legacy data. "
+                + "Re-saving will fix it.",
                 "warning",
             )
 
