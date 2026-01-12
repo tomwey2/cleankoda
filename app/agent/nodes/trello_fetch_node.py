@@ -39,6 +39,31 @@ async def _get_card_context(sys_config: dict):
     return card_context
 
 
+async def _ensure_card_in_progress(
+    card_context: dict,
+    card: dict,
+    trello_progress_list_name: str | None,
+    sys_config: dict,
+) -> dict:
+    """
+    Moves the card to the in-progress list if needed, updating the card_context.
+    """
+    if not trello_progress_list_name:
+        return card_context
+
+    current_list_name = card_context["trello_list_name"]
+    if current_list_name == trello_progress_list_name:
+        return card_context
+
+    remove_issue_from_db(card["id"])
+    readfrom_list_id = card_context["trello_list_id"]
+    move_card_result = await move_card_to_in_progress(
+        card["id"], readfrom_list_id, sys_config
+    )
+    card_context["trello_list_id"] = move_card_result["trello_list_id"]
+    return card_context
+
+
 def create_trello_fetch_node(sys_config: dict):
     """Creates a Trello fetch node for the agent graph."""
 
@@ -54,7 +79,7 @@ def create_trello_fetch_node(sys_config: dict):
             review_list_name = sys_config.get("trello_moveto_list")
             if not review_list_name:
                 return {"trello_card_id": None}
-            
+
             trello_progress_list_name = sys_config.get("trello_progress_list")
 
             card_context = await _get_card_context(sys_config)
@@ -63,16 +88,9 @@ def create_trello_fetch_node(sys_config: dict):
 
             card = card_context["card"]
 
-            list_name = card_context["trello_list_name"]
-
-            # move card to in-progress list
-            if list_name != trello_progress_list_name:
-                remove_issue_from_db(card["id"])
-                trello_readfrom_list_id = card_context["trello_list_id"]
-                move_card_result = await move_card_to_in_progress(
-                    card["id"], trello_readfrom_list_id, sys_config
-                )
-                card_context["trello_list_id"] = move_card_result["trello_list_id"]
+            card_context = await _ensure_card_in_progress(
+                card_context, card, trello_progress_list_name, sys_config
+            )
 
             comments = await get_trello_card_comments(card["id"], sys_config)
 
@@ -97,9 +115,6 @@ def create_trello_fetch_node(sys_config: dict):
             logger.info("Processing card ID: %s - %s", card["id"], card.get("name", ""))
             logger.info("Initial messages content: %s", content)
 
-            logger.info("returning trello_card_id: %s", card["id"])
-            logger.info("returning trello_card_name: %s", card["name"])
-            logger.info("returning trello_list_id: %s", card_context["trello_list_id"])
             return {
                 "trello_card_id": card["id"],
                 "trello_card_name": card["name"],
