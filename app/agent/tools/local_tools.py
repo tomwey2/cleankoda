@@ -320,7 +320,7 @@ def _update_existing_pr(existing_pr, owner: str, repo: str, headers: dict, body:
 
 
 @tool
-def create_or_update_github_pr(title: str, body: str):
+def create_or_update_github_pr(title: str, body: str):  # pylint: disable=too-many-return-statements
     """
     Creates a Pull Request on GitHub for the current branch.
     If a PR already exists for this branch, adds a comment instead.
