@@ -36,6 +36,7 @@ def create_bugfixer_node(llm, tools, agent_stack):
 
     async def bugfixer_node(state: AgentState):
         # Filter messages to keep only recent relevant context (original task + last 15 messages)
+        # pylint: disable=duplicate-code
         filtered_messages = filter_messages_for_llm(state["messages"], max_messages=15)
         current_messages: list[BaseMessage | SystemMessage] = [
             SystemMessage(content=sys_msg)
@@ -44,7 +45,6 @@ def create_bugfixer_node(llm, tools, agent_stack):
 
         current_tool_choice = "auto"
 
-        # pylint: disable=duplicate-code
         for attempt in range(3):
             try:
                 chain = llm.bind_tools(tools, tool_choice=current_tool_choice)
@@ -72,7 +72,6 @@ def create_bugfixer_node(llm, tools, agent_stack):
                 logger.error("Error in LLM call (Attempt %d): %s", attempt + 1, e)
 
         # Fallback
-        # pylint: disable=duplicate-code
         return {
             "messages": [
                 AIMessage(

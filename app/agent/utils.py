@@ -8,10 +8,7 @@ import re
 import shutil
 from typing import Any, Optional
 from urllib.parse import urlparse, urlunparse
-import subprocess
 
-from core.repositories import upsert_issue
-from flask import current_app
 from git import Repo
 from git.exc import GitCommandError
 from langchain_core.messages import AIMessage, BaseMessage, HumanMessage

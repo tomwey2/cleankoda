@@ -34,6 +34,11 @@ OPTIONS:
 Respond ONLY with valid JSON that matches {"role":"coder"|"bugfixer"|"analyst"} with no additional text or markdown.
 """
 
+ROLE_PREFIXES = {
+    "coder": "feature",
+    "bugfixer": "bugfix",
+}
+
 
 class RouterDecision(BaseModel):
     """Classify the incoming task into the correct category."""
@@ -151,6 +156,51 @@ async def checkout_card_branch(card_id: str, card_name: str, role: str, sys_conf
         logger.info("Current branch: %s", real_git_branch)
 
 
+def _slugify(value: str | None) -> str:
+    if not value:
+        return ""
+    value = value.lower()
+    value = re.sub(r"[^a-z0-9]+", "-", value)
+    value = re.sub(r"-{2,}", "-", value)
+    return value.strip("-")
+
+
+def _build_base_branch_name(card_id: str, card_name: str, role: str) -> str:
+    slug = _slugify(card_name)
+    sanitized_card_id = re.sub(r"[^a-z0-9]", "", card_id.lower())
+    short_id = sanitized_card_id[:8] if sanitized_card_id else "card"
+    branch_suffix = slug[:48] if slug else "update"
+    role_prefix = ROLE_PREFIXES.get(role, "task")
+    return f"agent/{role_prefix}/{short_id}-{branch_suffix}"
+
+
+def _collect_branch_names(repo: Repo) -> set[str]:
+    names = {head.name for head in repo.heads}
+    for remote in repo.remotes:
+        for ref in remote.refs:
+            remote_name = getattr(ref, "remote_head", None)
+            if remote_name:
+                names.add(remote_name)
+            else:
+                names.add(ref.name.split("/")[-1])
+    return names
+
+
+def _resolve_unique_branch_name(base_name: str, existing_names: set[str]) -> str:
+    candidate = base_name
+    suffix_counter = 1
+    while candidate in existing_names:
+        candidate = f"{base_name}-{suffix_counter}"
+        suffix_counter += 1
+    if candidate != base_name:
+        logger.info(
+            "Branch name conflict detected. Using '%s' instead of '%s'.",
+            candidate,
+            base_name,
+        )
+    return candidate
+
+
 async def checkout_branch_for_card(card_id: str, card_name: str, role: str, sys_config: dict):
     """
     Checks out a new git branch for an issue.
@@ -160,51 +210,13 @@ async def checkout_branch_for_card(card_id: str, card_name: str, role: str, sys_
     if not card_id or not card_name:
         raise ValueError("card_id and card_name are required to create a git branch.")
 
-    def _slugify(value: str | None) -> str:
-        if not value:
-            return ""
-        value = value.lower()
-        value = re.sub(r"[^a-z0-9]+", "-", value)
-        value = re.sub(r"-{2,}", "-", value)
-        return value.strip("-")
-
-    slug = _slugify(card_name)
-
-    sanitized_card_id = re.sub(r"[^a-z0-9]", "", card_id.lower())
-    short_id = sanitized_card_id[:8] if sanitized_card_id else "card"
-    branch_suffix = slug[:48] if slug else "update"
-    role_prefixes = {
-        "coder": "feature",
-        "bugfixer": "bugfix",
-    }
-    role_prefix = role_prefixes.get(role or "", "task")
-    base_branch_name = f"agent/{role_prefix}/{short_id}-{branch_suffix}"
-
     repo = Repo(get_workspace())
     repo.git.reset("--hard")
     repo.git.fetch("--prune")
-    
-    existing_branches = {head.name for head in repo.heads}
-    for remote in repo.remotes:
-        for ref in remote.refs:
-            remote_name = getattr(ref, "remote_head", None)
-            if remote_name:
-                existing_branches.add(remote_name)
-            else:
-                existing_branches.add(ref.name.split("/")[-1])
 
-    branch_name = base_branch_name
-    suffix_counter = 1
-    while branch_name in existing_branches:
-        branch_name = f"{base_branch_name}-{suffix_counter}"
-        suffix_counter += 1
-
-    if branch_name != base_branch_name:
-        logger.info(
-            "Branch name conflict detected. Using '%s' instead of '%s'.",
-            branch_name,
-            base_branch_name,
-        )
+    base_branch_name = _build_base_branch_name(card_id, card_name, role)
+    existing_branches = _collect_branch_names(repo)
+    branch_name = _resolve_unique_branch_name(base_branch_name, existing_branches)
 
     github_repo_url = sys_config.get("github_repo_url")
     if not github_repo_url:
@@ -223,7 +235,6 @@ async def checkout_branch_for_card(card_id: str, card_name: str, role: str, sys_
 
     repo.git.reset("--hard")
     repo.git.checkout("-b", branch_name)
-    
 
     try:
         with current_app.app_context():

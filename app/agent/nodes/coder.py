@@ -35,6 +35,7 @@ def create_coder_node(llm, tools, agent_stack):
 
     async def coder_node(state: AgentState):
         # Filter messages to keep only recent relevant context (original task + last 15 messages)
+        # pylint: disable=duplicate-code
         filtered_messages = filter_messages_for_llm(state["messages"], max_messages=15)
         current_messages: list[BaseMessage | SystemMessage] = [
             SystemMessage(content=sys_msg)
@@ -79,7 +80,6 @@ def create_coder_node(llm, tools, agent_stack):
 
             except Exception as e:  # pylint: disable=broad-exception-caught
                 logger.error("Error in LLM call (Attempt %d): %s", attempt + 1, e)
-
         # Fallback
         logger.error("Agent stuck after 3 attempts. Hard exit.")
 

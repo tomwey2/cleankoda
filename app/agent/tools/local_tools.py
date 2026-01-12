@@ -10,9 +10,7 @@ import subprocess
 
 import docker
 import requests
-from core.repositories import upsert_issue
 from docker.errors import APIError, NotFound
-from flask import current_app
 from langchain_core.tools import tool
 
 from agent.utils import get_workbench, get_workspace
