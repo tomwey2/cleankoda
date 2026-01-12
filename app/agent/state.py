@@ -31,5 +31,4 @@ class AgentState(TypedDict):
     trello_card_id: Optional[str]
     trello_card_name: Optional[str]
     trello_list_id: Optional[str]
-    trello_in_progress: bool
     git_branch: Optional[str]

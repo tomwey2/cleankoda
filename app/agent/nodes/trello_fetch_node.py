@@ -18,6 +18,7 @@ from agent.trello_client import (
     get_trello_card_list_moves,
     move_trello_card_to_named_list,
 )
+from core.repositories import remove_issue_from_db
 
 logger = logging.getLogger(__name__)
 
@@ -29,16 +30,12 @@ async def _get_card_context(sys_config: dict):
     # Try to fetch a card from the in-progress list first
     card_context = None
     if in_progress_list_name:
-        card_context = await fetch_card_from_list(
-            in_progress_list_name, sys_config, move_to_progress=False
-        )
+        card_context = await fetch_card_from_list(in_progress_list_name, sys_config)
 
     # If no card is found in the in-progress list, try the incoming
     # list (moves card to in-progress)
     if not card_context:
-        card_context = await fetch_card_from_list(
-            incoming_list_name, sys_config, move_to_progress=True
-        )
+        card_context = await fetch_card_from_list(incoming_list_name, sys_config)
     return card_context
 
 
@@ -54,15 +51,30 @@ def create_trello_fetch_node(sys_config: dict):
         )
 
         try:
+            review_list_name = sys_config.get("trello_moveto_list")
+            if not review_list_name:
+                return {"trello_card_id": None}
+            
+            trello_progress_list_name = sys_config.get("trello_progress_list")
+
             card_context = await _get_card_context(sys_config)
             if not card_context:
                 return {"trello_card_id": None}
 
             card = card_context["card"]
+
+            list_name = card_context["trello_list_name"]
+
+            # move card to in-progress list
+            if list_name != trello_progress_list_name:
+                remove_issue_from_db(card["id"])
+                trello_readfrom_list_id = card_context["trello_list_id"]
+                move_card_result = await move_card_to_in_progress(
+                    card["id"], trello_readfrom_list_id, sys_config
+                )
+                card_context["trello_list_id"] = move_card_result["trello_list_id"]
+
             comments = await get_trello_card_comments(card["id"], sys_config)
-            review_list_name = sys_config.get("trello_moveto_list")
-            if not review_list_name:
-                return {"trello_card_id": None}
 
             review_cutoff = await get_review_transition_timestamp(
                 card["id"], review_list_name, sys_config
@@ -85,12 +97,14 @@ def create_trello_fetch_node(sys_config: dict):
             logger.info("Processing card ID: %s - %s", card["id"], card.get("name", ""))
             logger.info("Initial messages content: %s", content)
 
+            logger.info("returning trello_card_id: %s", card["id"])
+            logger.info("returning trello_card_name: %s", card["name"])
+            logger.info("returning trello_list_id: %s", card_context["trello_list_id"])
             return {
                 "trello_card_id": card["id"],
-                "trello_card_name": card.get("name", ""),
+                "trello_card_name": card["name"],
                 "messages": [HumanMessage(content=content)],
                 "trello_list_id": card_context["trello_list_id"],
-                "trello_in_progress": card_context["trello_in_progress"],
             }
         except Exception as e:  # pylint: disable=broad-exception-caught
             logger.error("Error fetching Trello cards: %s", e)
@@ -99,9 +113,7 @@ def create_trello_fetch_node(sys_config: dict):
     return trello_fetch
 
 
-async def fetch_card_from_list(
-    readfrom_list_name: str, sys_config: dict, move_to_progress: bool
-) -> dict | None:
+async def fetch_card_from_list(readfrom_list_name: str, sys_config: dict) -> dict | None:
     """Fetch a card from a Trello list."""
     trello_lists = await get_all_trello_lists(sys_config)
     read_from_list = next(
@@ -113,30 +125,20 @@ async def fetch_card_from_list(
         logger.warning("%s list not found", readfrom_list_name)
         return None
 
-    trello_readfrom_list_id = read_from_list["id"]
-    logger.info("Found %s list id: %s", readfrom_list_name, trello_readfrom_list_id)
+    readfrom_list_id = read_from_list["id"]
+    logger.info("Found %s list id: %s", readfrom_list_name, readfrom_list_id)
 
-    cards = await get_all_trello_cards(trello_readfrom_list_id, sys_config)
+    cards = await get_all_trello_cards(readfrom_list_id, sys_config)
     if not cards:
         logger.info("No open tasks found in %s.", readfrom_list_name)
         return None
 
     card = cards[0]
-    trello_list_id = trello_readfrom_list_id
-    trello_progress_list_name = sys_config.get("trello_progress_list")
-    trello_in_progress = readfrom_list_name == trello_progress_list_name
-
-    if move_to_progress and trello_progress_list_name and not trello_in_progress:
-        move_card_result = await move_card_to_in_progress(
-            card["id"], trello_readfrom_list_id, sys_config
-        )
-        trello_list_id = move_card_result["trello_list_id"]
-        trello_in_progress = move_card_result["trello_in_progress"]
 
     return {
         "card": card,
-        "trello_list_id": trello_list_id,
-        "trello_in_progress": trello_in_progress,
+        "trello_list_id": readfrom_list_id,
+        "trello_list_name": readfrom_list_name,
     }
 
 
@@ -162,14 +164,13 @@ async def move_card_to_in_progress(
             )
             return {
                 "trello_list_id": progress_list_id,
-                "trello_in_progress": True,
             }
         except ValueError as e:
             logger.warning("Failed to move card to in-progress list: %s", e)
         except Exception as e:  # pylint: disable=broad-exception-caught
             logger.error("Failed to move card to in-progress list: %s", e)
 
-    return {"trello_list_id": current_list_id, "trello_in_progress": False}
+    return {"trello_list_id": current_list_id}
 
 
 async def get_review_transition_timestamp(

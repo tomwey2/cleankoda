@@ -122,7 +122,6 @@ def log_agent_state(
     logger.info("error_log         : %s", state.get("error_log"))
     logger.info("trello_card_id    : %s", state.get("trello_card_id"))
     logger.info("trello_list_id    : %s", state.get("trello_list_id"))
-    logger.info("trello_in_progress: %s", state.get("trello_in_progress"))
 
     messages = state.get("messages", [])
     logger.info("\n--- Messages (%d) ---", len(messages))
