@@ -26,7 +26,6 @@ from agent.tools.local_tools import (
     finish_task,
     git_add,
     git_commit,
-    git_create_branch,
     git_push_origin,
     git_status,
     list_files,
@@ -173,7 +172,6 @@ def create_workflow(
     # --- Tool Sets ---
     analyst_tools = [list_files, read_file, log_thought, finish_task]
     coder_tools = [
-        git_create_branch,
         list_files,
         read_file,
         write_to_file,
@@ -194,7 +192,7 @@ def create_workflow(
     workflow = StateGraph(AgentState)
 
     workflow.add_node("task_fetch", create_trello_fetch_node(sys_config))
-    workflow.add_node("router", create_router_node(llm_small))
+    workflow.add_node("router", create_router_node(sys_config, llm_small))
 
     workflow.add_node("coder", create_coder_node(llm_large, coder_tools, agent_stack))
     workflow.add_node(

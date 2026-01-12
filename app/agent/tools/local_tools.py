@@ -197,48 +197,6 @@ def write_to_file(filepath: str, content: str):
 
 
 @tool
-def git_create_branch(
-    branch_name: str, card_id: str | None = None, card_name: str | None = None
-):
-    """
-    Creates a new git branch and switches to it immediately.
-    If card_id and card_name are provided, persists the card-branch relationship in the database.
-    Example: 'feature/login-page' or 'fix/bug-123'.
-    """
-    try:
-        logger.info(
-            "Creating branch '%s' in workspace '%s'", branch_name, get_workspace()
-        )
-        # 'checkout -b' erstellt und wechselt in einem Schritt
-        subprocess.run(
-            ["git", "checkout", "-b", branch_name],
-            cwd=get_workspace(),
-            check=True,
-            capture_output=True,
-            text=True,
-        )
-
-        if card_id and card_name:
-            try:
-                with current_app.app_context():
-                    remote_url = subprocess.check_output(
-                        ["git", "remote", "get-url", "origin"],
-                        cwd=get_workspace(),
-                        text=True,
-                    ).strip()
-                    upsert_issue(card_id, card_name, branch_name, remote_url)
-                    logger.info(
-                        "Persisted Issue: card_id=%s, branch=%s", card_id, branch_name
-                    )
-            except Exception as e:  # pylint: disable=broad-exception-caught
-                logger.warning("Failed to persist Issue relationship: %s", e)
-
-        return f"Successfully created and switched to branch '{branch_name}'."
-    except subprocess.CalledProcessError as e:
-        return f"ERROR creating branch: {e.stderr}"
-
-
-@tool
 def git_push_origin():
     """
     Pushes the current branch to the remote repository.
@@ -257,7 +215,8 @@ def git_push_origin():
         # Prevent pushing to default branches
         if current_branch in ["main", "master"]:
             logger.warning("Attempted to push to default branch '%s'", current_branch)
-            return f"ERROR: Cannot push to default branch '{current_branch}'. Create a feature branch first!"
+            return f"ERROR: Cannot push to default branch '{current_branch}'. \
+                Create a feature branch first"
 
         # URL Auth Logic (wie vorher)
         current_url = subprocess.check_output(

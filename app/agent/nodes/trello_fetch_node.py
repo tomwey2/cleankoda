@@ -5,12 +5,9 @@ Fetches tasks from a Trello board, preparing them for processing by the agent.
 """
 
 import logging
-import subprocess
 
 from datetime import datetime, timezone
 
-from core.repositories import get_branch_for_issue
-from flask import current_app
 from langchain_core.messages import HumanMessage
 
 from agent.state import AgentState
@@ -21,7 +18,6 @@ from agent.trello_client import (
     get_trello_card_list_moves,
     move_trello_card_to_named_list,
 )
-from agent.utils import checkout_branch, get_workspace
 
 logger = logging.getLogger(__name__)
 
@@ -87,37 +83,14 @@ def create_trello_fetch_node(sys_config: dict):
                     content += f"\n[{date}] {author}:\n{text}\n"
 
             logger.info("Processing card ID: %s - %s", card["id"], card.get("name", ""))
-
-            git_branch = await get_existing_branch_for_card(card["id"])
-
-            if git_branch:
-                logger.info(
-                    "Checking out existing git branch: %s for card %s - %s",
-                    git_branch,
-                    card["id"],
-                    card.get("name", ""),
-                )
-                github_repo_url = sys_config.get("github_repo_url")
-                if github_repo_url:
-                    checkout_branch(github_repo_url, git_branch, get_workspace())
-                else:
-                    logger.warning("No github_repo_url configured, skipping checkout")
-
-                real_git_branch = subprocess.check_output(
-                    ["git", "rev-parse", "--abbrev-ref", "HEAD"],
-                    cwd=get_workspace(),
-                    text=True,
-                ).strip()
-                logger.info("Current branch: %s", real_git_branch)
-
             logger.info("Initial messages content: %s", content)
+
             return {
                 "trello_card_id": card["id"],
                 "trello_card_name": card.get("name", ""),
                 "messages": [HumanMessage(content=content)],
                 "trello_list_id": card_context["trello_list_id"],
                 "trello_in_progress": card_context["trello_in_progress"],
-                "git_branch": git_branch,
             }
         except Exception as e:  # pylint: disable=broad-exception-caught
             logger.error("Error fetching Trello cards: %s", e)
@@ -197,20 +170,6 @@ async def move_card_to_in_progress(
             logger.error("Failed to move card to in-progress list: %s", e)
 
     return {"trello_list_id": current_list_id, "trello_in_progress": False}
-
-
-async def get_existing_branch_for_card(card_id: str) -> str | None:
-    """
-    Retrieves the existing git branch for a Trello card from the database.
-    Returns None if no branch exists for this card.
-    """
-    try:
-        with current_app.app_context():
-            branch_name = get_branch_for_issue(card_id)
-            return branch_name
-    except Exception as e:  # pylint: disable=broad-exception-caught
-        logger.warning("Failed to retrieve branch for card %s: %s", card_id, e)
-        return None
 
 
 async def get_review_transition_timestamp(

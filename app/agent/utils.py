@@ -8,7 +8,10 @@ import re
 import shutil
 from typing import Any, Optional
 from urllib.parse import urlparse, urlunparse
+import subprocess
 
+from core.repositories import upsert_issue
+from flask import current_app
 from git import Repo
 from git.exc import GitCommandError
 from langchain_core.messages import AIMessage, BaseMessage, HumanMessage
@@ -506,3 +509,4 @@ def checkout_branch(repo_url: str, branch_name: str, work_dir: str) -> None:
     except GitCommandError as exc:
         logger.error("Failed to checkout branch '%s': %s", branch_name, exc)
         raise
+    

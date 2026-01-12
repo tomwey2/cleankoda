@@ -28,9 +28,8 @@ Your goal is to .
 # EXECUTION PLAN & TOOL USAGE
 1. **Analyze** the requirements and the code (use tools: `list_files`, `read_file`).
 2. **Plan** the implementation (use tool: `log_thought`).
-3. **Create a branch** (use tool: `git_create_branch(branch_name, card_id, card_name)`) if `git_branch` is not set.
-4. **Implement** the feature and write code (use tool: `write_to_file`).
-5. **Finish** the task (use tool: `finish_task(summary="a short summary (max 2 sentences)")`)
+3. **Implement** the feature and write code (use tool: `write_to_file`).
+4. **Finish** the task (use tool: `finish_task(summary="a short summary (max 2 sentences)")`)
 
 # RULES
 1. **Do NOT** chat. Use `log_thought` to explain your thinking.
