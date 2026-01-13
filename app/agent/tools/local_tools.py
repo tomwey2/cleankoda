@@ -194,7 +194,6 @@ def write_to_file(filepath: str, content: str):
         return f"ERROR writing file: {str(e)}"
 
 
-@tool
 def git_push_origin():
     """
     Pushes the current branch to the remote repository.
@@ -286,7 +285,6 @@ def _update_existing_pr(existing_pr, owner: str, repo: str, headers: dict, body:
     )
 
 
-@tool
 def create_or_update_github_pr(title: str, body: str):  # pylint: disable=too-many-return-statements
     """
     Creates a Pull Request on GitHub for the current branch.
@@ -354,7 +352,6 @@ def create_or_update_github_pr(title: str, body: str):  # pylint: disable=too-ma
         return f"ERROR: {str(e)}"
 
 
-@tool
 def git_add(files: list):  # repo_path ignorieren wir oft besser zugunsten der ENV
     """Adds files to staging area."""
     try:
@@ -370,7 +367,6 @@ def git_add(files: list):  # repo_path ignorieren wir oft besser zugunsten der E
         return f"Error adding files: {e.stderr}"
 
 
-@tool
 def git_commit(message: str):
     """Commits staged changes."""
     try:
@@ -399,7 +395,6 @@ def git_commit(message: str):
         return f"Error committing: {e.stderr}"
 
 
-@tool
 def git_status():
     """Checks git status."""
     try:

@@ -22,7 +22,6 @@ from agent.nodes.trello_fetch_node import create_trello_fetch_node
 from agent.nodes.trello_update_node import create_trello_update_node
 from agent.state import AgentState
 from agent.tools.local_tools import (
-    create_or_update_github_pr,
     finish_task,
     git_add,
     git_commit,
@@ -179,11 +178,6 @@ def create_workflow(
         finish_task,
     ]
     tester_tools = [
-        git_add,
-        git_status,
-        git_commit,
-        git_push_origin,
-        create_or_update_github_pr,
         log_thought,
         run_java_command,
     ]
