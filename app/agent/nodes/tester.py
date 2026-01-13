@@ -22,6 +22,7 @@ from agent.utils import (
     get_workspace,
     load_system_prompt,
     log_agent_response,
+    build_agent_summary_text,
 )
 
 logger = logging.getLogger(__name__)
@@ -87,9 +88,14 @@ def create_tester_node(llm, tools, agent_stack):
                 else:
                     push_success, push_msg = _execute_git_push()
                     if push_success:
+                        aggregated_summary = build_agent_summary_text(state)
+                        pr_body_summary = aggregated_summary or summary
+                        issue_title = state.get("trello_card_name") or ""
+                        pr_title = issue_title or "Automated Fix"
                         pr_success, pr_msg = _execute_create_pull_request(
-                            title="Automated Fix",
-                            body=f"Automated changes after successful tests.\n\n{summary}",
+                            title=pr_title,
+                            body="Automated changes after successful tests."
+                            + (f"\n\n{pr_body_summary}" if pr_body_summary else ""),
                         )
                         if pr_success:
                             logger.info("Git workflow completed successfully: %s", pr_msg)

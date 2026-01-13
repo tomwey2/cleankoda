@@ -6,14 +6,104 @@ import logging
 import os
 import re
 import shutil
-from typing import Any, Optional
+from typing import Any, Optional, Sequence
 from urllib.parse import urlparse, urlunparse
-
 from git import Repo
 from git.exc import GitCommandError
 from langchain_core.messages import AIMessage, BaseMessage, HumanMessage
 
+from agent.state import AgentState
+
 logger = logging.getLogger(__name__)
+
+
+def _format_agent_summary_entry(role: str, summary: str) -> Optional[str]:
+    """
+    Build a normalized summary entry for a specific role.
+    """
+    if summary is None:
+        return None
+
+    clean_summary = summary.strip()
+    if not clean_summary:
+        return None
+
+    role_prefix = role.capitalize()
+    return f"[{role_prefix}] {clean_summary}"
+
+
+def append_agent_summary(state: AgentState, role: str, summary: str) -> None:
+    """
+    Append a normalized summary entry for the given role to the AgentState.
+    """
+    entry = _format_agent_summary_entry(role, summary)
+    if not entry:
+        return
+
+    existing = list(state.get("agent_summary") or [])
+    existing.append(entry)
+    state["agent_summary"] = existing
+
+
+def collect_finish_task_summaries(message: BaseMessage) -> list[str]:
+    """
+    Extract the summary strings from any finish_task tool calls within a message.
+    """
+    summaries: list[str] = []
+    if not isinstance(message, AIMessage) or not getattr(message, "tool_calls", None):
+        return summaries
+
+    for tool_call in message.tool_calls:
+        if tool_call.get("name") != "finish_task":
+            continue
+
+        args = tool_call.get("args") or {}
+        summary = args.get("summary")
+        if summary:
+            summaries.append(str(summary))
+
+    return summaries
+
+
+def build_agent_summary_text(
+    state: AgentState,
+    separator: str = "\n\n",
+) -> Optional[str]:
+    """
+    Join all recorded summary entries into a single string.
+    """
+    entries = _get_normalized_agent_summary_entries(state)
+    if not entries:
+        return None
+    return separator.join(entries)
+
+
+def _get_normalized_agent_summary_entries(state: AgentState) -> list[str]:
+    """
+    Return the list of cached summary entries, falling back to scanning messages.
+    """
+    cached_entries = [
+        entry for entry in (state.get("agent_summary") or []) if isinstance(entry, str)
+    ]
+    if cached_entries:
+        return cached_entries
+
+    derived_entries = _derive_summaries_from_messages(state.get("messages") or [])
+    return derived_entries
+
+
+def _derive_summaries_from_messages(messages: Sequence[BaseMessage]) -> list[str]:
+    """
+    Build summary entries by scanning the message history for finish_task calls.
+    """
+    derived: list[str] = []
+    for message in messages:
+        summaries = collect_finish_task_summaries(message)
+        for summary in summaries:
+            entry = _format_agent_summary_entry("agent", summary)
+            if entry:
+                derived.append(entry)
+    return derived
 
 
 def safe_truncate(value: Any, length: int = 100) -> str:

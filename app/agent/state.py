@@ -32,3 +32,4 @@ class AgentState(TypedDict):
     trello_card_name: Optional[str]
     trello_list_id: Optional[str]
     git_branch: Optional[str]
+    agent_summary: Optional[list[str]]

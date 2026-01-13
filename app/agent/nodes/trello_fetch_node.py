@@ -120,6 +120,7 @@ def create_trello_fetch_node(sys_config: dict):
                 "trello_card_name": card["name"],
                 "messages": [HumanMessage(content=content)],
                 "trello_list_id": card_context["trello_list_id"],
+                "agent_summary": [],
             }
         except Exception as e:  # pylint: disable=broad-exception-caught
             logger.error("Error fetching Trello cards: %s", e)

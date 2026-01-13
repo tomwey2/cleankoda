@@ -35,3 +35,5 @@ Your goal is to diagnose root causes and apply minimal, safe fixes to the code.
 1. **NO TEST EXECUTION:** Do not run the full test suite. Trust your analysis. The Tester will verify it.
 2. **STRICT SCOPE:** Do not clean up code style or refactor. Only fix the bug.
 3. **FILE SYSTEM ONLY:** Your output is the modified file on the disk.
+4. If a test fails, inspect also the test - it might be wrong or outdated.
+

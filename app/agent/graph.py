@@ -29,6 +29,28 @@ from agent.tools.local_tools import (
     run_java_command,
     write_to_file,
 )
+from agent.utils import append_agent_summary
+
+
+def _record_finish_task_summary(
+    state: AgentState,
+    role: str,
+    ai_message: AIMessage,
+) -> bool:
+    """
+    Store any finish_task summaries emitted by the given role.
+    """
+    if not isinstance(ai_message, AIMessage) or not ai_message.tool_calls:
+        return False
+
+    recorded = False
+    for tool_call in ai_message.tool_calls:
+        if tool_call.get("name") == "finish_task":
+            summary = (tool_call.get("args") or {}).get("summary", "")
+            append_agent_summary(state, role, summary)
+            recorded = True
+
+    return recorded
 
 
 def router_tester_old(state):
@@ -131,10 +153,8 @@ def route_after_tools_coder(state: AgentState) -> str:
     # 2. Prüfen auf finish_task
     if len(messages) >= 2:
         ai_msg = messages[-2]  # Die Nachricht VOR dem Tool-Output
-        if isinstance(ai_msg, AIMessage) and ai_msg.tool_calls:
-            # Wir prüfen den ersten Call (oder iterieren, falls nötig)
-            if ai_msg.tool_calls[0]["name"] == "finish_task":
-                return "finish"
+        if _record_finish_task_summary(state, current_agent, ai_msg):
+            return "finish"
 
     # 3. Kein Finish? Dann Loop zurück zum Agenten
     return current_agent
@@ -150,9 +170,8 @@ def route_after_tools_analyst(state: AgentState) -> str:
 
     if len(messages) >= 2:
         ai_msg = messages[-2]
-        if isinstance(ai_msg, AIMessage) and ai_msg.tool_calls:
-            if ai_msg.tool_calls[0]["name"] == "finish_task":
-                return "finish"  # Geht zu task_update
+        if _record_finish_task_summary(state, "analyst", ai_msg):
+            return "finish"  # Geht zu task_update
 
     return "analyst"
 
