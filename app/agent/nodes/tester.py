@@ -10,6 +10,7 @@ import os
 import re
 import subprocess
 from typing import Any, Dict, Literal, Optional
+import requests
 
 from langchain_core.messages import SystemMessage
 from pydantic import BaseModel, Field
@@ -256,8 +257,6 @@ def _execute_create_pull_request(title: str, body: str) -> tuple[bool, str]:
         return False, "ERROR: GITHUB_TOKEN missing"
 
     try:
-        import requests
-
         remote_url = subprocess.check_output(
             ["git", "remote", "get-url", "origin"],
             cwd=get_workspace(),
@@ -294,7 +293,8 @@ def _execute_create_pull_request(title: str, body: str) -> tuple[bool, str]:
                 existing_pr = pulls[0]
                 pr_number = existing_pr.get("number")
                 pr_url = existing_pr.get("html_url")
-                comment_url = f"https://api.github.com/repos/{owner}/{repo}/issues/{pr_number}/comments"
+                comment_url = f"https://api.github.com/repos/\
+                    {owner}/{repo}/issues/{pr_number}/comments"
                 comment_payload = {"body": f"**Automated Update:**\n\n{body}"}
                 comment_response = requests.post(
                     comment_url, json=comment_payload, headers=headers, timeout=10
@@ -318,8 +318,6 @@ def _execute_create_pull_request(title: str, body: str) -> tuple[bool, str]:
             return True, f"SUCCESS: Pull Request created: {pr_url}"
 
         return False, f"ERROR creating PR: {response.status_code} - {response.text}"
-    except Exception as e:
+    except Exception as e: # pylint: disable=broad-exception-caught
         logger.error("PR creation failed: %s", str(e))
         return False, f"ERROR: {str(e)}"
-
-

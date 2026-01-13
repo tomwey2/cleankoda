@@ -23,10 +23,6 @@ from agent.nodes.trello_update_node import create_trello_update_node
 from agent.state import AgentState
 from agent.tools.local_tools import (
     finish_task,
-    git_add,
-    git_commit,
-    git_push_origin,
-    git_status,
     list_files,
     log_thought,
     read_file,
