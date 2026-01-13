@@ -87,26 +87,32 @@ def create_tester_node(llm, tools, agent_stack):
 
         report_args = _get_report_result_args(response)
         summary_updated = False
+        updated_summary = None
         if tests_passed(report_args):
-            summary_updated = _process_successful_tests(state, report_args)
+            summary_updated, updated_summary = _process_successful_tests(state, report_args)
 
         result: dict[str, Any] = {"messages": [response]}
         if summary_updated:
-            result["agent_summary"] = list(state.get("agent_summary") or [])
+            result["agent_summary"] = updated_summary
         return result
 
     return tester_node
 
 
-def _process_successful_tests(state: AgentState, report_args: Dict[str, Any]) -> bool:
+def _process_successful_tests(
+    state: AgentState,
+    report_args: Dict[str, Any],
+) -> tuple[bool, list[str]]:
     """
     Run the Git workflow and PR creation steps after successful tests.
-    Returns True when the agent_summary gets updated (e.g., PR link recorded).
+    Returns (updated_flag, summary_entries) where updated_flag is True when the
+    agent_summary gains new information (e.g., PR link recorded).
     """
     summary = report_args.get("summary", "")
     detail = f": {summary}" if summary else ""
     logger.info("Tester node reported PASS result%s", detail)
 
+    summary_entries = list(state.get("agent_summary") or [])
     has_changes, _ = _execute_git_status()
     failure_detected = False
     if not has_changes:
@@ -120,12 +126,12 @@ def _process_successful_tests(state: AgentState, report_args: Dict[str, Any]) ->
         failure_detected = True
 
     if failure_detected:
-        return False
+        return False, summary_entries
 
     push_success, push_msg = _execute_git_push()
     if not push_success:
         logger.error("Git push failed: %s", push_msg)
-        return False
+        return False, summary_entries
 
     pr_title, pr_body = _build_pr_inputs(state, summary)
     pr_success, pr_msg, pr_url = _execute_create_pull_request(
@@ -134,19 +140,20 @@ def _process_successful_tests(state: AgentState, report_args: Dict[str, Any]) ->
     )
     if not pr_success:
         logger.error("PR creation failed: %s", pr_msg)
-        return False
+        return False, summary_entries
 
     logger.info("Git workflow completed successfully: %s", pr_msg)
     if not pr_url:
         logger.warning("PR creation succeeded but no URL was returned")
-        return False
+        return False, summary_entries
 
-    append_agent_summary(
-        state,
+    summary_entries = append_agent_summary(
+        summary_entries,
         "tester",
         f"Pull request available at {pr_url}",
     )
-    return True
+    state["agent_summary"] = summary_entries
+    return True, summary_entries
 
 
 def _build_pr_inputs(state: AgentState, summary: str) -> tuple[str, str]:
