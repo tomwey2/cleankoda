@@ -246,6 +246,66 @@ def _execute_git_push() -> tuple[bool, str]:
         return False, f"Push FAILED: {safe_stderr}"
 
 
+def _get_github_repo_info() -> tuple[Optional[str], Optional[str], Optional[str]]:
+    """Get GitHub owner, repo, and current branch. Returns (owner, repo, branch)."""
+    try:
+        remote_url = subprocess.check_output(
+            ["git", "remote", "get-url", "origin"],
+            cwd=get_workspace(),
+            text=True,
+        ).strip()
+
+        match = re.search(r"github\.com[:/](.+)/(.+?)(\.git)?$", remote_url)
+        if not match:
+            return None, None, None
+
+        owner, repo = match.group(1), match.group(2)
+
+        current_branch = subprocess.check_output(
+            ["git", "rev-parse", "--abbrev-ref", "HEAD"],
+            cwd=get_workspace(),
+            text=True,
+        ).strip()
+
+        return owner, repo, current_branch
+    except subprocess.CalledProcessError:
+        return None, None, None
+
+
+def _update_existing_pr(owner: str, repo: str, pr_data: dict, body: str, headers: dict) -> tuple[bool, str]:
+    """Add comment to existing PR. Returns (success, message)."""
+    pr_number = pr_data.get("number")
+    pr_url = pr_data.get("html_url")
+    comment_url = f"https://api.github.com/repos/{owner}/{repo}/issues/{pr_number}/comments"
+    comment_payload = {"body": f"**Automated Update:**\n\n{body}"}
+    
+    response = requests.post(comment_url, json=comment_payload, headers=headers, timeout=10)
+    
+    if response.status_code == 201:
+        logger.info("Added comment to existing PR: %s", pr_url)
+        return True, f"SUCCESS: Added comment to existing PR: {pr_url}"
+    return False, f"ERROR adding comment: {response.status_code}"
+
+
+def _create_new_pr(owner: str, repo: str, title: str, body: str, branch: str, headers: dict) -> tuple[bool, str]:
+    """Create new PR. Returns (success, message)."""
+    url = f"https://api.github.com/repos/{owner}/{repo}/pulls"
+    payload = {"title": title, "body": body, "head": branch, "base": "main"}
+    response = requests.post(url, json=payload, headers=headers, timeout=10)
+
+    if response.status_code == 422:
+        logger.info("Target 'main' not found, trying 'master'...")
+        payload["base"] = "master"
+        response = requests.post(url, json=payload, headers=headers, timeout=10)
+
+    if response.status_code == 201:
+        pr_url = response.json().get("html_url")
+        logger.info("Pull Request created: %s", pr_url)
+        return True, f"SUCCESS: Pull Request created: {pr_url}"
+
+    return False, f"ERROR creating PR: {response.status_code} - {response.text}"
+
+
 def _execute_create_pull_request(title: str, body: str) -> tuple[bool, str]:
     """
     Creates or updates a GitHub Pull Request.
@@ -257,23 +317,9 @@ def _execute_create_pull_request(title: str, body: str) -> tuple[bool, str]:
         return False, "ERROR: GITHUB_TOKEN missing"
 
     try:
-        remote_url = subprocess.check_output(
-            ["git", "remote", "get-url", "origin"],
-            cwd=get_workspace(),
-            text=True,
-        ).strip()
-
-        match = re.search(r"github\.com[:/](.+)/(.+?)(\.git)?$", remote_url)
-        if not match:
-            return False, f"ERROR: Could not parse Owner/Repo from URL: {remote_url}"
-
-        owner, repo = match.group(1), match.group(2)
-
-        current_branch = subprocess.check_output(
-            ["git", "rev-parse", "--abbrev-ref", "HEAD"],
-            cwd=get_workspace(),
-            text=True,
-        ).strip()
+        owner, repo, current_branch = _get_github_repo_info()
+        if not owner or not repo or not current_branch:
+            return False, "ERROR: Could not parse GitHub repository information"
 
         if current_branch in ["main", "master"]:
             return False, "ERROR: You are on main/master. Create a feature branch first!"
@@ -290,34 +336,9 @@ def _execute_create_pull_request(title: str, body: str) -> tuple[bool, str]:
         if response.status_code == 200:
             pulls = response.json()
             if pulls:
-                existing_pr = pulls[0]
-                pr_number = existing_pr.get("number")
-                pr_url = existing_pr.get("html_url")
-                comment_url = f"https://api.github.com/repos/\
-                    {owner}/{repo}/issues/{pr_number}/comments"
-                comment_payload = {"body": f"**Automated Update:**\n\n{body}"}
-                comment_response = requests.post(
-                    comment_url, json=comment_payload, headers=headers, timeout=10
-                )
-                if comment_response.status_code == 201:
-                    logger.info("Added comment to existing PR: %s", pr_url)
-                    return True, f"SUCCESS: Added comment to existing PR: {pr_url}"
-                return False, f"ERROR adding comment: {comment_response.status_code}"
+                return _update_existing_pr(owner, repo, pulls[0], body, headers)
 
-        payload = {"title": title, "body": body, "head": current_branch, "base": "main"}
-        response = requests.post(url, json=payload, headers=headers, timeout=10)
-
-        if response.status_code == 422:
-            logger.info("Target 'main' not found, trying 'master'...")
-            payload["base"] = "master"
-            response = requests.post(url, json=payload, headers=headers, timeout=10)
-
-        if response.status_code == 201:
-            pr_url = response.json().get("html_url")
-            logger.info("Pull Request created: %s", pr_url)
-            return True, f"SUCCESS: Pull Request created: {pr_url}"
-
-        return False, f"ERROR creating PR: {response.status_code} - {response.text}"
+        return _create_new_pr(owner, repo, title, body, current_branch, headers)
     except Exception as e: # pylint: disable=broad-exception-caught
         logger.error("PR creation failed: %s", str(e))
         return False, f"ERROR: {str(e)}"
