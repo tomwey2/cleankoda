@@ -61,10 +61,14 @@ def create_coder_node(llm, tools, agent_stack):
                         response,
                         attempt=attempt + 1,
                     )
-                    recorded = record_finish_task_summary(state, "coder", response)
+                    recorded, agent_summary = record_finish_task_summary(
+                        state,
+                        "coder",
+                        response,
+                    )
                     result = {"messages": [response]}
                     if recorded:
-                        result["agent_summary"] = list(state.get("agent_summary") or [])
+                        result["agent_summary"] = agent_summary
                     return result
 
                 logger.warning(
@@ -100,10 +104,10 @@ def create_coder_node(llm, tools, agent_stack):
                 }
             ],
         )
-        recorded = record_finish_task_summary(state, "coder", fallback_message)
+        recorded, agent_summary = record_finish_task_summary(state, "coder", fallback_message)
         result: dict[str, Any] = {"messages": [fallback_message]}
         if recorded:
-            result["agent_summary"] = list(state.get("agent_summary") or [])
+            result["agent_summary"] = agent_summary
         return result
 
     return coder_node

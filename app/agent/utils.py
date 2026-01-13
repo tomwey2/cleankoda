@@ -32,29 +32,33 @@ def _format_agent_summary_entry(role: str, summary: str) -> Optional[str]:
     return f"**[{role_prefix}]** {clean_summary}"
 
 
-def append_agent_summary(state: AgentState, role: str, summary: str) -> None:
+def append_agent_summary(
+    summary_entries: list[str],
+    role: str,
+    summary: str,
+) -> list[str]:
     """
-    Append a normalized summary entry for the given role to the AgentState.
+    Append a normalized summary entry for the given role to the provided list.
     """
     entry = _format_agent_summary_entry(role, summary)
     if not entry:
-        return
+        return summary_entries
 
-    existing = list(state.get("agent_summary") or [])
-    existing.append(entry)
-    state["agent_summary"] = existing
+    summary_entries.append(entry)
+    return summary_entries
 
 
 def record_finish_task_summary(
     state: AgentState,
     role: str,
     ai_message: BaseMessage,
-) -> bool:
+) -> tuple[bool, list[str]]:
     """
     Store any finish_task summaries emitted by the given role.
     """
+    summary_entries = list(state.get("agent_summary") or [])
     if not isinstance(ai_message, AIMessage) or not getattr(ai_message, "tool_calls", None):
-        return False
+        return False, summary_entries
 
     recorded = False
     for tool_call in ai_message.tool_calls:
@@ -64,13 +68,14 @@ def record_finish_task_summary(
         args = tool_call.get("args") or {}
         summary = args.get("summary", "")
         # Persist the normalized summary so downstream nodes can reuse the cached list
-        append_agent_summary(state, role, summary)
+        summary_entries = append_agent_summary(summary_entries, role, summary)
         # Also stash the role on the tool call to allow reconstruction when the cache is absent
         args["agent_role"] = role
         tool_call["args"] = args
         recorded = True
+    state["agent_summary"] = summary_entries
 
-    return recorded
+    return recorded, summary_entries
 
 
 def has_finish_task_call(message: BaseMessage) -> bool:

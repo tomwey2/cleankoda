@@ -61,10 +61,14 @@ def create_bugfixer_node(llm, tools, agent_stack):
                         response,
                         attempt=attempt + 1,
                     )
-                    recorded = record_finish_task_summary(state, "bugfixer", response)
+                    recorded, agent_summary = record_finish_task_summary(
+                        state,
+                        "bugfixer",
+                        response,
+                    )
                     result = {"messages": [response]}
                     if recorded:
-                        result["agent_summary"] = list(state.get("agent_summary") or [])
+                        result["agent_summary"] = agent_summary
                     return result
 
                 logger.warning("Attempt %d: Empty response. Escalating...", attempt + 1)
@@ -89,10 +93,14 @@ def create_bugfixer_node(llm, tools, agent_stack):
                 }
             ],
         )
-        recorded = record_finish_task_summary(state, "bugfixer", fallback_message)
+        recorded, agent_summary = record_finish_task_summary(
+            state,
+            "bugfixer",
+            fallback_message,
+        )
         result: dict[str, Any] = {"messages": [fallback_message]}
         if recorded:
-            result["agent_summary"] = list(state.get("agent_summary") or [])
+            result["agent_summary"] = agent_summary
         return result
 
     return bugfixer_node

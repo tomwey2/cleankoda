@@ -57,10 +57,10 @@ def create_analyst_node(llm: BaseChatModel, tools, agent_stack):
         if has_content or has_tool_calls:
             log_agent_response("analyst", response)
 
-        recorded = record_finish_task_summary(state, "analyst", response)
+        recorded, agent_summary = record_finish_task_summary(state, "analyst", response)
         result = {"messages": [response]}
         if recorded:
-            result["agent_summary"] = list(state.get("agent_summary") or [])
+            result["agent_summary"] = agent_summary
         return result
 
     return analyst_node
