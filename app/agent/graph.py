@@ -22,19 +22,14 @@ from agent.nodes.trello_fetch_node import create_trello_fetch_node
 from agent.nodes.trello_update_node import create_trello_update_node
 from agent.state import AgentState
 from agent.tools.local_tools import (
-    create_or_update_github_pr,
     finish_task,
-    git_add,
-    git_commit,
-    git_create_branch,
-    git_push_origin,
-    git_status,
     list_files,
     log_thought,
     read_file,
     run_java_command,
     write_to_file,
 )
+from agent.utils import has_finish_task_call
 
 
 def router_tester_old(state):
@@ -137,10 +132,8 @@ def route_after_tools_coder(state: AgentState) -> str:
     # 2. Prüfen auf finish_task
     if len(messages) >= 2:
         ai_msg = messages[-2]  # Die Nachricht VOR dem Tool-Output
-        if isinstance(ai_msg, AIMessage) and ai_msg.tool_calls:
-            # Wir prüfen den ersten Call (oder iterieren, falls nötig)
-            if ai_msg.tool_calls[0]["name"] == "finish_task":
-                return "finish"
+        if has_finish_task_call(ai_msg):
+            return "finish"
 
     # 3. Kein Finish? Dann Loop zurück zum Agenten
     return current_agent
@@ -156,9 +149,8 @@ def route_after_tools_analyst(state: AgentState) -> str:
 
     if len(messages) >= 2:
         ai_msg = messages[-2]
-        if isinstance(ai_msg, AIMessage) and ai_msg.tool_calls:
-            if ai_msg.tool_calls[0]["name"] == "finish_task":
-                return "finish"  # Geht zu task_update
+        if has_finish_task_call(ai_msg):
+            return "finish"  # Geht zu task_update
 
     return "analyst"
 
@@ -173,7 +165,6 @@ def create_workflow(
     # --- Tool Sets ---
     analyst_tools = [list_files, read_file, log_thought, finish_task]
     coder_tools = [
-        git_create_branch,
         list_files,
         read_file,
         write_to_file,
@@ -181,11 +172,6 @@ def create_workflow(
         finish_task,
     ]
     tester_tools = [
-        git_add,
-        git_status,
-        git_commit,
-        git_push_origin,
-        create_or_update_github_pr,
         log_thought,
         run_java_command,
     ]
@@ -194,7 +180,7 @@ def create_workflow(
     workflow = StateGraph(AgentState)
 
     workflow.add_node("task_fetch", create_trello_fetch_node(sys_config))
-    workflow.add_node("router", create_router_node(llm_small))
+    workflow.add_node("router", create_router_node(sys_config, llm_small))
 
     workflow.add_node("coder", create_coder_node(llm_large, coder_tools, agent_stack))
     workflow.add_node(
