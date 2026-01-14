@@ -7,13 +7,14 @@ and decide the skill level (junior or senior).
 """
 
 import logging
-from typing import Dict, Literal
+from typing import Any, Dict, Literal
 
 from langchain_core.exceptions import OutputParserException
 from langchain_core.messages import SystemMessage
 from pydantic import BaseModel, Field
 
 from agent.state import AgentState
+from agent.utils import append_agent_summary
 
 logger = logging.getLogger(__name__)
 
@@ -79,6 +80,13 @@ Description: "User age must be > 18 in the registration service."
 }"""
 
 
+def has_required_skill_level(task_skill_level, agent_skill_level):
+    """True if the agent has the required skill level for the task otherwise False"""
+    if task_skill_level == "senior" and agent_skill_level == "junior":
+        return False
+    return True
+
+
 class SkillLevelResult(BaseModel):
     """Represents the result of the agent skill level analysis."""
 
@@ -100,7 +108,7 @@ def create_agent_skill_level_node(llm):
     """
     structured_llm = llm.with_structured_output(SkillLevelResult)
 
-    async def agent_skill_level_node(state: AgentState) -> Dict[str, str]:
+    async def agent_skill_level_node(state: AgentState) -> Dict[str, Any]:
         # Router only needs the original task to make routing decision
         task = state["messages"][0].content
         messages = [SystemMessage(content=AGENT_SKILL_LEVEL_SYSTEM)] + [task]
@@ -112,12 +120,27 @@ def create_agent_skill_level_node(llm):
                 {response.classification},
                 {response.reasoning},
             )
-            return {"task_skill_level": response.classification}
+            summary_entries = list(state.get("agent_summary") or [])
+            if not has_required_skill_level(
+                response.classification, state["agent_skill_level"]
+            ):
+                comment = (
+                    f"Agent skill level is {state['agent_skill_level']}, "
+                    + f"but task requires {response.classification} because:\n\n"
+                    + f"{response.reasoning}"
+                )
+                summary_entries = append_agent_summary(
+                    summary_entries, "agent_skill_level", comment
+                )
+            return {
+                "task_skill_level": response.classification,
+                "agent_summary": summary_entries,
+            }
         except OutputParserException as e:
             logger.warning(
                 "coder_skill_check_node produced invalid JSON %s",
                 e,
             )
-            return {"task_skill_level": "junior"}  # oder wie dein Node heißt
+            return {"task_skill_level": "junior"}
 
     return agent_skill_level_node
