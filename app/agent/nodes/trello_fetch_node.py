@@ -10,8 +10,8 @@ from datetime import datetime, timezone
 
 from langchain_core.messages import HumanMessage
 
-from agent.state import AgentState
-from agent.trello_client import (
+from agent.core.state import AgentState
+from agent.integrations.trello_client import (
     get_all_trello_cards,
     get_all_trello_lists,
     get_trello_card_comments,

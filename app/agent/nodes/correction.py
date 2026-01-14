@@ -10,7 +10,7 @@ import logging
 
 from langchain_core.messages import HumanMessage
 
-from agent.state import AgentState
+from agent.core.state import AgentState
 
 logger = logging.getLogger(__name__)
 

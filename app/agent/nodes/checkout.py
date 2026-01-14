@@ -5,7 +5,7 @@ import re
 import subprocess
 from typing import Any, Dict
 
-from agent.state import AgentState
+from agent.core.state import AgentState
 from agent.utils import checkout_branch, get_workspace
 from core.repositories import get_branch_for_issue, upsert_issue
 from flask import current_app
@@ -49,8 +49,6 @@ async def checkout_card_branch(
         repo.git.fetch()
         repo.git.reset("--hard")
         return
-
-    logger.info("Sysconfig: %s", sys_config)
 
     git_branch = await get_existing_branch_for_card(card_id)
 

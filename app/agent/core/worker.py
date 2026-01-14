@@ -1,0 +1,89 @@
+"""
+Main worker module for the AI agent.
+
+This module contains the core asynchronous function that executes a single agent cycle,
+from fetching tasks to running the graph.
+"""
+
+import asyncio
+import logging
+import os
+import sys
+from contextlib import AsyncExitStack
+
+from cryptography.fernet import Fernet
+from flask import Flask
+from langchain.chat_models import BaseChatModel
+from langgraph.graph import StateGraph
+
+from agent.core.graph import create_workflow
+from agent.core.runtime import AgentRuntimeContext, prepare_runtime
+from agent.services.logging import log_agent_state
+from agent.services.llm_factory import get_llm
+from agent.integrations.mcp.adapter import McpServerClient
+from agent.utils import get_workspace, save_graph_as_mermaid, save_graph_as_png
+
+logger = logging.getLogger(__name__)
+
+
+async def run_agent_cycle_async(app: Flask, encryption_key: Fernet) -> None:
+    """Runs one complete asynchronous cycle of the agent."""
+    with app.app_context():
+        runtime = prepare_runtime(encryption_key)
+        if not runtime:
+            return
+
+        await _execute_agent_cycle(runtime)
+
+
+async def _execute_agent_cycle(runtime: AgentRuntimeContext) -> None:
+    """Internal helper that orchestrates one graph execution."""
+    async with AsyncExitStack() as stack:
+        git_mcp = McpServerClient(
+            command=sys.executable,
+            args=["-m", "mcp_server_git", "--repository", get_workspace()],
+            env=os.environ.copy(),
+        )
+        task_mcp = McpServerClient(
+            runtime.system_def["command"][0],
+            runtime.system_def["command"][1:],
+            env=runtime.task_env,
+        )
+
+        await stack.enter_async_context(git_mcp)
+        await stack.enter_async_context(task_mcp)
+
+        llm_large: BaseChatModel = get_llm(runtime.sys_config, True)
+        llm_small: BaseChatModel = get_llm(runtime.sys_config, False)
+        workflow: StateGraph = create_workflow(
+            llm_large,
+            llm_small,
+            runtime.sys_config,
+            runtime.agent_stack,
+        )
+
+        app_graph = workflow.compile()
+        save_graph_as_png(app_graph)
+        save_graph_as_mermaid(app_graph)
+        logger.info("Executing graph...")
+        final_state = await app_graph.ainvoke(
+            {
+                "messages": [],
+                "next_step": "",
+                "trello_card_id": None,
+                "trello_list_id": None,
+                "agent_stack": runtime.agent_stack,
+                "agent_skill_level": runtime.agent_config.agent_skill_level,
+                "task_skill_level": None,
+            },
+            {"recursion_limit": 200},
+        )
+        log_agent_state(final_state)
+
+
+def run_agent_cycle(app: Flask, encryption_key: Fernet) -> None:
+    """Synchronous wrapper for the main async agent cycle."""
+    try:
+        asyncio.run(run_agent_cycle_async(app, encryption_key))
+    except Exception as e:  # pylint: disable=broad-exception-caught
+        logger.error("Critical error in agent cycle: %s", e, exc_info=True)

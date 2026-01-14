@@ -12,8 +12,8 @@ from langchain_core.exceptions import OutputParserException
 from langchain_core.messages import HumanMessage, SystemMessage
 from pydantic import BaseModel, Field
 
-from agent.state import AgentState
-from agent.utils import filter_messages_for_llm
+from agent.services.message_processing import filter_messages_for_llm
+from agent.core.state import AgentState
 
 logger = logging.getLogger(__name__)
 

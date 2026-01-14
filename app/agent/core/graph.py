@@ -23,7 +23,8 @@ from agent.nodes.router import create_router_node
 from agent.nodes.tester import create_tester_node
 from agent.nodes.trello_fetch_node import create_trello_fetch_node
 from agent.nodes.trello_update_node import create_trello_update_node
-from agent.state import AgentState
+from agent.core.state import AgentState
+from agent.services.summaries import has_finish_task_call
 from agent.tools.local_tools import (
     finish_task,
     list_files,
@@ -32,7 +33,6 @@ from agent.tools.local_tools import (
     run_java_command,
     write_to_file,
 )
-from agent.utils import has_finish_task_call
 
 
 def route_after_tools_tester(state: AgentState):
