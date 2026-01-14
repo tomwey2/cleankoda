@@ -12,10 +12,13 @@ from langchain_core.messages import AIMessage
 from langgraph.graph import END, StateGraph
 from langgraph.prebuilt import ToolNode
 
+from agent.nodes.agent_skill_level import create_agent_skill_level_node
 from agent.nodes.analyst import create_analyst_node
 from agent.nodes.bugfixer import create_bugfixer_node
+from agent.nodes.checkout import create_checkout_node
 from agent.nodes.coder import create_coder_node
 from agent.nodes.correction import create_correction_node
+from agent.nodes.pull_request import create_pull_request_node
 from agent.nodes.router import create_router_node
 from agent.nodes.tester import create_tester_node
 from agent.nodes.trello_fetch_node import create_trello_fetch_node
@@ -30,44 +33,6 @@ from agent.tools.local_tools import (
     write_to_file,
 )
 from agent.utils import has_finish_task_call
-
-
-def router_tester_old(state):
-    """
-    Entscheidet nach dem Tester-LLM:
-    - Wurde TesterResult aufgerufen? -> Auswerten (pass/fail).
-    - Anderes Tool (git, mvn)? -> Ab zum ToolNode.
-    """
-    messages = state["messages"]
-    last_message = messages[-1]
-
-    if hasattr(last_message, "tool_calls") and last_message.tool_calls:
-        tool_call = last_message.tool_calls[0]
-
-        if tool_call["name"] == "TesterResult":
-            result_args = tool_call["args"]
-            decision = result_args.get("result")
-
-            if decision == "pass":
-                return "pass"
-            # Gibt z.B. "coder failed" oder "bugfixer failed" zurück
-            return state.get("next_step") + " failed"
-
-        return "tools"
-
-    return "tools"
-
-
-def router_tester(state):
-    """Routes traffic from the tester agent. Always directs to the tester's tool node."""
-    last_msg = state["messages"][-1]
-
-    # Wenn der Tester Tools nutzen will (egal ob git, java oder report_result)
-    # -> Ab zum ToolNode!
-    if hasattr(last_msg, "tool_calls") and last_msg.tool_calls:
-        return "tools_tester"
-
-    return "tools_tester"  # Oder Error handling
 
 
 def route_after_tools_tester(state: AgentState):
@@ -180,7 +145,9 @@ def create_workflow(
     workflow = StateGraph(AgentState)
 
     workflow.add_node("task_fetch", create_trello_fetch_node(sys_config))
+    workflow.add_node("checkout", create_checkout_node())
     workflow.add_node("router", create_router_node(sys_config, llm_small))
+    workflow.add_node("agent_skill_level", create_agent_skill_level_node(llm_small))
 
     workflow.add_node("coder", create_coder_node(llm_large, coder_tools, agent_stack))
     workflow.add_node(
@@ -200,6 +167,7 @@ def create_workflow(
     workflow.add_node("tools_tester", ToolNode(tester_tools))
 
     workflow.add_node("correction", create_correction_node())
+    workflow.add_node("pull_request", create_pull_request_node())
     workflow.add_node("task_update", create_trello_update_node(sys_config))
 
     workflow.set_entry_point("task_fetch")
@@ -209,15 +177,25 @@ def create_workflow(
     # 1. Start -> Router
     workflow.add_conditional_edges(
         "task_fetch",
-        lambda state: "router" if state.get("trello_card_id") else END,
-        {END: END, "router": "router"},
+        lambda state: "checkout" if state.get("trello_card_id") else END,
+        {END: END, "checkout": "checkout"},
     )
+
+    workflow.add_edge("checkout", "router")
 
     # 2. Router -> Spezialisten: Coder | Bugfixer | Analyst
     workflow.add_conditional_edges(
         "router",
         lambda state: state.get("next_step", "coder"),
-        {"coder": "coder", "bugfixer": "bugfixer", "analyst": "analyst"},
+        {"coder": "agent_skill_level", "bugfixer": "bugfixer", "analyst": "analyst"},
+    )
+
+    # 2a. Skill level -> Coder | Task_update
+    workflow.add_conditional_edges(
+        "agent_skill_level",
+        lambda state: state["task_skill_level"] == "junior"
+        or state["agent_skill_level"] == "senior",
+        {True: "coder", False: "task_update"},
     )
 
     # 3. Coder -> Tools | Correction
@@ -274,11 +252,7 @@ def create_workflow(
 
     # 7. Tester Logik
     # 7.1. Tester -> Tools
-    workflow.add_conditional_edges(
-        "tester",
-        router_tester,  # Schickt alles zu tools_tester
-        {"tools_tester": "tools_tester"},
-    )
+    workflow.add_edge("tester", "tools_tester")
 
     # 7.2. Tools -> Entscheidung
     workflow.add_conditional_edges(
@@ -286,7 +260,7 @@ def create_workflow(
         route_after_tools_tester,
         {
             "tester": "tester",  # Loop (für git, mvn)
-            "pass": "task_update",  # Erfolg
+            "pass": "pull_request",  # Erfolg
             "coder failed": "coder",  # Tests failed back to coder or bugfixer
             "bugfixer failed": "bugfixer",
         },
@@ -299,6 +273,7 @@ def create_workflow(
         {"coder": "coder", "bugfixer": "bugfixer", "analyst": "analyst"},
     )
 
+    workflow.add_edge("pull_request", "task_update")
     workflow.add_edge("task_update", END)
 
     return workflow
