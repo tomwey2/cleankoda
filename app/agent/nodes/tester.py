@@ -65,19 +65,21 @@ def create_tester_node(llm, tools, agent_stack):
         if has_content or has_tool_calls:
             log_agent_response("tester", response)
 
-        summary_entries = list(state.get("agent_summary") or [])                
+        summary_entries = list(state.get("agent_summary") or [])
         report_args = _get_report_result_args(response)
 
         if tests_passed(report_args):
             summary = report_args.get("summary", "")
             summary_entries = append_agent_summary(
-                    summary_entries, "tester", summary
-                )
+                summary_entries,
+                "tester",
+                summary,
+            )
 
         return {
-                "messages": [response],
-                "agent_summary": summary_entries,
-            }
+            "messages": [response],
+            "agent_summary": summary_entries,
+        }
 
     return tester_node
 

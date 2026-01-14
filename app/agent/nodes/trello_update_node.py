@@ -53,7 +53,7 @@ def create_trello_update_node(sys_config: dict):
         # add comment to card
         try:
             final_comments = _build_agent_comments(state)
-            for comment in final_comments:                
+            for comment in final_comments:
                 await add_comment_to_trello_card(card_id, comment, sys_config)
                 sleep(0.1)
         except Exception as e:  # pylint: disable=broad-exception-caught
@@ -100,7 +100,6 @@ def _build_agent_comments(state: AgentState) -> list[str]:
     """
     Builds a list of agent comments from the agent summary entries.
     """
-    
     entries = get_agent_summary_entries(state)
     if not entries:
         return [AGENT_DEFAULT_COMMENT]

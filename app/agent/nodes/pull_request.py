@@ -35,10 +35,10 @@ def create_pull_request_node():
 
     async def pull_request_node(state: AgentState) -> Dict[str, Any]:  # pylint: disable=unused-argument
         success, summary_entries = _create_or_update_pr(state)
-        if success:                        
+        if success:
             logger.info("Pull request created successfully")
         else:
-            logger.error("Pull request creation failed")        
+            logger.error("Pull request creation failed")
 
         return {"agent_summary": summary_entries}
 
@@ -46,7 +46,6 @@ def create_pull_request_node():
 
 
 def _create_or_update_pr(state: AgentState):
-    
     summary_entries = list(state.get("agent_summary") or [])
     has_changes, _ = _execute_git_status()
     failure_detected = False

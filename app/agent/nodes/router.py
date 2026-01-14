@@ -7,19 +7,13 @@ specialist agent (e.g., Coder, Bugfixer, Analyst) should handle it next.
 """
 
 import logging
-import re
-import subprocess
 from typing import Dict, Literal
-
-from flask import current_app
-from git import Repo
 from langchain_core.exceptions import OutputParserException
 from langchain_core.messages import HumanMessage, SystemMessage
 from pydantic import BaseModel, Field
 
 from agent.state import AgentState
-from agent.utils import filter_messages_for_llm, checkout_branch, get_workspace
-from core.repositories import get_branch_for_issue, upsert_issue
+from agent.utils import filter_messages_for_llm
 
 logger = logging.getLogger(__name__)
 
@@ -42,7 +36,7 @@ class RouterDecision(BaseModel):
     )
 
 
-def create_router_node(sys_config: dict, llm):
+def create_router_node(llm):
     """
     Factory function that creates the router node for the agent graph.
 

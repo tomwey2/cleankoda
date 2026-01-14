@@ -3,13 +3,13 @@
 import logging
 import re
 import subprocess
+from typing import Any, Dict
 
 from agent.state import AgentState
-from agent.utils import get_workspace, checkout_branch
+from agent.utils import checkout_branch, get_workspace
 from core.repositories import get_branch_for_issue, upsert_issue
 from flask import current_app
 from git import Repo
-from typing import Any, Dict
 
 
 logger = logging.getLogger(__name__)
@@ -26,7 +26,7 @@ def create_checkout_node(sys_config: dict):
     async def checkout_node(state: AgentState) -> Dict[str, Any]:  # pylint: disable=unused-argument
         trello_card_id = state["trello_card_id"]
         trello_card_name = state.get("trello_card_name", "")
-        
+
         if trello_card_id:
             await checkout_card_branch(trello_card_id, trello_card_name, "coder", sys_config)
         else:
