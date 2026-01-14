@@ -30,7 +30,22 @@ from agent.tools.local_tools import (
     run_java_command,
     write_to_file,
 )
-from agent.utils import has_finish_task_call
+from agent.utils import (
+    append_agent_summary,
+    has_finish_task_call,
+)
+
+
+def route_after_skill_level_check(state: AgentState):
+    if state["task_skill_level"] == "senior" and state["agent_skill_level"] == "junior":
+        summary_entries = list(state.get("agent_summary") or [])
+        summary_entries = append_agent_summary(
+            summary_entries, "", "Agent skill level is too low to handle this task."
+        )
+        state["agent_summary"] = summary_entries
+        return False
+
+    return True
 
 
 def route_after_tools_tester(state: AgentState):
@@ -187,8 +202,7 @@ def create_workflow(
     # 2a. Skill level -> Coder | Task_update
     workflow.add_conditional_edges(
         "agent_skill_level",
-        lambda state: state["task_skill_level"] == "junior"
-        or state["agent_skill_level"] == "senior",
+        route_after_skill_level_check,
         {True: "coder", False: "task_update"},
     )
 
