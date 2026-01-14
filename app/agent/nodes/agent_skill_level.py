@@ -1,9 +1,9 @@
 """
 Defines the agent_skill_level node for the agent graph.
 
-This node is responsible for the analysis which skill level must have the agent to complete the task.
-It uses a specialized LLM call to classify the user's request and decide the skill level
-(junior or senior).
+This node is responsible for the analysis which skill level must have the agent
+to complete the task. It uses a specialized LLM call to classify the user's request
+and decide the skill level (junior or senior).
 """
 
 import logging
@@ -80,6 +80,8 @@ Description: "User age must be > 18 in the registration service."
 
 
 class SkillLevelResult(BaseModel):
+    """Represents the result of the agent skill level analysis."""
+
     reasoning: str = Field(description="Why this classification was chosen")
     classification: Literal["junior", "senior"] = Field(
         description="Must be 'junior' or 'senior'"
