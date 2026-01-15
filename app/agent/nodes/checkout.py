@@ -5,13 +5,13 @@ import re
 import subprocess
 from typing import Any, Dict
 
-from agent.core.state import AgentState
-from agent.services.git_workspace import checkout_branch
-from agent.utils import get_workspace
 from core.trello_repository import get_branch_for_issue, upsert_issue
 from flask import current_app
 from git import Repo
 
+from agent.core.state import AgentState
+from agent.services.git_workspace import checkout_branch
+from agent.utils import get_workspace
 
 logger = logging.getLogger(__name__)
 
@@ -26,12 +26,14 @@ def create_checkout_node(sys_config: dict):
 
     async def checkout_node(state: AgentState) -> Dict[str, Any]:  # pylint: disable=unused-argument
         trello_card_id = state["trello_card_id"]
-        trello_card_name = state.get("trello_card_name", "")
+        trello_card_name = state["trello_card_name"]
 
-        if trello_card_id:
-            await checkout_card_branch(trello_card_id, trello_card_name, "coder", sys_config)
+        if trello_card_id and trello_card_name:
+            await checkout_card_branch(
+                trello_card_id, trello_card_name, "coder", sys_config
+            )
         else:
-            raise ValueError("Missing trello_card_id in AgentState")
+            raise ValueError("Missing trello_card_id or trello_card_name in AgentState")
 
         return {}
 
@@ -91,9 +93,10 @@ async def get_existing_branch_for_card(card_id: str):
         logger.warning("Failed to retrieve branch for card %s: %s", card_id, e)
         return None
 
+
 def _slugify(value: str | None) -> str:
     """
-    Convert a string to a branch-friendly slug.    
+    Convert a string to a branch-friendly slug.
     """
     if not value:
         return ""
