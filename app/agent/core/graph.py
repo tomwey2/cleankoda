@@ -31,8 +31,8 @@ from agent.tools.file_tools import (
     write_to_file,
 )
 from agent.tools.finish_task import finish_task
-from agent.tools.log_thought import log_thought
-from agent.tools.run_java_command import run_java_command
+from agent.tools.run_command import run_command
+from agent.tools.thinking import thinking
 
 
 def route_after_tools_tester(state: AgentState):
@@ -128,17 +128,17 @@ def create_workflow(
 ) -> StateGraph:
     """Creates and configures the main LangGraph workflow."""
     # --- Tool Sets ---
-    analyst_tools = [list_files, read_file, log_thought, finish_task]
+    analyst_tools = [list_files, read_file, thinking, finish_task]
     coder_tools = [
         list_files,
         read_file,
         write_to_file,
-        log_thought,
+        thinking,
         finish_task,
     ]
     tester_tools = [
-        log_thought,
-        run_java_command,
+        thinking,
+        run_command,
     ]
 
     # --- Graph Nodes ---

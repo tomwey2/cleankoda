@@ -1,4 +1,4 @@
-"""Tool for executing commands inside the Java development container."""
+"""Tool for executing commands inside the workbench development container."""
 
 import logging
 
@@ -33,8 +33,8 @@ def _truncate_tool_output(output: str, limit: int = MAX_TOOL_OUTPUT_CHARS) -> st
 
 
 @tool
-def run_java_command(command: str) -> str:
-    """Execute a shell command inside the Java container."""
+def run_command(command: str) -> str:
+    """Execute a shell command inside the workbench container."""
     if not DOCKER_CLIENT:
         return "Error: Docker client not initialized. Is the socket mounted?"
 
@@ -47,7 +47,7 @@ def run_java_command(command: str) -> str:
                 f"(Status: {container.status})."
             )
 
-        logger.info("Executing in Java-Box: %s", command)
+        logger.info("Executing in workbench: %s", command)
 
         exec_result = container.exec_run(command, workdir=get_workspace())
         output = exec_result.output.decode("utf-8")
