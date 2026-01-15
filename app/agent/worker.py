@@ -6,137 +6,80 @@ from fetching tasks to running the graph.
 """
 
 import asyncio
-import json
 import logging
 import os
 import sys
 from contextlib import AsyncExitStack
-from typing import Any
 
-from core.models import AgentConfig
 from cryptography.fernet import Fernet
 from flask import Flask
 from langchain.chat_models import BaseChatModel
 from langgraph.graph import StateGraph
 
 from agent.graph import create_workflow
-from agent.llm_factory import get_llm
-from agent.mcp_adapter import McpServerClient
-from agent.system_mappings import SYSTEM_DEFINITIONS
-from agent.utils import (
-    ensure_repository_exists,
-    get_workbench,
-    get_workspace,
-    log_agent_state,
-    save_graph_as_mermaid,
-    save_graph_as_png,
-)
+from agent.integrations.mcp.adapter import McpServerClient
+from agent.runtime import AgentRuntimeContext, prepare_runtime
+from agent.services.graph_assets import save_graph_as_mermaid, save_graph_as_png
+from agent.services.llm_factory import get_llm
+from agent.services.logging import log_agent_state
+from agent.utils import get_workspace
 
 logger = logging.getLogger(__name__)
-
-
-def _get_agent_config():
-    """Loads the agent configuration."""
-    config = AgentConfig.query.first()
-    if not config or not config.is_active:
-        logger.info("Agent is not active or not configured. Skipping cycle.")
-        return None
-    return config
-
-
-def _get_sys_config(config, encryption_key: Fernet) -> dict[str, Any] | None:
-    """Loads and decrypts the agent configuration."""
-
-    logger.info("Starting agent cycle for system: %s", config.task_system_type)
-    if config.task_system_type not in SYSTEM_DEFINITIONS:
-        logger.error("Task system '%s' not defined.", config.task_system_type)
-        return None
-
-    sys_config = ""
-    try:
-        sys_config = json.loads(
-            encryption_key.decrypt(config.system_config_json.encode()).decode() or "{}"
-        )
-    except (TypeError, AttributeError, json.JSONDecodeError):
-        logger.error("Could not parse or decrypt existing configuration.")
-        return None
-
-    return sys_config
 
 
 async def run_agent_cycle_async(app: Flask, encryption_key: Fernet) -> None:
     """Runs one complete asynchronous cycle of the agent."""
     with app.app_context():
-        config = _get_agent_config()
-        if not config:
+        runtime = prepare_runtime(encryption_key)
+        if not runtime:
             return
 
-        sys_config = _get_sys_config(config, encryption_key)
-        if not sys_config:
-            return
+        await _execute_agent_cycle(runtime)
 
-        # Add the remote repo url to the sys_config
-        sys_config["github_repo_url"] = config.github_repo_url
 
-        task_env = os.environ.copy()
-        task_env.update(sys_config.get("env", {}))
-
-        logger.info("Workspace: %s", get_workspace())
-
-        ensure_repository_exists(
-            config.github_repo_url or "https://github.com/tom-test-user/test-repo.git",
-            get_workspace(),
+async def _execute_agent_cycle(runtime: AgentRuntimeContext) -> None:
+    """Internal helper that orchestrates one graph execution."""
+    async with AsyncExitStack() as stack:
+        git_mcp = McpServerClient(
+            command=sys.executable,
+            args=["-m", "mcp_server_git", "--repository", get_workspace()],
+            env=os.environ.copy(),
+        )
+        task_mcp = McpServerClient(
+            runtime.system_def["command"][0],
+            runtime.system_def["command"][1:],
+            env=runtime.task_env,
         )
 
-        system_def = SYSTEM_DEFINITIONS[config.task_system_type]
+        await stack.enter_async_context(git_mcp)
+        await stack.enter_async_context(task_mcp)
 
-        async with AsyncExitStack() as stack:
-            # --- Start ALL MCP Servers ---
-            git_mcp = McpServerClient(
-                command=sys.executable,
-                args=["-m", "mcp_server_git", "--repository", get_workspace()],
-                env=os.environ.copy(),
-            )
-            task_mcp = McpServerClient(
-                system_def["command"][0], system_def["command"][1:], env=task_env
-            )
+        llm_large: BaseChatModel = get_llm(runtime.sys_config, True)
+        llm_small: BaseChatModel = get_llm(runtime.sys_config, False)
+        workflow: StateGraph = create_workflow(
+            llm_large,
+            llm_small,
+            runtime.sys_config,
+            runtime.agent_stack,
+        )
 
-            await stack.enter_async_context(git_mcp)
-            await stack.enter_async_context(task_mcp)
-
-            # --- Agent Stack ---
-            agent_stack = (
-                "backend" if get_workbench() == "workbench-backend" else "frontend"
-            )
-
-            # --- LLM and Graph Creation ---
-            llm_large: BaseChatModel = get_llm(sys_config, True)
-            llm_small: BaseChatModel = get_llm(sys_config, False)
-            workflow: StateGraph = create_workflow(
-                llm_large,
-                llm_small,
-                sys_config,
-                agent_stack,
-            )
-
-            # --- Graph Execution ---
-            app_graph = workflow.compile()
-            save_graph_as_png(app_graph)
-            save_graph_as_mermaid(app_graph)
-            logger.info("Executing graph...")
-            final_state = await app_graph.ainvoke(
-                {
-                    "messages": [],
-                    "next_step": "",
-                    "trello_card_id": None,
-                    "trello_list_id": None,
-                    "agent_stack": agent_stack,
-                    "agent_skill_level": config.agent_skill_level,
-                    "task_skill_level": None,
-                },
-                {"recursion_limit": 200},
-            )
-            log_agent_state(final_state)
+        app_graph = workflow.compile()
+        save_graph_as_png(app_graph)
+        save_graph_as_mermaid(app_graph)
+        logger.info("Executing graph...")
+        final_state = await app_graph.ainvoke(
+            {
+                "messages": [],
+                "next_step": "",
+                "trello_card_id": None,
+                "trello_list_id": None,
+                "agent_stack": runtime.agent_stack,
+                "agent_skill_level": runtime.agent_config.agent_skill_level,
+                "task_skill_level": None,
+            },
+            {"recursion_limit": 200},
+        )
+        log_agent_state(final_state)
 
 
 def run_agent_cycle(app: Flask, encryption_key: Fernet) -> None:

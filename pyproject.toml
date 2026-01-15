@@ -24,6 +24,7 @@ dependencies = [
     "mcp-server-git>=2025.9.25",
     "python-dotenv>=1.2.1",
     "requests>=2.32.5",
+    "pytest>=8.3.0",
 ]
 
 [tool.setuptools.packages.find]

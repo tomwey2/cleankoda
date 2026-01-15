@@ -9,14 +9,15 @@ from typing import Any, Dict, Optional
 
 import requests
 
-from agent.state import AgentState
-from agent.utils import (
+from agent.services.summaries import (
     append_agent_summary,
     build_agent_summary_markdown,
-    get_workspace,
 )
+from agent.state import AgentState
+from agent.utils import get_workspace
 
 logger = logging.getLogger(__name__)
+
 
 @dataclass(frozen=True)
 class GitHubContext:
@@ -33,7 +34,7 @@ class GitHubContext:
 def create_pull_request_node():
     """Create a pull request node"""
 
-    async def pull_request_node(state: AgentState) -> Dict[str, Any]:  # pylint: disable=unused-argument
+    async def pull_request_node(state: AgentState) -> Dict[str, Any]:
         success, summary_entries = _create_or_update_pr(state)
         if success:
             logger.info("Pull request created successfully")
@@ -109,6 +110,7 @@ def _build_pr_inputs(state: AgentState) -> tuple[str, str]:
 
     return pr_title, pr_body
 
+
 def _execute_git_status() -> tuple[bool, str]:
     """
     Executes git status and checks if there are changes.
@@ -123,7 +125,9 @@ def _execute_git_status() -> tuple[bool, str]:
             text=True,
         )
         has_changes = bool(result.stdout.strip())
-        logger.info("Git status check: %s changes found", "Some" if has_changes else "No")
+        logger.info(
+            "Git status check: %s changes found", "Some" if has_changes else "No"
+        )
         return has_changes, result.stdout
     except subprocess.CalledProcessError as e:
         logger.error("Git status failed: %s", e.stderr)
@@ -328,7 +332,9 @@ def _create_new_pr(
     return False, f"ERROR creating PR: {response.status_code} - {response.text}", None
 
 
-def _execute_create_pull_request(title: str, body: str) -> tuple[bool, str, Optional[str]]:
+def _execute_create_pull_request(
+    title: str, body: str
+) -> tuple[bool, str, Optional[str]]:
     """
     Creates or updates a GitHub Pull Request.
     Returns (success, message, pr_url).
@@ -344,7 +350,11 @@ def _execute_create_pull_request(title: str, body: str) -> tuple[bool, str, Opti
             return False, "ERROR: Missing GitHub context", None
 
         if context.branch in ["main", "master"]:
-            return False, "ERROR: You are on main/master. Create a feature branch first!", None
+            return (
+                False,
+                "ERROR: You are on main/master. Create a feature branch first!",
+                None,
+            )
 
         url = f"https://api.github.com/repos/{context.owner}/{context.repo}/pulls"
         params = {"head": f"{context.owner}:{context.branch}", "state": "open"}

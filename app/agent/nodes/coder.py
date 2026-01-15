@@ -10,13 +10,11 @@ from typing import Any
 
 from langchain_core.messages import AIMessage, BaseMessage, HumanMessage, SystemMessage
 
+from agent.services.logging import log_agent_response
+from agent.services.message_processing import filter_messages_for_llm
+from agent.services.prompts import load_system_prompt
+from agent.services.summaries import record_finish_task_summary
 from agent.state import AgentState
-from agent.utils import (
-    filter_messages_for_llm,
-    load_system_prompt,
-    log_agent_response,
-    record_finish_task_summary,
-)
 
 logger = logging.getLogger(__name__)
 
@@ -104,7 +102,9 @@ def create_coder_node(llm, tools, agent_stack):
                 }
             ],
         )
-        recorded, agent_summary = record_finish_task_summary(state, "coder", fallback_message)
+        recorded, agent_summary = record_finish_task_summary(
+            state, "coder", fallback_message
+        )
         result: dict[str, Any] = {"messages": [fallback_message]}
         if recorded:
             result["agent_summary"] = agent_summary

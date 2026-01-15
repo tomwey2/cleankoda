@@ -23,16 +23,16 @@ from agent.nodes.router import create_router_node
 from agent.nodes.tester import create_tester_node
 from agent.nodes.trello_fetch_node import create_trello_fetch_node
 from agent.nodes.trello_update_node import create_trello_update_node
+from agent.services.summaries import has_finish_task_call
 from agent.state import AgentState
-from agent.tools.local_tools import (
-    finish_task,
+from agent.tools.file_tools import (
     list_files,
-    log_thought,
     read_file,
-    run_java_command,
     write_to_file,
 )
-from agent.utils import has_finish_task_call
+from agent.tools.finish_task import finish_task
+from agent.tools.run_command import run_command
+from agent.tools.thinking import thinking
 
 
 def route_after_tools_tester(state: AgentState):
@@ -63,7 +63,7 @@ def route_after_tools_tester(state: AgentState):
                 previous_agent = state.get("next_step", "coder")
                 return f"{previous_agent} failed"
 
-    # Wenn kein 'report_test_result' dabei war (z.B. nur 'run_java_command' oder 'git_add')
+    # Wenn kein 'report_test_result' dabei war (z.B. nur 'run_command' oder 'git_add')
     # dann geht es zurück zum Tester (Loop), damit er weitermachen kann.
     return "tester"
 
@@ -128,17 +128,17 @@ def create_workflow(
 ) -> StateGraph:
     """Creates and configures the main LangGraph workflow."""
     # --- Tool Sets ---
-    analyst_tools = [list_files, read_file, log_thought, finish_task]
+    analyst_tools = [list_files, read_file, thinking, finish_task]
     coder_tools = [
         list_files,
         read_file,
         write_to_file,
-        log_thought,
+        thinking,
         finish_task,
     ]
     tester_tools = [
-        log_thought,
-        run_java_command,
+        thinking,
+        run_command,
     ]
 
     # --- Graph Nodes ---
