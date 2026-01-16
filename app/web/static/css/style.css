@@ -81,3 +81,7 @@ body {
     color: var(--dark-text-highlight);
     background-color: var(--dark-card);
 }
+
+.hero-section {
+    min-height: 90dvh; /* Passt sich an, wenn die Adressleiste ein/ausblendet */
+}
