@@ -39,9 +39,16 @@
                     <h5>Plan</h5>
                 </div>
                 <div class="card-body card-body-scroll">
-                    <ul id="plan-steps" class="list-group list-group-flush">
-                        <li class="list-group-item">No plan available.</li>
-                    </ul>
+                    <pre
+                        class="font-monospace"
+                        style="
+                            white-space: pre-wrap;
+                            max-height: 80vh;
+                            overflow-y: auto;
+                        "
+                    >
+{{ plan_content }}</pre
+                    >
                 </div>
             </div>
         </div>

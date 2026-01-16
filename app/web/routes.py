@@ -221,7 +221,17 @@ def handle_get(config: AgentConfig, encryption_key: Fernet) -> str:
 @web_bp.route("/", methods=["GET"])
 def dashboard():
     """Handles the main dashboard page."""
-    return render_template("index.html")
+    workspace_path = os.environ.get("WORKSPACE", ".")
+    plan_path = os.path.join(workspace_path, "plan.md")
+    plan_content = "No plan.md found in workspace."
+    if os.path.exists(plan_path):
+        try:
+            with open(plan_path, "r", encoding="utf-8") as f:
+                plan_content = f.read()
+        except Exception as e:
+            logger.error(f"Error reading plan.md: {e}")
+            plan_content = f"Error reading plan.md: {e}"
+    return render_template("index.html", plan_content=plan_content)
 
 
 @web_bp.route("/config", methods=["GET", "POST"])
