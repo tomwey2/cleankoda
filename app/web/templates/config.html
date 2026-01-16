@@ -138,8 +138,7 @@
                                             value="GITHUB"
                                             {%
                                             if
-                                            config.repo_type=""
-                                            ="GITHUB"
+                                            config.repo_type=="GITHUB"
                                             %}selected{%
                                             endif
                                             %}
@@ -150,8 +149,7 @@
                                             value="BITBUCKET"
                                             {%
                                             if
-                                            config.repo_type=""
-                                            ="BITBUCKET"
+                                            config.repo_type=="BITBUCKET"
                                             %}selected{%
                                             endif
                                             %}
@@ -162,8 +160,7 @@
                                             value="GITLAB"
                                             {%
                                             if
-                                            config.repo_type=""
-                                            ="GITLAB"
+                                            config.repo_type=="GITLAB"
                                             %}selected{%
                                             endif
                                             %}
@@ -215,8 +212,7 @@
                                             value="TRELLO"
                                             {%
                                             if
-                                            config.task_system_type=""
-                                            ="TRELLO"
+                                            config.task_system_type=="TRELLO"
                                             %}checked{%
                                             endif
                                             %}
@@ -278,8 +274,7 @@
                                                 value="junior"
                                                 {%
                                                 if
-                                                form_data.agent_skill_level=""
-                                                ="junior"
+                                                form_data.agent_skill_level=="junior"
                                                 %}checked{%
                                                 endif
                                                 %}
@@ -301,8 +296,7 @@
                                                 value="senior"
                                                 {%
                                                 if
-                                                form_data.agent_skill_level=""
-                                                ="senior"
+                                                form_data.agent_skill_level=="senior"
                                                 %}checked{%
                                                 endif
                                                 %}
@@ -356,8 +350,7 @@
                                             value="mistral"
                                             {%
                                             if
-                                            form_data.llm_provider=""
-                                            ="mistral"
+                                            form_data.llm_provider=="mistral"
                                             %}selected{%
                                             endif
                                             %}
@@ -368,8 +361,7 @@
                                             value="openai"
                                             {%
                                             if
-                                            form_data.llm_provider=""
-                                            ="openai"
+                                            form_data.llm_provider=="openai"
                                             %}selected{%
                                             endif
                                             %}
@@ -380,8 +372,7 @@
                                             value="google"
                                             {%
                                             if
-                                            form_data.llm_provider=""
-                                            ="google"
+                                            form_data.llm_provider=="google"
                                             %}selected{%
                                             endif
                                             %}
@@ -392,8 +383,7 @@
                                             value="openrouter"
                                             {%
                                             if
-                                            form_data.llm_provider=""
-                                            ="openrouter"
+                                            form_data.llm_provider=="openrouter"
                                             %}selected{%
                                             endif
                                             %}
@@ -404,8 +394,7 @@
                                             value="ollama"
                                             {%
                                             if
-                                            form_data.llm_provider=""
-                                            ="ollama"
+                                            form_data.llm_provider=="ollama"
                                             %}selected{%
                                             endif
                                             %}
@@ -416,8 +405,7 @@
                                             value="anthropic"
                                             {%
                                             if
-                                            form_data.llm_provider=""
-                                            ="anthropic"
+                                            form_data.llm_provider=="anthropic"
                                             %}selected{%
                                             endif
                                             %}
