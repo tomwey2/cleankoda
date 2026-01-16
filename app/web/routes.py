@@ -86,8 +86,8 @@ def _get_llm_config() -> dict[str, Any]:
     }
 
 
-def configuration_post(config: AgentConfig, encryption_key: Fernet):
-    """Update agent configuration from form"""
+def settings_post(config: AgentConfig, encryption_key: Fernet):
+    """Update agent settings from form"""
     # Update generic fields
     config.task_system_type = request.form.get("task_system_type")
     config.repo_type = request.form.get("repo_type")
@@ -136,8 +136,8 @@ def configuration_post(config: AgentConfig, encryption_key: Fernet):
             "agent_job", trigger="interval", seconds=polling_interval
         )
 
-    flash("Configuration saved successfully!", "success")
-    return redirect(url_for("web.configuration"))
+    flash("Settings saved successfully!", "success")
+    return redirect(url_for("web.settings"))
 
 
 def _set_trello_form_data(saved_data: dict[str, Any], form_data: dict):
@@ -168,9 +168,9 @@ def _set_llm_form_data(saved_data: dict[str, Any], form_data: dict):
     form_data["llm_temperature"] = saved_data.get("llm_temperature", 0.0)
 
 
-def configuration_get(config: AgentConfig, encryption_key: Fernet) -> str:
+def settings_get(config: AgentConfig, encryption_key: Fernet) -> str:
     """
-    Get agent configuration from form.
+    Get agent settings from form.
     Decrypt and parse JSON to populate form
     """
     form_data = {}
@@ -195,7 +195,7 @@ def configuration_get(config: AgentConfig, encryption_key: Fernet) -> str:
 
         except (InvalidToken, TypeError, AttributeError, json.JSONDecodeError):
             flash(
-                "Could not parse or decrypt existing configuration. It may be legacy data. "
+                "Could not parse or decrypt existing settings. It may be legacy data. "
                 + "Re-saving will fix it.",
                 "warning",
             )
@@ -209,7 +209,7 @@ def configuration_get(config: AgentConfig, encryption_key: Fernet) -> str:
     )
 
     return render_template(
-        "config.html",
+        "settings.html",
         config=config,
         form_data=form_data,
         selected_provider=selected_provider,
@@ -234,15 +234,15 @@ def dashboard():
     return render_template("index.html", plan_content=plan_content)
 
 
-@web_bp.route("/config", methods=["GET", "POST"])
-def configuration():
-    """Handles the configuration page."""
+@web_bp.route("/settings", methods=["GET", "POST"])
+def settings():
+    """Handles the settings page."""
     encryption_key = current_app.config["FERNET_KEY"]
     config = AgentConfig.query.first()
     if not config:
         config = AgentConfig(task_system_type="TRELLO", system_config_json="{}")
 
     if request.method == "POST":
-        return configuration_post(config, encryption_key)
+        return settings_post(config, encryption_key)
 
-    return configuration_get(config, encryption_key)
+    return settings_get(config, encryption_key)
