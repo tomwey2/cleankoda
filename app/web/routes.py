@@ -86,7 +86,7 @@ def _get_llm_config() -> dict[str, Any]:
     }
 
 
-def handle_post(config: AgentConfig, encryption_key: Fernet):
+def configuration_post(config: AgentConfig, encryption_key: Fernet):
     """Update agent configuration from form"""
     # Update generic fields
     config.task_system_type = request.form.get("task_system_type")
@@ -168,7 +168,7 @@ def _set_llm_form_data(saved_data: dict[str, Any], form_data: dict):
     form_data["llm_temperature"] = saved_data.get("llm_temperature", 0.0)
 
 
-def handle_get(config: AgentConfig, encryption_key: Fernet) -> str:
+def configuration_get(config: AgentConfig, encryption_key: Fernet) -> str:
     """
     Get agent configuration from form.
     Decrypt and parse JSON to populate form
@@ -228,14 +228,14 @@ def dashboard():
         try:
             with open(plan_path, "r", encoding="utf-8") as f:
                 plan_content = f.read()
-        except Exception as e:
-            logger.error(f"Error reading plan.md: {e}")
+        except FileExistsError as e:
+            logger.error("Error reading plan.md: %s", e)
             plan_content = f"Error reading plan.md: {e}"
     return render_template("index.html", plan_content=plan_content)
 
 
 @web_bp.route("/config", methods=["GET", "POST"])
-def config():
+def configiguration():
     """Handles the configuration page."""
     encryption_key = current_app.config["FERNET_KEY"]
     config = AgentConfig.query.first()
@@ -243,6 +243,6 @@ def config():
         config = AgentConfig(task_system_type="TRELLO", system_config_json="{}")
 
     if request.method == "POST":
-        return handle_post(config, encryption_key)
+        return configuration_post(config, encryption_key)
 
-    return handle_get(config, encryption_key)
+    return configuration_get(config, encryption_key)
