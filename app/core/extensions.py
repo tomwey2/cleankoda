@@ -13,8 +13,8 @@ need to import the `db` object. If `db` were created in `main.py`, `models.py`
 couldn't import it without creating a circular dependency.
 """
 
-from flask_apscheduler import APScheduler
+# from flask_apscheduler import APScheduler
 from flask_sqlalchemy import SQLAlchemy
 
 db = SQLAlchemy()
-scheduler = APScheduler()
+# scheduler = APScheduler()

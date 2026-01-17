@@ -4,12 +4,13 @@ from __future__ import annotations
 
 import json
 
-from agent import runtime as runtime_module
-from agent.runtime import AgentRuntimeContext, prepare_runtime
-from core.extensions import db
-from core.models import AgentConfig
 from cryptography.fernet import Fernet
 from flask import Flask
+
+from app.agent import runtime as runtime_module
+from app.agent.runtime import AgentRuntimeContext, prepare_runtime
+from app.core.extensions import db
+from app.core.models import AgentConfig
 
 
 def _create_app(database_uri: str) -> Flask:
@@ -41,7 +42,7 @@ def test_prepare_runtime_returns_context(tmp_path, monkeypatch):
         ensure_called["repo_url"] = repo_url
         ensure_called["work_dir"] = work_dir
 
-    monkeypatch.setattr("agent.runtime.ensure_repository_exists", fake_ensure)
+    monkeypatch.setattr("app.agent.runtime.ensure_repository_exists", fake_ensure)
 
     with app.app_context():
         db.create_all()
@@ -121,7 +122,7 @@ def test_prepare_runtime_uses_default_repo_when_missing(tmp_path, monkeypatch):
     assert isinstance(context, AgentRuntimeContext)
     assert context.agent_stack == "frontend"
     # DEFAULT_REPO lives in runtime module
-    expected_repo = config.github_repo_url or runtime_module.DEFAULT_REPO
+    expected_repo = config.github_repo_url
     assert captured["repo_url"] == expected_repo
     assert captured["work_dir"] == codespace.as_posix()
     assert sys_config_result["value"] == {

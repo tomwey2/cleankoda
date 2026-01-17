@@ -7,17 +7,17 @@ Fetches tasks from a Trello board, preparing them for processing by the agent.
 import logging
 from datetime import datetime, timezone
 
-from core.trello_repository import remove_issue_from_db
 from langchain_core.messages import HumanMessage
 
-from agent.integrations.trello_client import (
+from app.agent.integrations.trello_client import (
     get_all_trello_cards,
     get_all_trello_lists,
     get_trello_card_comments,
     get_trello_card_list_moves,
     move_trello_card_to_named_list,
 )
-from agent.state import AgentState
+from app.agent.state import AgentState
+from app.core.trello_repository import remove_issue_from_db
 
 logger = logging.getLogger(__name__)
 

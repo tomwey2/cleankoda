@@ -11,12 +11,12 @@ from time import sleep
 
 from langchain_core.messages import AIMessage
 
-from agent.integrations.trello_client import (
+from app.agent.integrations.trello_client import (
     add_comment_to_trello_card,
     move_trello_card_to_named_list,
 )
-from agent.services.summaries import get_agent_summary_entries
-from agent.state import AgentState
+from app.agent.services.summaries import get_agent_summary_entries
+from app.agent.state import AgentState
 
 AGENT_DEFAULT_COMMENT = "Task completed by AI Agent."
 

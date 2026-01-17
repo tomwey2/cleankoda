@@ -4,8 +4,9 @@ from __future__ import annotations
 
 from collections import OrderedDict
 
-import agent.graph as graph_module
 import pytest
+
+import app.agent.graph as graph_module
 
 
 class RecordingStateGraph:

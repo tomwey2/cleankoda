@@ -4,7 +4,7 @@ This module contains the class definitions for all database models used by
 SQLAlchemy. Each class corresponds to a table in the database.
 """
 
-from core.extensions import db
+from app.core.extensions import db
 
 
 # pylint: disable=too-few-public-methods

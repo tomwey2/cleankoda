@@ -6,14 +6,20 @@ from itertools import count
 
 from langchain_core.messages import AIMessage, HumanMessage
 
-from agent.services.message_processing import filter_messages_for_llm, sanitize_response
-
+from app.agent.services.message_processing import (
+    filter_messages_for_llm,
+    sanitize_response,
+)
 
 _TOOL_CALL_COUNTER = count()
 
 
 def _tool_call(name: str, args: dict | None = None) -> dict:
-    return {"id": f"tool-call-{next(_TOOL_CALL_COUNTER)}", "name": name, "args": args or {}}
+    return {
+        "id": f"tool-call-{next(_TOOL_CALL_COUNTER)}",
+        "name": name,
+        "args": args or {},
+    }
 
 
 def _ai(content: str, *, tool_calls: list[dict] | None = None) -> AIMessage:
@@ -34,11 +40,16 @@ def test_filter_messages_preserves_task_and_recent_history():
 
 
 def test_filter_messages_drops_trailing_ai_without_tools():
-    msgs = [HumanMessage(content="Task"), _ai("assistant", tool_calls=[_tool_call("tool")])]
+    msgs = [
+        HumanMessage(content="Task"),
+        _ai("assistant", tool_calls=[_tool_call("tool")]),
+    ]
     msgs.append(_ai("orphan"))
 
     filtered = filter_messages_for_llm(msgs, max_messages=2)
-    assert all(not (isinstance(msg, AIMessage) and not msg.tool_calls) for msg in filtered[-1:])
+    assert all(
+        not (isinstance(msg, AIMessage) and not msg.tool_calls) for msg in filtered[-1:]
+    )
 
 
 def test_sanitize_response_removes_invalid_tool_calls():

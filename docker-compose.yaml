@@ -1,32 +1,25 @@
 services:
   # ----------------------------------------
-  # CONTAINER 1: Der AI Coding Agent
+  # CONTAINER 1: the frontend
+  # ----------------------------------------
+  webapp:
+    build: .
+    container_name: frontend
+    ports:
+      - "5000:5000"
+    command: uv run run_web.py # <-- Startet NUR Flask
+    env_file: .env
+    volumes:
+      - ./workspace:/coding-agent-workspace
+      - ./app/instance:/coding-agent/app/instance
+
+  # ----------------------------------------
+  # CONTAINER 2: the AI coding agent
   # ----------------------------------------
   ai-coding-agent:
     build: .
     container_name: ai-coding-agent
-    ports:
-      - "5000:5000"
-    environment:
-      # GitHub token is mandatory for repository access
-      - GITHUB_TOKEN=${GHCR_AI_CODING_AGENT_TOKEN}
-      
-      # LLM API keys (only set if you want to use them)
-      - MISTRAL_API_KEY=${MISTRAL_API_KEY:-}
-      - GOOGLE_API_KEY=${GOOGLE_API_KEY:-}
-      - OPENAI_API_KEY=${OPENAI_API_KEY:-}
-      - OPENROUTER_API_KEY=${OPENROUTER_API_KEY:-}
-      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY:-}
-      
-      # Ollama API key (only if a key is needed)
-      - OLLAMA_API_KEY=${OLLAMA_API_KEY:-}
-      # Ollama base URL (only if you want to use Ollama not in a docker container)
-      - OLLAMA_BASE_URL=${OLLAMA_BASE_URL:-}
-      
-      # in which workspace the agent works
-      - WORKSPACE=/coding-agent-workspace
-      # which workbench the agent uses
-      - WORKBENCH=workbench-backend
+    command: uv run run_agent.py
     env_file: .env
     volumes:
       - ./app/instance:/coding-agent/app/instance
@@ -36,7 +29,7 @@ services:
       - /var/run/docker.sock:/var/run/docker.sock
 
   # ----------------------------------------
-  # CONTAINER 2: The Workbench
+  # CONTAINER 3: the workbench
   # ----------------------------------------
   workbench-backend:
     image: maven:3.9-eclipse-temurin-21
