@@ -60,8 +60,8 @@ def workflow_mocks(monkeypatch):
         "create_pull_request_node",
         "create_router_node",
         "create_tester_node",
-        "create_trello_fetch_node",
-        "create_trello_update_node",
+        "create_task_fetch_node",
+        "create_task_update_node",
     ]
     originals = {}
     for name in factories:

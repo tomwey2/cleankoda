@@ -1,0 +1,202 @@
+"""
+Tests for the Trello board provider implementation.
+"""
+
+from datetime import datetime
+from unittest.mock import AsyncMock, patch
+
+import pytest
+
+from agent.integrations.board_provider import BoardTask, BoardComment, BoardListMove
+from agent.integrations.trello_provider import TrelloProvider
+
+
+@pytest.fixture
+def sys_config():
+    """Fixture for system configuration."""
+    return {
+        "env": {
+            "TRELLO_API_KEY": "test_key",
+            "TRELLO_TOKEN": "test_token",
+        },
+        "trello_board_id": "test_board_id",
+    }
+
+
+@pytest.fixture
+def trello_provider(sys_config):
+    """Fixture for TrelloProvider instance."""
+    return TrelloProvider(sys_config)
+
+
+@pytest.mark.asyncio
+async def test_get_lists(trello_provider, sys_config):
+    """Test getting lists from Trello."""
+    mock_lists = [
+        {"id": "list1", "name": "To Do"},
+        {"id": "list2", "name": "In Progress"},
+    ]
+    
+    with patch(
+        "agent.integrations.trello_provider.get_all_trello_lists",
+        new=AsyncMock(return_value=mock_lists),
+    ):
+        lists = await trello_provider.get_lists()
+        
+        assert lists == mock_lists
+
+
+@pytest.mark.asyncio
+async def test_get_tasks_from_list(trello_provider):
+    """Test getting tasks from a Trello list."""
+    mock_cards = [
+        {"id": "card1", "name": "Task 1", "desc": "Description 1"},
+        {"id": "card2", "name": "Task 2", "desc": "Description 2"},
+    ]
+    
+    with patch(
+        "agent.integrations.trello_provider.get_all_trello_cards",
+        new=AsyncMock(return_value=mock_cards),
+    ):
+        tasks = await trello_provider.get_tasks_from_list("list1")
+        
+        assert len(tasks) == 2
+        assert all(isinstance(task, BoardTask) for task in tasks)
+        assert tasks[0].id == "card1"
+        assert tasks[0].name == "Task 1"
+        assert tasks[0].description == "Description 1"
+
+
+@pytest.mark.asyncio
+async def test_move_task_to_list(trello_provider):
+    """Test moving a task to a different list."""
+    with patch(
+        "agent.integrations.trello_provider.move_trello_card_to_list",
+        new=AsyncMock(),
+    ) as mock_move:
+        await trello_provider.move_task_to_list("card1", "list2")
+        
+        mock_move.assert_called_once()
+
+
+@pytest.mark.asyncio
+async def test_move_task_to_named_list(trello_provider):
+    """Test moving a task to a list by name."""
+    with patch(
+        "agent.integrations.trello_provider.move_trello_card_to_named_list",
+        new=AsyncMock(return_value="list2"),
+    ) as mock_move:
+        list_id = await trello_provider.move_task_to_named_list("card1", "In Progress")
+        
+        assert list_id == "list2"
+        mock_move.assert_called_once()
+
+
+@pytest.mark.asyncio
+async def test_add_comment(trello_provider):
+    """Test adding a comment to a card."""
+    with patch(
+        "agent.integrations.trello_provider.add_comment_to_trello_card",
+        new=AsyncMock(),
+    ) as mock_add:
+        await trello_provider.add_comment("card1", "Test comment")
+        
+        mock_add.assert_called_once_with("card1", "Test comment", trello_provider.sys_config)
+
+
+@pytest.mark.asyncio
+async def test_get_comments(trello_provider):
+    """Test getting comments from a card."""
+    mock_comments = [
+        {
+            "id": "comment1",
+            "text": "Great work!",
+            "member_creator": "John Doe",
+            "date": "2024-01-01T12:00:00Z",
+        },
+    ]
+    
+    with patch(
+        "agent.integrations.trello_provider.get_trello_card_comments",
+        new=AsyncMock(return_value=mock_comments),
+    ):
+        comments = await trello_provider.get_comments("card1")
+        
+        assert len(comments) == 1
+        assert all(isinstance(comment, BoardComment) for comment in comments)
+        assert comments[0].id == "comment1"
+        assert comments[0].text == "Great work!"
+        assert comments[0].author == "John Doe"
+        assert isinstance(comments[0].date, datetime)
+
+
+@pytest.mark.asyncio
+async def test_get_list_moves(trello_provider):
+    """Test getting list move history for a card."""
+    mock_moves = [
+        {
+            "id": "move1",
+            "date": "2024-01-01T12:00:00Z",
+            "list_before": "To Do",
+            "list_after": "In Progress",
+        },
+    ]
+    
+    with patch(
+        "agent.integrations.trello_provider.get_trello_card_list_moves",
+        new=AsyncMock(return_value=mock_moves),
+    ):
+        moves = await trello_provider.get_list_moves("card1")
+        
+        assert len(moves) == 1
+        assert all(isinstance(move, BoardListMove) for move in moves)
+        assert moves[0].id == "move1"
+        assert moves[0].list_before == "To Do"
+        assert moves[0].list_after == "In Progress"
+
+
+@pytest.mark.asyncio
+async def test_create_card(trello_provider):
+    """Test creating a new card."""
+    mock_result = {
+        "id": "new_card",
+        "name": "New Task",
+        "url": "https://trello.com/c/new_card",
+        "list": "To Do",
+    }
+    
+    with patch(
+        "agent.integrations.trello_provider.create_trello_card",
+        new=AsyncMock(return_value=mock_result),
+    ):
+        task = await trello_provider.create_task("New Task", "Description", "To Do")
+        
+        assert isinstance(task, BoardTask)
+        assert task.id == "new_card"
+        assert task.name == "New Task"
+        assert task.list_name == "To Do"
+
+
+def test_parse_timestamp_valid(trello_provider):
+    """Test parsing a valid timestamp."""
+    timestamp = "2024-01-01T12:00:00Z"
+    result = trello_provider._parse_timestamp(timestamp)
+    
+    assert isinstance(result, datetime)
+    assert result.tzinfo is not None
+
+
+def test_parse_timestamp_none(trello_provider):
+    """Test parsing None timestamp returns current time."""
+    result = trello_provider._parse_timestamp(None)
+    
+    assert isinstance(result, datetime)
+    assert result.tzinfo is not None
+
+
+def test_parse_timestamp_invalid(trello_provider):
+    """Test parsing invalid timestamp returns current time."""
+    result = trello_provider._parse_timestamp("invalid")
+    
+    assert isinstance(result, datetime)
+    assert result.tzinfo is not None

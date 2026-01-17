@@ -74,4 +74,14 @@ SYSTEM_DEFINITIONS = {
     #         "description": issue.get("fields", {}).get("description"),
     #     },
     # },
+    "JIRA": {
+        "command": ["npx", "-y", "@modelcontextprotocol/server-jira"],
+        "polling_tool": "get_issues_in_project",
+        "polling_args": {"projectId": "{project_id}"},
+        "response_parser": lambda issue: {
+            "id": issue.get("key"),
+            "title": issue.get("fields", {}).get("summary"),
+            "description": issue.get("fields", {}).get("description"),
+        },
+    },
 }

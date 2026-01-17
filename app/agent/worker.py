@@ -71,8 +71,9 @@ async def _execute_agent_cycle(runtime: AgentRuntimeContext) -> None:
             {
                 "messages": [],
                 "next_step": "",
-                "trello_card_id": None,
-                "trello_list_id": None,
+                "task_id": None,
+                "task_name": None,
+                "task_state_id": None,
                 "agent_stack": runtime.agent_stack,
                 "agent_skill_level": runtime.agent_config.agent_skill_level,
                 "task_skill_level": None,

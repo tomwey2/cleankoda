@@ -5,8 +5,39 @@ from __future__ import annotations
 import sys
 from pathlib import Path
 
+import pytest
+
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 APP_PATH = PROJECT_ROOT / "app"
 
 if str(APP_PATH) not in sys.path:
     sys.path.insert(0, str(APP_PATH))
+
+
+@pytest.fixture
+def app():
+    """Create and configure a test Flask application."""
+    from flask import Flask
+    from core.extensions import db
+    
+    app = Flask(__name__)
+    app.config["TESTING"] = True
+    app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///:memory:"
+    app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
+    
+    db.init_app(app)
+    
+    with app.app_context():
+        db.create_all()
+        yield app
+        db.session.remove()
+        db.drop_all()
+
+
+@pytest.fixture
+def db_session(app):
+    """Create a database session for testing."""
+    from core.extensions import db
+    
+    with app.app_context():
+        yield db.session

@@ -93,7 +93,7 @@ def _create_or_update_pr(state: AgentState):
 
 def _build_pr_inputs(state: AgentState) -> tuple[str, str]:
     """
-    Build the PR title and body using the Trello card name and agent summaries.
+    Build the PR title and body using the task name and agent summaries.
     """
     aggregated_summary = build_agent_summary_markdown(
         state,
@@ -102,8 +102,8 @@ def _build_pr_inputs(state: AgentState) -> tuple[str, str]:
         line_separator="\n",
     )
     pr_body_summary = aggregated_summary
-    issue_title = state.get("trello_card_name") or ""
-    pr_title = issue_title or "Automated Fix"
+    task_title = state.get("task_name") or ""
+    pr_title = task_title or "Automated Fix"
     pr_body = "Automated changes after successful tests."
     if pr_body_summary:
         pr_body += f"\n\n{pr_body_summary}"

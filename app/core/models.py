@@ -47,14 +47,14 @@ class AgentConfig(db.Model):
         return f"<AgentConfig {self.id}>"
 
 
-class Issue(db.Model):
-    """Model for tracking issues"""
+class Task(db.Model):
+    """Model for tracking tasks"""
 
-    __tablename__ = "issue"
+    __tablename__ = "task"
 
     id = db.Column(db.Integer, primary_key=True)
-    trello_card_id = db.Column(db.String(64), nullable=False, unique=True, index=True)
-    card_name = db.Column(db.String(500), nullable=False)
+    task_id = db.Column(db.String(64), nullable=False, unique=True, index=True)
+    task_name = db.Column(db.String(500), nullable=False)
     branch_name = db.Column(db.String(200), nullable=False)
     repo_url = db.Column(db.String(200), nullable=True)
     created_at = db.Column(db.DateTime, server_default=db.func.now())
@@ -66,4 +66,4 @@ class Issue(db.Model):
         super().__init__(**kwargs)
 
     def __repr__(self):
-        return f"<Issue card={self.trello_card_id} branch={self.branch_name}>"
+        return f"<Task id={self.task_id} branch={self.branch_name}>"

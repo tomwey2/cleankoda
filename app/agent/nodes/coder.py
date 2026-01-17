@@ -36,7 +36,7 @@ def create_coder_node(llm, tools, agent_stack):
     async def coder_node(state: AgentState):
         # Filter messages to keep only recent relevant context (original task + last 15 messages)
         # pylint: disable=duplicate-code
-        filtered_messages = filter_messages_for_llm(state["messages"], max_messages=15)
+        filtered_messages = filter_messages_for_llm(state["messages"], max_messages=25)
         current_messages: list[BaseMessage | SystemMessage] = [
             SystemMessage(content=sys_msg)
         ]
