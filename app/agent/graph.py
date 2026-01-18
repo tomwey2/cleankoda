@@ -12,28 +12,28 @@ from langchain_core.messages import AIMessage
 from langgraph.graph import END, StateGraph
 from langgraph.prebuilt import ToolNode
 
-from agent.nodes.agent_skill_level import create_agent_skill_level_node
-from agent.nodes.analyst import create_analyst_node
-from agent.nodes.bugfixer import create_bugfixer_node
-from agent.nodes.checkout import create_checkout_node
-from agent.nodes.coder import create_coder_node
-from agent.nodes.correction import create_correction_node
-from agent.nodes.pull_request import create_pull_request_node
-from agent.nodes.router import create_router_node
-from agent.nodes.tester import create_tester_node
-from agent.nodes.trello_fetch_node import create_trello_fetch_node
-from agent.nodes.trello_update_node import create_trello_update_node
-from agent.services.summaries import has_finish_task_call
-from agent.state import AgentState
-from agent.tools.create_issue import create_issue_tool
-from agent.tools.file_tools import (
+from app.agent.nodes.agent_skill_level import create_agent_skill_level_node
+from app.agent.nodes.analyst import create_analyst_node
+from app.agent.nodes.bugfixer import create_bugfixer_node
+from app.agent.nodes.checkout import create_checkout_node
+from app.agent.nodes.coder import create_coder_node
+from app.agent.nodes.correction import create_correction_node
+from app.agent.nodes.pull_request import create_pull_request_node
+from app.agent.nodes.router import create_router_node
+from app.agent.nodes.tester import create_tester_node
+from app.agent.nodes.trello_fetch_node import create_trello_fetch_node
+from app.agent.nodes.trello_update_node import create_trello_update_node
+from app.agent.services.summaries import has_finish_task_call
+from app.agent.state import AgentState
+from app.agent.tools.create_issue import create_issue_tool
+from app.agent.tools.file_tools import (
     list_files,
     read_file,
     write_to_file,
 )
-from agent.tools.finish_task import finish_task
-from agent.tools.run_command import run_command
-from agent.tools.thinking import thinking
+from app.agent.tools.finish_task import finish_task
+from app.agent.tools.run_command import run_command
+from app.agent.tools.thinking import thinking
 
 
 def route_after_tools_tester(state: AgentState):

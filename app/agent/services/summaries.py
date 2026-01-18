@@ -4,7 +4,7 @@ from typing import Optional, Sequence, Tuple
 
 from langchain_core.messages import AIMessage, BaseMessage
 
-from agent.state import AgentState
+from app.agent.state import AgentState
 
 
 def _format_agent_summary_entry(role: str, summary: str) -> Optional[str]:

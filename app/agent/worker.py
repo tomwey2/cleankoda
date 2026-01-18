@@ -16,13 +16,13 @@ from flask import Flask
 from langchain.chat_models import BaseChatModel
 from langgraph.graph import StateGraph
 
-from agent.graph import create_workflow
-from agent.integrations.mcp.adapter import McpServerClient
-from agent.runtime import AgentRuntimeContext, prepare_runtime
-from agent.services.graph_assets import save_graph_as_mermaid, save_graph_as_png
-from agent.services.llm_factory import get_llm
-from agent.services.logging import log_agent_state
-from agent.utils import get_codespace
+from app.agent.graph import create_workflow
+from app.agent.integrations.mcp.adapter import McpServerClient
+from app.agent.runtime import AgentRuntimeContext, prepare_runtime
+from app.agent.services.graph_assets import save_graph_as_mermaid, save_graph_as_png
+from app.agent.services.llm_factory import get_llm
+from app.agent.services.logging import log_agent_state
+from app.agent.utils import get_codespace
 
 logger = logging.getLogger(__name__)
 

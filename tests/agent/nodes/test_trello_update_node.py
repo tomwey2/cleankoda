@@ -8,14 +8,13 @@ from unittest.mock import AsyncMock, patch
 import anyio
 from langchain_core.messages import AIMessage, ToolMessage
 
-from agent.nodes.trello_update_node import (
+from app.agent.nodes.trello_update_node import (
     _build_agent_comments,
     _check_for_card_creation,
     create_trello_update_node,
     get_agent_result,
 )
-from agent.state import AgentState
-
+from app.agent.state import AgentState
 
 _TOOL_CALL_COUNTER = count()
 
@@ -257,6 +256,7 @@ def test_build_agent_comments_adds_second_comment_when_card_created():
 
 def test_trello_update_node_adds_comments_and_moves_card():
     """Test that trello_update node adds comments and moves card."""
+
     async def _test():
         sys_config = {
             "trello_board_id": "board123",
@@ -289,13 +289,16 @@ def test_trello_update_node_adds_comments_and_moves_card():
             "agent_summary": None,
         }
 
-        with patch(
-            "agent.nodes.trello_update_node.add_comment_to_trello_card",
-            new_callable=AsyncMock,
-        ) as mock_add_comment, patch(
-            "agent.nodes.trello_update_node.move_trello_card_to_named_list",
-            new_callable=AsyncMock,
-        ) as mock_move_card:
+        with (
+            patch(
+                "app.agent.nodes.trello_update_node.add_comment_to_trello_card",
+                new_callable=AsyncMock,
+            ) as mock_add_comment,
+            patch(
+                "app.agent.nodes.trello_update_node.move_trello_card_to_named_list",
+                new_callable=AsyncMock,
+            ) as mock_move_card,
+        ):
             mock_move_card.return_value = "list456"
 
             trello_update = create_trello_update_node(sys_config)
@@ -318,6 +321,7 @@ def test_trello_update_node_adds_comments_and_moves_card():
 
 def test_trello_update_node_handles_missing_card_id():
     """Test that trello_update node handles missing card ID gracefully."""
+
     async def _test():
         sys_config = {"trello_board_id": "board123"}
 
@@ -347,6 +351,7 @@ def test_trello_update_node_handles_missing_card_id():
 
 def test_trello_update_node_handles_comment_failure():
     """Test that trello_update node continues when adding comment fails."""
+
     async def _test():
         sys_config = {
             "trello_board_id": "board123",
@@ -379,13 +384,16 @@ def test_trello_update_node_handles_comment_failure():
             "agent_summary": None,
         }
 
-        with patch(
-            "agent.nodes.trello_update_node.add_comment_to_trello_card",
-            new_callable=AsyncMock,
-        ) as mock_add_comment, patch(
-            "agent.nodes.trello_update_node.move_trello_card_to_named_list",
-            new_callable=AsyncMock,
-        ) as mock_move_card:
+        with (
+            patch(
+                "app.agent.nodes.trello_update_node.add_comment_to_trello_card",
+                new_callable=AsyncMock,
+            ) as mock_add_comment,
+            patch(
+                "app.agent.nodes.trello_update_node.move_trello_card_to_named_list",
+                new_callable=AsyncMock,
+            ) as mock_move_card,
+        ):
             mock_add_comment.side_effect = Exception("API Error")
             mock_move_card.return_value = "list456"
 
@@ -401,6 +409,7 @@ def test_trello_update_node_handles_comment_failure():
 
 def test_trello_update_node_handles_move_value_error():
     """Test that trello_update node handles ValueError when moving card."""
+
     async def _test():
         sys_config = {
             "trello_board_id": "board123",
@@ -433,13 +442,16 @@ def test_trello_update_node_handles_move_value_error():
             "agent_summary": None,
         }
 
-        with patch(
-            "agent.nodes.trello_update_node.add_comment_to_trello_card",
-            new_callable=AsyncMock,
-        ), patch(
-            "agent.nodes.trello_update_node.move_trello_card_to_named_list",
-            new_callable=AsyncMock,
-        ) as mock_move_card:
+        with (
+            patch(
+                "app.agent.nodes.trello_update_node.add_comment_to_trello_card",
+                new_callable=AsyncMock,
+            ),
+            patch(
+                "app.agent.nodes.trello_update_node.move_trello_card_to_named_list",
+                new_callable=AsyncMock,
+            ) as mock_move_card,
+        ):
             mock_move_card.side_effect = ValueError("List not found")
 
             trello_update = create_trello_update_node(sys_config)
@@ -453,6 +465,7 @@ def test_trello_update_node_handles_move_value_error():
 
 def test_trello_update_node_handles_move_generic_error():
     """Test that trello_update node handles generic Exception when moving card."""
+
     async def _test():
         sys_config = {
             "trello_board_id": "board123",
@@ -485,13 +498,16 @@ def test_trello_update_node_handles_move_generic_error():
             "agent_summary": None,
         }
 
-        with patch(
-            "agent.nodes.trello_update_node.add_comment_to_trello_card",
-            new_callable=AsyncMock,
-        ), patch(
-            "agent.nodes.trello_update_node.move_trello_card_to_named_list",
-            new_callable=AsyncMock,
-        ) as mock_move_card:
+        with (
+            patch(
+                "app.agent.nodes.trello_update_node.add_comment_to_trello_card",
+                new_callable=AsyncMock,
+            ),
+            patch(
+                "app.agent.nodes.trello_update_node.move_trello_card_to_named_list",
+                new_callable=AsyncMock,
+            ) as mock_move_card,
+        ):
             mock_move_card.side_effect = RuntimeError("Network error")
 
             trello_update = create_trello_update_node(sys_config)

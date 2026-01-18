@@ -8,12 +8,12 @@ import os
 from dataclasses import dataclass
 from typing import Any, Dict, Optional
 
-from core.models import AgentConfig
 from cryptography.fernet import Fernet
 
-from agent.services.git_workspace import ensure_repository_exists
-from agent.system_mappings import SYSTEM_DEFINITIONS
-from agent.utils import get_codespace, get_workbench
+from app.agent.services.git_workspace import ensure_repository_exists
+from app.agent.system_mappings import SYSTEM_DEFINITIONS
+from app.agent.utils import get_codespace, get_workbench
+from app.core.models import AgentConfig
 
 logger = logging.getLogger(__name__)
 

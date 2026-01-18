@@ -11,14 +11,14 @@ import logging
 from langchain.chat_models import BaseChatModel
 from langchain_core.messages import SystemMessage
 
-from agent.services.logging import log_agent_response
-from agent.services.message_processing import (
+from app.agent.services.logging import log_agent_response
+from app.agent.services.message_processing import (
     filter_messages_for_llm,
     sanitize_response,
 )
-from agent.services.prompts import load_system_prompt
-from agent.services.summaries import record_finish_task_summary
-from agent.state import AgentState
+from app.agent.services.prompts import load_system_prompt
+from app.agent.services.summaries import record_finish_task_summary
+from app.agent.state import AgentState
 
 logger = logging.getLogger(__name__)
 

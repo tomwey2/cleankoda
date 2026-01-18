@@ -4,8 +4,8 @@ Database repository functions for managing issues and their corresponding branch
 
 from typing import Optional
 
-from core.extensions import db
-from core.models import Issue
+from app.core.extensions import db
+from app.core.models import Issue
 
 
 def get_branch_for_issue(issue_id: str) -> Optional[str]:

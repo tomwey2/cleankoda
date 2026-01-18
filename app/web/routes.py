@@ -12,9 +12,6 @@ import logging
 import os
 from typing import Any
 
-from core.constants import LLM_PROVIDER_API_ENV
-from core.extensions import db, scheduler
-from core.models import AgentConfig
 from cryptography.fernet import Fernet, InvalidToken
 from flask import (
     Blueprint,
@@ -25,6 +22,10 @@ from flask import (
     request,
     url_for,
 )
+
+from app.core.constants import LLM_PROVIDER_API_ENV
+from app.core.extensions import db
+from app.core.models import AgentConfig
 
 logger = logging.getLogger(__name__)
 
@@ -130,12 +131,6 @@ def settings_post(config: AgentConfig, encryption_key: Fernet):
     if not config.id:
         db.session.add(config)
     db.session.commit()
-
-    # Reschedule job
-    if scheduler.get_job("agent_job"):
-        scheduler.scheduler.reschedule_job(
-            "agent_job", trigger="interval", seconds=polling_interval
-        )
 
     flash("Settings saved successfully!", "success")
     return redirect(url_for("web.settings"))

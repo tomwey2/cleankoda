@@ -9,12 +9,12 @@ from typing import Any, Dict, Optional
 
 import requests
 
-from agent.services.summaries import (
+from app.agent.services.summaries import (
     append_agent_summary,
     build_agent_summary_markdown,
 )
-from agent.state import AgentState
-from agent.utils import get_codespace
+from app.agent.state import AgentState
+from app.agent.utils import get_codespace
 
 logger = logging.getLogger(__name__)
 

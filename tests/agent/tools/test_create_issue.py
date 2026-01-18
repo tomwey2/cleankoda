@@ -6,11 +6,12 @@ from unittest.mock import AsyncMock, patch
 
 import anyio
 
-from agent.tools.create_issue import create_issue_tool
+from app.agent.tools.create_issue import create_issue_tool
 
 
 def test_create_issue_tool_creates_card_successfully():
     """Test that the tool creates a card successfully with valid config."""
+
     async def _test():
         sys_config = {
             "trello_readfrom_list": "Sprint Backlog",
@@ -28,7 +29,7 @@ def test_create_issue_tool_creates_card_successfully():
         }
 
         with patch(
-            "agent.tools.create_issue.create_trello_card",
+            "app.agent.tools.create_issue.create_trello_card",
             new_callable=AsyncMock,
         ) as mock_create:
             mock_create.return_value = mock_card_data
@@ -58,6 +59,7 @@ def test_create_issue_tool_creates_card_successfully():
 
 def test_create_issue_tool_handles_missing_target_list():
     """Test that the tool handles missing target list configuration."""
+
     async def _test():
         sys_config = {
             "env": {
@@ -81,6 +83,7 @@ def test_create_issue_tool_handles_missing_target_list():
 
 def test_create_issue_tool_handles_value_error():
     """Test that the tool handles ValueError from Trello client."""
+
     async def _test():
         sys_config = {
             "trello_readfrom_list": "Invalid List",
@@ -91,7 +94,7 @@ def test_create_issue_tool_handles_value_error():
         }
 
         with patch(
-            "agent.tools.create_issue.create_trello_card",
+            "app.agent.tools.create_issue.create_trello_card",
             new_callable=AsyncMock,
         ) as mock_create:
             mock_create.side_effect = ValueError("List 'Invalid List' not found")
@@ -112,6 +115,7 @@ def test_create_issue_tool_handles_value_error():
 
 def test_create_issue_tool_handles_runtime_error():
     """Test that the tool handles RuntimeError from Trello API."""
+
     async def _test():
         sys_config = {
             "trello_readfrom_list": "Sprint Backlog",
@@ -122,7 +126,7 @@ def test_create_issue_tool_handles_runtime_error():
         }
 
         with patch(
-            "agent.tools.create_issue.create_trello_card",
+            "app.agent.tools.create_issue.create_trello_card",
             new_callable=AsyncMock,
         ) as mock_create:
             mock_create.side_effect = RuntimeError("Failed to create card: API error")
@@ -154,6 +158,7 @@ def test_create_issue_tool_has_correct_metadata():
 
 def test_create_issue_tool_binds_sys_config_and_target_list():
     """Test that the factory function correctly binds sys_config and target list."""
+
     async def _test():
         sys_config_1 = {"trello_readfrom_list": "List A"}
         sys_config_2 = {"trello_readfrom_list": "List B"}
@@ -166,7 +171,7 @@ def test_create_issue_tool_binds_sys_config_and_target_list():
         }
 
         with patch(
-            "agent.tools.create_issue.create_trello_card",
+            "app.agent.tools.create_issue.create_trello_card",
             new_callable=AsyncMock,
         ) as mock_create:
             mock_create.return_value = mock_card_data

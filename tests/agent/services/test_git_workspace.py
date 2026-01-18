@@ -6,7 +6,7 @@ from pathlib import Path
 
 from git import Actor, Repo
 
-from agent.services.git_workspace import checkout_branch, normalize_git_url
+from app.agent.services.git_workspace import checkout_branch, normalize_git_url
 
 TEST_ACTOR = Actor("Test User", "test@example.com")
 
@@ -45,5 +45,5 @@ def _setup_remote_repo(tmp_path) -> Path:
     src_repo.index.add(["README.md"])
     src_repo.index.commit("init", author=TEST_ACTOR, committer=TEST_ACTOR)
     origin = src_repo.create_remote("origin", remote_dir.as_posix())
-    origin.push(src_repo.head.ref)
+    origin.push(str(src_repo.head.ref))
     return remote_dir
