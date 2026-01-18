@@ -146,12 +146,15 @@ Supported providers:
 |Google|`GOOGLE_API_KEY`|-|
 |Anthropic|`ANTHROPIC_API_KEY`|-|
 |Ollama|`OLLAMA_API_KEY` (optional for local setups)|`OLLAMA_BASE_URL` - default http://host.docker.internal:11434|
+|MCP control|`ENABLE_MCP_SERVERS` (default `true`)|Set to `false`/`0`/`no` to skip spawning the Git and task MCP servers when running locally|
 
 ```bash
 docker compose up -d --build
 ```
 
 To support more Providers add the key in the environment variables.
+
+If you want to run the agent without spawning MCP helper processes (e.g., when debugging locally or when MCP tooling is unavailable), set `ENABLE_MCP_SERVERS=false` (or `0`/`no`). The default is `true`, which launches both the Git MCP server and the task-system MCP server so the agent can execute repository and task-side commands.
 
 #### 4. Stop the Container
 

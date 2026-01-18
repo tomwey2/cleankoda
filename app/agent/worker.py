@@ -40,19 +40,28 @@ async def run_agent_cycle_async(app: Flask, encryption_key: Fernet) -> None:
 async def _execute_agent_cycle(runtime: AgentRuntimeContext) -> None:
     """Internal helper that orchestrates one graph execution."""
     async with AsyncExitStack() as stack:
-        git_mcp = McpServerClient(
-            command=sys.executable,
-            args=["-m", "mcp_server_git", "--repository", get_codespace()],
-            env=os.environ.copy(),
-        )
-        task_mcp = McpServerClient(
-            runtime.system_def["command"][0],
-            runtime.system_def["command"][1:],
-            env=runtime.task_env,
-        )
+        enable_mcp = os.environ.get("ENABLE_MCP_SERVERS", "true").lower() not in {
+            "false",
+            "0",
+            "no",
+        }
 
-        await stack.enter_async_context(git_mcp)
-        await stack.enter_async_context(task_mcp)
+        if enable_mcp:
+            git_mcp = McpServerClient(
+                command=sys.executable,
+                args=["-m", "mcp_server_git", "--repository", get_codespace()],
+                env=os.environ.copy(),
+            )
+            task_mcp = McpServerClient(
+                runtime.system_def["command"][0],
+                runtime.system_def["command"][1:],
+                env=runtime.task_env,
+            )
+
+            await stack.enter_async_context(git_mcp)
+            await stack.enter_async_context(task_mcp)
+        else:
+            logger.info("Skipping MCP server startup (ENABLE_MCP_SERVERS is disabled)")
 
         llm_large: BaseChatModel = get_llm(runtime.sys_config, True)
         llm_small: BaseChatModel = get_llm(runtime.sys_config, False)

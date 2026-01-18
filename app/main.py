@@ -51,6 +51,13 @@ if __name__ == "__main__":
     if not OLLAMA_BASE_URL:
         logger.info("OLLAMA_BASE_URL is not set")
 
+    enable_mcp = os.environ.get("ENABLE_MCP_SERVERS", "true").lower() not in {
+        "false",
+        "0",
+        "no",
+    }
+    logger.info("MCP enabled: %s", enable_mcp)
+
     if not os.environ.get("GITHUB_TOKEN"):
         raise ValueError("GITHUB_TOKEN is not set. Application cannot start.")
 
