@@ -46,10 +46,8 @@ if __name__ == "__main__":
     ANTHROPIC_API_KEY = _log_secret("ANTHROPIC_API_KEY")
     OLLAMA_API_KEY = _log_secret("OLLAMA_API_KEY")
 
-    DATABASE_DIR = os.environ.get("DATABASE_BASE_DIR")
+    DATABASE_DIR = os.environ.get("DATABASE_DIR")
     logger.info("DATABASE_DIR: %s", DATABASE_DIR)
-    if not DATABASE_DIR:
-        logger.info("DATABASE_DIR is not set")
 
     OLLAMA_BASE_URL = os.environ.get("OLLAMA_BASE_URL")
     logger.info("OLLAMA_BASE_URL: %s", OLLAMA_BASE_URL)
