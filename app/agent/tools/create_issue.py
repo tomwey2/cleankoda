@@ -4,7 +4,7 @@ import logging
 
 from langchain_core.tools import StructuredTool
 
-from agent.integrations.trello_client import create_trello_card
+from app.agent.integrations.trello_client import create_trello_card
 
 logger = logging.getLogger(__name__)
 
