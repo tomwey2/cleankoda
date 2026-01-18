@@ -4,8 +4,8 @@ Database repository functions for managing tasks and their corresponding branche
 
 from typing import Optional
 
-from core.extensions import db
-from core.models import Task
+from app.core.extensions import db
+from app.core.models import Task
 
 
 def get_branch_for_task(task_id: str) -> Optional[str]:

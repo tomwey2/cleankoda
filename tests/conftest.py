@@ -8,17 +8,16 @@ from pathlib import Path
 import pytest
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
-APP_PATH = PROJECT_ROOT / "app"
 
-if str(APP_PATH) not in sys.path:
-    sys.path.insert(0, str(APP_PATH))
+if str(PROJECT_ROOT) not in sys.path:
+    sys.path.insert(0, str(PROJECT_ROOT))
 
 
 @pytest.fixture
 def app():
     """Create and configure a test Flask application."""
     from flask import Flask
-    from core.extensions import db
+    from app.core.extensions import db
     
     app = Flask(__name__)
     app.config["TESTING"] = True
@@ -37,7 +36,7 @@ def app():
 @pytest.fixture
 def db_session(app):
     """Create a database session for testing."""
-    from core.extensions import db
+    from app.core.extensions import db
     
     with app.app_context():
         yield db.session

@@ -4,8 +4,8 @@ Tests for the task repository.
 
 import pytest
 
-from core.models import Task
-from core.task_repository import (
+from app.core.models import Task
+from app.core.task_repository import (
     get_branch_for_task,
     get_task_by_id,
     remove_task_from_db,

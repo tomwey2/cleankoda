@@ -9,13 +9,13 @@ with other board systems.
 import logging
 from datetime import datetime, timezone
 
-from agent.integrations.board_provider import (
+from app.agent.integrations.board_provider import (
     BoardTask,
     BoardComment,
     BoardStateMove,
     BoardProvider,
 )
-from agent.integrations.trello_client import (
+from app.agent.integrations.trello_client import (
     add_comment_to_trello_card,
     create_trello_card,
     get_all_trello_cards,

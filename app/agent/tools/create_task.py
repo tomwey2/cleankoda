@@ -4,7 +4,7 @@ import logging
 
 from langchain_core.tools import StructuredTool
 
-from agent.integrations.board_factory import create_board_provider
+from app.agent.integrations.board_factory import create_board_provider
 
 logger = logging.getLogger(__name__)
 

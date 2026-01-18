@@ -5,14 +5,13 @@ import re
 import subprocess
 from typing import Any, Dict
 
-from core.task_repository import get_branch_for_task, upsert_task
 from flask import current_app
 from git import Repo
 
+from app.core.task_repository import get_branch_for_task, upsert_task
 from app.agent.services.git_workspace import checkout_branch
 from app.agent.state import AgentState
 from app.agent.utils import get_codespace
-from app.core.trello_repository import get_branch_for_issue, upsert_issue
 
 logger = logging.getLogger(__name__)
 

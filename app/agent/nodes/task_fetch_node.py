@@ -8,12 +8,12 @@ preparing them for processing by the agent.
 import logging
 from datetime import datetime
 
-from core.task_repository import remove_task_from_db
 from langchain_core.messages import SystemMessage
 
-from agent.integrations.board_factory import create_board_provider
-from agent.integrations.board_provider import BoardProvider, BoardTask  # pylint: disable=unused-import
-from agent.state import AgentState
+from app.core.task_repository import remove_task_from_db
+from app.agent.integrations.board_factory import create_board_provider
+from app.agent.integrations.board_provider import BoardProvider, BoardTask  # pylint: disable=unused-import
+from app.agent.state import AgentState
 
 logger = logging.getLogger(__name__)
 

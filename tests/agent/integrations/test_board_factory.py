@@ -4,9 +4,9 @@ Tests for the board provider factory.
 
 import pytest
 
-from agent.integrations.board_factory import create_board_provider
-from agent.integrations.board_provider import BoardProvider
-from agent.integrations.trello_provider import TrelloProvider
+from app.agent.integrations.board_factory import create_board_provider
+from app.agent.integrations.board_provider import BoardProvider
+from app.agent.integrations.trello_provider import TrelloProvider
 
 
 def test_create_trello_provider():

@@ -11,9 +11,9 @@ from time import sleep
 
 from langchain_core.messages import AIMessage, ToolMessage
 
-from agent.integrations.board_factory import create_board_provider
-from agent.services.summaries import get_agent_summary_entries
-from agent.state import AgentState
+from app.agent.integrations.board_factory import create_board_provider
+from app.agent.services.summaries import get_agent_summary_entries
+from app.agent.state import AgentState
 
 AGENT_DEFAULT_COMMENT = "Task completed by AI Agent."
 

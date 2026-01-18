@@ -8,8 +8,8 @@ different board systems (Trello, GitHub, Jira, etc.).
 
 import logging
 
-from agent.integrations.board_provider import BoardProvider
-from agent.integrations.trello_provider import TrelloProvider
+from app.agent.integrations.board_provider import BoardProvider
+from app.agent.integrations.trello_provider import TrelloProvider
 
 logger = logging.getLogger(__name__)
 

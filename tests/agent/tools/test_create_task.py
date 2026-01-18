@@ -6,8 +6,8 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import anyio
 
-from agent.integrations.board_provider import BoardTask
-from agent.tools.create_task import create_task_tool
+from app.agent.integrations.board_provider import BoardTask
+from app.agent.tools.create_task import create_task_tool
 
 
 def test_create_task_tool_creates_card_successfully():
@@ -31,7 +31,7 @@ def test_create_task_tool_creates_card_successfully():
         mock_provider.create_task = AsyncMock(return_value=mock_task)
 
         with patch(
-            "agent.tools.create_task.create_board_provider",
+            "app.agent.tools.create_task.create_board_provider",
             return_value=mock_provider,
         ):
             tool = create_task_tool(sys_config, "Sprint Backlog")
@@ -90,7 +90,7 @@ def test_create_task_tool_handles_value_error():
         )
 
         with patch(
-            "agent.tools.create_task.create_board_provider",
+            "app.agent.tools.create_task.create_board_provider",
             return_value=mock_provider,
         ):
             tool = create_task_tool(sys_config, "Invalid List")
@@ -121,7 +121,7 @@ def test_create_task_tool_handles_runtime_error():
         )
 
         with patch(
-            "agent.tools.create_task.create_board_provider",
+            "app.agent.tools.create_task.create_board_provider",
             return_value=mock_provider,
         ):
             tool = create_task_tool(sys_config, "Sprint Backlog")
@@ -180,7 +180,7 @@ def test_create_task_tool_binds_sys_config_and_target_state():
         mock_provider_2.create_task = AsyncMock(return_value=mock_task_2)
 
         with patch(
-            "agent.tools.create_task.create_board_provider",
+            "app.agent.tools.create_task.create_board_provider",
             side_effect=[mock_provider_1, mock_provider_2],
         ):
             tool_1 = create_task_tool(sys_config_1, "List A")

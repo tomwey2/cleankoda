@@ -8,8 +8,8 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
 from langchain_core.messages import SystemMessage
 
-from agent.integrations.board_provider import BoardTask, BoardComment
-from agent.nodes.task_fetch_node import (
+from app.agent.integrations.board_provider import BoardTask, BoardComment
+from app.agent.nodes.task_fetch_node import (
     create_task_fetch_node,
     fetch_task_from_state,
     filter_comments_after_timestamp,
@@ -60,7 +60,7 @@ def mock_board_provider():
 async def test_task_fetch_node_success(sys_config, mock_board_provider):
     """Test successful task fetch."""
     with patch(
-        "agent.nodes.task_fetch_node.create_board_provider",
+        "app.agent.nodes.task_fetch_node.create_board_provider",
         return_value=mock_board_provider,
     ):
         task_fetch = create_task_fetch_node(sys_config)
@@ -82,7 +82,7 @@ async def test_task_fetch_node_no_review_list(sys_config, mock_board_provider):
     sys_config_no_review["task_moveto_state"] = None
     
     with patch(
-        "agent.nodes.task_fetch_node.create_board_provider",
+        "app.agent.nodes.task_fetch_node.create_board_provider",
         return_value=mock_board_provider,
     ):
         task_fetch = create_task_fetch_node(sys_config_no_review)
@@ -97,7 +97,7 @@ async def test_task_fetch_node_no_cards(sys_config, mock_board_provider):
     mock_board_provider.get_tasks_from_state = AsyncMock(return_value=[])
     
     with patch(
-        "agent.nodes.task_fetch_node.create_board_provider",
+        "app.agent.nodes.task_fetch_node.create_board_provider",
         return_value=mock_board_provider,
     ):
         task_fetch = create_task_fetch_node(sys_config)
@@ -120,7 +120,7 @@ async def test_task_fetch_node_with_comments(sys_config, mock_board_provider):
     mock_board_provider.get_comments = AsyncMock(return_value=mock_comments)
     
     with patch(
-        "agent.nodes.task_fetch_node.create_board_provider",
+        "app.agent.nodes.task_fetch_node.create_board_provider",
         return_value=mock_board_provider,
     ):
         task_fetch = create_task_fetch_node(sys_config)
@@ -156,7 +156,7 @@ async def test_fetch_task_from_state_not_found(mock_board_provider, sys_config):
 @pytest.mark.asyncio
 async def test_get_review_transition_timestamp(mock_board_provider):
     """Test getting review transition timestamp."""
-    from agent.integrations.board_provider import BoardStateMove
+    from app.agent.integrations.board_provider import BoardStateMove
     
     mock_moves = [
         BoardStateMove(

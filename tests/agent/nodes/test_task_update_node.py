@@ -7,7 +7,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
 from langchain_core.messages import AIMessage, HumanMessage, ToolMessage
 
-from agent.nodes.task_update_node import (
+from app.agent.nodes.task_update_node import (
     AGENT_DEFAULT_COMMENT,
     _build_agent_comments,
     _check_for_task_creation,
@@ -44,7 +44,7 @@ async def test_task_update_node_success(sys_config, mock_board_provider):
     }
     
     with patch(
-        "agent.nodes.task_update_node.create_board_provider",
+        "app.agent.nodes.task_update_node.create_board_provider",
         return_value=mock_board_provider,
     ):
         task_update = create_task_update_node(sys_config)
@@ -63,7 +63,7 @@ async def test_task_update_node_no_task_id(sys_config, mock_board_provider):
     state = {"task_id": None, "messages": []}
     
     with patch(
-        "agent.nodes.task_update_node.create_board_provider",
+        "app.agent.nodes.task_update_node.create_board_provider",
         return_value=mock_board_provider,
     ):
         task_update = create_task_update_node(sys_config)
@@ -82,7 +82,7 @@ async def test_task_update_node_move_fails(sys_config, mock_board_provider):
     )
     
     with patch(
-        "agent.nodes.task_update_node.create_board_provider",
+        "app.agent.nodes.task_update_node.create_board_provider",
         return_value=mock_board_provider,
     ):
         task_update = create_task_update_node(sys_config)
