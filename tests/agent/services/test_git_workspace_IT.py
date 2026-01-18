@@ -4,8 +4,9 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from agent.services.git_workspace import ensure_repository_exists
 from git import Actor, Repo
+
+from app.agent.services.git_workspace import ensure_repository_exists
 
 TEST_ACTOR = Actor("Integration User", "integration@example.com")
 
@@ -55,5 +56,5 @@ def _setup_remote_repo(path: Path, contents: str = "root") -> Path:
     src_repo.index.add(["README.md"])
     src_repo.index.commit("init", author=TEST_ACTOR, committer=TEST_ACTOR)
     origin = src_repo.create_remote("origin", remote_dir.as_posix())
-    origin.push(src_repo.head.ref)
+    origin.push(str(src_repo.head.ref))
     return remote_dir

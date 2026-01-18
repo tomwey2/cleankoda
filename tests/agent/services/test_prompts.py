@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from agent.services.prompts import load_system_prompt
+from app.agent.services.prompts import load_system_prompt
 
 
 def test_load_system_prompt_reads_file(tmp_path, monkeypatch):

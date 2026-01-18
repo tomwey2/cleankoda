@@ -39,4 +39,4 @@ RUN git config --global user.email "agent@bot.local" && \
     git config --global safe.directory "/coding-agent-workspace"
 
 # 7. Startbefehl
-CMD ["uv", "run", "app/main.py"]
+CMD ["uv", "run", "run_web.py"]

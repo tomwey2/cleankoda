@@ -10,11 +10,11 @@ from typing import Any
 
 from langchain_core.messages import AIMessage, BaseMessage, HumanMessage, SystemMessage
 
-from agent.services.logging import log_agent_response
-from agent.services.message_processing import filter_messages_for_llm
-from agent.services.prompts import load_system_prompt
-from agent.services.summaries import record_finish_task_summary
-from agent.state import AgentState
+from app.agent.services.logging import log_agent_response
+from app.agent.services.message_processing import filter_messages_for_llm
+from app.agent.services.prompts import load_system_prompt
+from app.agent.services.summaries import record_finish_task_summary
+from app.agent.state import AgentState
 
 logger = logging.getLogger(__name__)
 

@@ -5,7 +5,7 @@ import os
 
 from langchain_core.tools import tool
 
-from agent.utils import get_workspace
+from app.agent.utils import get_workspace
 
 logger = logging.getLogger(__name__)
 

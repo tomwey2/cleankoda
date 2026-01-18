@@ -6,18 +6,21 @@ from itertools import count
 
 from langchain_core.messages import AIMessage
 
-from agent.services.summaries import (
+from app.agent.services.summaries import (
     append_agent_summary,
     get_agent_summary_entries,
     record_finish_task_summary,
 )
 
-
 _TOOL_CALL_COUNTER = count()
 
 
 def _tool_call(name: str, args: dict | None = None) -> dict:
-    return {"id": f"tool-call-{next(_TOOL_CALL_COUNTER)}", "name": name, "args": args or {}}
+    return {
+        "id": f"tool-call-{next(_TOOL_CALL_COUNTER)}",
+        "name": name,
+        "args": args or {},
+    }
 
 
 def test_append_agent_summary_ignores_empty_entries():
@@ -47,7 +50,9 @@ def test_get_agent_summary_entries_derives_from_messages_when_cache_empty():
     ai_message = AIMessage(
         content="",
         tool_calls=[
-            _tool_call("finish_task", {"summary": "Task complete", "agent_role": "tester"}),
+            _tool_call(
+                "finish_task", {"summary": "Task complete", "agent_role": "tester"}
+            ),
         ],
     )
     state = {"messages": [ai_message]}
