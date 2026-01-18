@@ -29,7 +29,7 @@ def test_create_issue_tool_creates_card_successfully():
         }
 
         with patch(
-            "agent.tools.create_issue.create_trello_card",
+            "app.agent.tools.create_issue.create_trello_card",
             new_callable=AsyncMock,
         ) as mock_create:
             mock_create.return_value = mock_card_data
@@ -94,7 +94,7 @@ def test_create_issue_tool_handles_value_error():
         }
 
         with patch(
-            "agent.tools.create_issue.create_trello_card",
+            "app.agent.tools.create_issue.create_trello_card",
             new_callable=AsyncMock,
         ) as mock_create:
             mock_create.side_effect = ValueError("List 'Invalid List' not found")
@@ -126,7 +126,7 @@ def test_create_issue_tool_handles_runtime_error():
         }
 
         with patch(
-            "agent.tools.create_issue.create_trello_card",
+            "app.agent.tools.create_issue.create_trello_card",
             new_callable=AsyncMock,
         ) as mock_create:
             mock_create.side_effect = RuntimeError("Failed to create card: API error")
@@ -171,7 +171,7 @@ def test_create_issue_tool_binds_sys_config_and_target_list():
         }
 
         with patch(
-            "agent.tools.create_issue.create_trello_card",
+            "app.agent.tools.create_issue.create_trello_card",
             new_callable=AsyncMock,
         ) as mock_create:
             mock_create.return_value = mock_card_data

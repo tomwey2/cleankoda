@@ -291,11 +291,11 @@ def test_trello_update_node_adds_comments_and_moves_card():
 
         with (
             patch(
-                "agent.nodes.trello_update_node.add_comment_to_trello_card",
+                "app.agent.nodes.trello_update_node.add_comment_to_trello_card",
                 new_callable=AsyncMock,
             ) as mock_add_comment,
             patch(
-                "agent.nodes.trello_update_node.move_trello_card_to_named_list",
+                "app.agent.nodes.trello_update_node.move_trello_card_to_named_list",
                 new_callable=AsyncMock,
             ) as mock_move_card,
         ):
@@ -386,11 +386,11 @@ def test_trello_update_node_handles_comment_failure():
 
         with (
             patch(
-                "agent.nodes.trello_update_node.add_comment_to_trello_card",
+                "app.agent.nodes.trello_update_node.add_comment_to_trello_card",
                 new_callable=AsyncMock,
             ) as mock_add_comment,
             patch(
-                "agent.nodes.trello_update_node.move_trello_card_to_named_list",
+                "app.agent.nodes.trello_update_node.move_trello_card_to_named_list",
                 new_callable=AsyncMock,
             ) as mock_move_card,
         ):
@@ -444,11 +444,11 @@ def test_trello_update_node_handles_move_value_error():
 
         with (
             patch(
-                "agent.nodes.trello_update_node.add_comment_to_trello_card",
+                "app.agent.nodes.trello_update_node.add_comment_to_trello_card",
                 new_callable=AsyncMock,
             ),
             patch(
-                "agent.nodes.trello_update_node.move_trello_card_to_named_list",
+                "app.agent.nodes.trello_update_node.move_trello_card_to_named_list",
                 new_callable=AsyncMock,
             ) as mock_move_card,
         ):
@@ -500,11 +500,11 @@ def test_trello_update_node_handles_move_generic_error():
 
         with (
             patch(
-                "agent.nodes.trello_update_node.add_comment_to_trello_card",
+                "app.agent.nodes.trello_update_node.add_comment_to_trello_card",
                 new_callable=AsyncMock,
             ),
             patch(
-                "agent.nodes.trello_update_node.move_trello_card_to_named_list",
+                "app.agent.nodes.trello_update_node.move_trello_card_to_named_list",
                 new_callable=AsyncMock,
             ) as mock_move_card,
         ):
