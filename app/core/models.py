@@ -4,7 +4,58 @@ This module contains the class definitions for all database models used by
 SQLAlchemy. Each class corresponds to a table in the database.
 """
 
+import os
+
+from cryptography.fernet import Fernet
+from sqlalchemy import LargeBinary, TypeDecorator
+
 from app.core.extensions import db
+
+key = os.environ.get("ENCRYPTION_KEY")
+if not key:
+    raise ValueError("ENCRYPTION_KEY is not set. Application cannot start.")
+encryption_key = Fernet(key.encode())
+
+
+# pylint: disable=too-many-ancestors
+class EncryptedString(TypeDecorator):
+    """Encrypts data on its way into the database, decrypts it on its way out."""
+
+    impl = LargeBinary  # Stored as Binary/Blob in the DB
+    cache_ok = True
+
+    @property
+    def python_type(self):
+        return str
+
+    def process_bind_param(self, value, dialect):
+        """Encrypt before saving"""
+        if value is not None:
+            # Must be bytes for Fernet
+            value_bytes = value.encode("utf-8")
+            encrypted_value = encryption_key.encrypt(value_bytes)
+            return encrypted_value
+        return value
+
+    def process_result_value(self, value, dialect):
+        """Decrypt after loading"""
+        if value is not None:
+            decrypted_value = encryption_key.decrypt(value)
+            return decrypted_value.decode("utf-8")
+        return value
+
+    def process_literal_param(self, value, dialect):
+        """Handles rendering of a literal parameter for this type.
+
+        This is used for features like literal_binds.
+        """
+        processed_value = self.process_bind_param(value, dialect)
+        if processed_value is None:
+            return "NULL"
+
+        return dialect.type_descriptor(self.impl).process_literal_param(  # type: ignore[attr-defined] # pylint: disable=line-too-long
+            processed_value, dialect
+        )
 
 
 # pylint: disable=too-few-public-methods
@@ -47,6 +98,7 @@ class AgentConfig(db.Model):
         return f"<AgentConfig {self.id}>"
 
 
+# pylint: disable=too-few-public-methods
 class Task(db.Model):
     """Model for tracking tasks"""
 
