@@ -145,7 +145,7 @@ def test_prepare_runtime_returns_none_for_unknown_system(tmp_path, monkeypatch):
 
     # Still patch ensure_repository_exists to avoid network work
     monkeypatch.setattr(
-        "agent.runtime.ensure_repository_exists", lambda *args, **kwargs: None
+        "app.agent.runtime.ensure_repository_exists", lambda *args, **kwargs: None
     )
 
     with app.app_context():

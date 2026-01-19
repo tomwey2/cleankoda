@@ -14,6 +14,9 @@ Attributes:
 
 import os
 from pathlib import Path
+import logging
+
+logger = logging.getLogger(__name__)
 
 # Best practice: Load secrets from environment variables
 # For simplicity in this phase, we use a default secret key.
@@ -21,9 +24,11 @@ SECRET_KEY = os.environ.get("SECRET_KEY", "a-default-secret-key-for-development"
 
 # Database configuration
 BASE_DIR = Path(__file__).resolve().parent.parent
+DATABASE_DIR = Path(os.environ.get("DATABASE_DIR", BASE_DIR / "instance")).resolve()
 SQLALCHEMY_DATABASE_URI = (
-    os.environ.get("DATABASE_URL") or f"sqlite:///{BASE_DIR / 'instance' / 'agent.db'}"
+    os.environ.get("DATABASE_URL") or f"sqlite:///{DATABASE_DIR / 'agent.db'}"
 )
+logger.info("SQLALCHEMY_DATABASE_URI: %s", SQLALCHEMY_DATABASE_URI)
 SQLALCHEMY_TRACK_MODIFICATIONS = False
 
 # Scheduler configuration

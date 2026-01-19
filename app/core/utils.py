@@ -48,6 +48,16 @@ def log_and_validate_env(logger):
 
     logger.info("OLLAMA_BASE_URL: %s", os.environ.get("OLLAMA_BASE_URL", "Not set"))
 
+    enable_mpc_servers = os.environ.get("ENABLE_MCP_SERVERS", "true").lower() not in {
+        "false",
+        "0",
+        "no",
+    }
+    logger.info("MCP enabled: %s", enable_mpc_servers)
+    logger.info("DATABASE_DIR: %s", os.environ.get("DATABASE_DIR", "Not set"))
+    logger.info("WORKBENCH: %s", os.environ.get("WORKBENCH", "Not set"))
+    logger.info("WORKSPACE: %s", os.environ.get("WORKSPACE", "Not set"))
+
     # Kritische Checks
     if not os.environ.get("GITHUB_TOKEN"):
         raise ValueError("GITHUB_TOKEN is not set.")

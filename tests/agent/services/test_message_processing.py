@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from itertools import count
 
-from langchain_core.messages import AIMessage, HumanMessage
+from langchain_core.messages import AIMessage, HumanMessage, SystemMessage
 
 from app.agent.services.message_processing import (
     filter_messages_for_llm,
@@ -61,3 +61,18 @@ def test_sanitize_response_removes_invalid_tool_calls():
     sanitized = sanitize_response(ai_msg)
     assert len(sanitized.tool_calls) == 1
     assert sanitized.tool_calls[0]["name"] == "finish_task"
+
+
+def test_filter_messages_preserves_system_message():
+    messages = [SystemMessage(content="System prompt")]
+    messages.append(HumanMessage(content="Task"))
+    for i in range(5):
+        messages.append(_ai(f"assistant-{i}", tool_calls=[_tool_call("tool")]))
+        messages.append(HumanMessage(content=f"user-{i}"))
+
+    filtered = filter_messages_for_llm(messages, max_messages=3)
+
+    assert isinstance(filtered[0], SystemMessage)
+    assert filtered[0].content == "System prompt"
+    assert filtered[1].content == "Task"
+    assert len(filtered) == 5

@@ -99,8 +99,8 @@ def log_agent_state(
     logger.info("retry_count       : %s", state.get("retry_count"))
     logger.info("test_result       : %s", state.get("test_result"))
     logger.info("error_log         : %s", state.get("error_log"))
-    logger.info("trello_card_id    : %s", state.get("trello_card_id"))
-    logger.info("trello_list_id    : %s", state.get("trello_list_id"))
+    logger.info("task_id           : %s", state.get("task_id"))
+    logger.info("task_state_id     : %s", state.get("task_state_id"))
 
     messages = state.get("messages", [])
     logger.info("\n--- Messages (%d) ---", len(messages))

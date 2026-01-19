@@ -12,6 +12,9 @@ from langchain_core.messages import AIMessage
 from langgraph.graph import END, StateGraph
 from langgraph.prebuilt import ToolNode
 
+from app.agent.nodes.task_fetch_node import create_task_fetch_node
+from app.agent.nodes.task_update_node import create_task_update_node
+from app.agent.tools.create_task import create_task_tool
 from app.agent.nodes.agent_skill_level import create_agent_skill_level_node
 from app.agent.nodes.analyst import create_analyst_node
 from app.agent.nodes.bugfixer import create_bugfixer_node
@@ -21,11 +24,8 @@ from app.agent.nodes.correction import create_correction_node
 from app.agent.nodes.pull_request import create_pull_request_node
 from app.agent.nodes.router import create_router_node
 from app.agent.nodes.tester import create_tester_node
-from app.agent.nodes.trello_fetch_node import create_trello_fetch_node
-from app.agent.nodes.trello_update_node import create_trello_update_node
 from app.agent.services.summaries import has_finish_task_call
 from app.agent.state import AgentState
-from app.agent.tools.create_issue import create_issue_tool
 from app.agent.tools.file_tools import (
     list_files,
     read_file,
@@ -129,12 +129,12 @@ def create_workflow(
 ) -> StateGraph:
     """Creates and configures the main LangGraph workflow."""
     # --- Tool Sets ---
-    impl_issue_target_list = sys_config.get("backlog_list")
+    impl_task_target_state = sys_config.get("task_backlog_state")
     analyst_tools = [
         list_files,
         read_file,
         thinking,
-        create_issue_tool(sys_config, impl_issue_target_list),
+        create_task_tool(sys_config, impl_task_target_state),
         finish_task,
     ]
     coder_tools = [
@@ -152,7 +152,7 @@ def create_workflow(
     # --- Graph Nodes ---
     workflow = StateGraph(AgentState)
 
-    workflow.add_node("task_fetch", create_trello_fetch_node(sys_config))
+    workflow.add_node("task_fetch", create_task_fetch_node(sys_config))
     workflow.add_node("checkout", create_checkout_node(sys_config))
     workflow.add_node("router", create_router_node(llm_small))
     workflow.add_node("agent_skill_level", create_agent_skill_level_node(llm_small))
@@ -176,7 +176,7 @@ def create_workflow(
 
     workflow.add_node("correction", create_correction_node())
     workflow.add_node("pull_request", create_pull_request_node())
-    workflow.add_node("task_update", create_trello_update_node(sys_config))
+    workflow.add_node("task_update", create_task_update_node(sys_config))
 
     workflow.set_entry_point("task_fetch")
 
@@ -185,7 +185,7 @@ def create_workflow(
     # 1. Start -> Router
     workflow.add_conditional_edges(
         "task_fetch",
-        lambda state: "checkout" if state.get("trello_card_id") else END,
+        lambda state: "checkout" if state.get("task_id") else END,
         {END: END, "checkout": "checkout"},
     )
 

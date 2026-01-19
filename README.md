@@ -144,6 +144,13 @@ Supported providers:
 |Anthropic|`ANTHROPIC_API_KEY`     | -               |
 |Ollama   |`OLLAMA_API_KEY` (optional for local setups)|`OLLAMA_BASE_URL` - default http://host.docker.internal:11434|
 
+Other options:
+
+|Context |Key environment variable|Description|
+|---------|------------------------|-----------------|
+|Database directory|`DATABASE_DIR`|Optional override for the SQLite folder (defaults to `app/instance`)|
+|MCP control|`ENABLE_MCP_SERVERS` (default `true`)|Set to `false`/`0`/`no` to skip spawning the Git and task MCP servers when running locally|
+
 #### 4. Run the Agent via Docker Container (recommended)
 ##### 4.1 Build the Image
 ```bash
@@ -153,6 +160,8 @@ docker compose up -d --build
 ##### 4.2 Open the Dashboard in browser
 Open the agent dashboard in browser, e.g. http://localhost:5000.
 ![Agent Dashboard](./images/web-dashboard.png)
+
+If you want to run the agent without spawning MCP helper processes (e.g., when debugging locally or when MCP tooling is unavailable), set `ENABLE_MCP_SERVERS=false` (or `0`/`no`). The default is `true`, which launches both the Git MCP server and the task-system MCP server so the agent can execute repository and task-side commands.
 
 ##### 4.2 Stop the Container
 ```bash

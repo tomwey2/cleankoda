@@ -8,10 +8,10 @@ from typing import Any, Dict
 from flask import current_app
 from git import Repo
 
+from app.core.task_repository import get_branch_for_task, upsert_task
 from app.agent.services.git_workspace import checkout_branch
 from app.agent.state import AgentState
 from app.agent.utils import get_codespace
-from app.core.trello_repository import get_branch_for_issue, upsert_issue
 
 logger = logging.getLogger(__name__)
 
@@ -25,26 +25,26 @@ def create_checkout_node(sys_config: dict):
     """Create a checkout node"""
 
     async def checkout_node(state: AgentState) -> Dict[str, Any]:  # pylint: disable=unused-argument
-        trello_card_id = state["trello_card_id"]
-        trello_card_name = state["trello_card_name"]
+        task_id = state["task_id"]
+        task_name = state["task_name"]
 
-        if trello_card_id and trello_card_name:
-            await checkout_card_branch(
-                trello_card_id, trello_card_name, "coder", sys_config
+        if task_id and task_name:
+            await checkout_task_branch(
+                task_id, task_name, "coder", sys_config
             )
         else:
-            raise ValueError("Missing trello_card_id or trello_card_name in AgentState")
+            raise ValueError("Missing task_id or task_name in AgentState")
 
         return {}
 
     return checkout_node
 
 
-async def checkout_card_branch(
-    card_id: str, card_name: str, role: str, sys_config: dict
+async def checkout_task_branch(
+    task_id: str, task_name: str, role: str, sys_config: dict
 ):
     """
-    Checks out the existing git branch for a Trello card from the database.
+    Checks out the existing git branch for a task from the database.
     """
 
     if role not in ["coder", "bugfixer"]:
@@ -53,17 +53,17 @@ async def checkout_card_branch(
         repo.git.reset("--hard")
         return
 
-    git_branch = await get_existing_branch_for_card(card_id)
+    git_branch = await get_existing_branch_for_task(task_id)
 
     if not git_branch:
-        logger.info("No git branch found for card %s", card_id)
-        await checkout_branch_for_card(card_id, card_name, role, sys_config)
+        logger.info("No git branch found for task %s", task_id)
+        await checkout_branch_for_task(task_id, task_name, role, sys_config)
     else:
         logger.info(
-            "Checking out existing git branch: %s for card %s - %s",
+            "Checking out existing git branch: %s for task %s - %s",
             git_branch,
-            card_id,
-            card_name,
+            task_id,
+            task_name,
         )
 
         github_repo_url = sys_config.get("github_repo_url")
@@ -80,17 +80,17 @@ async def checkout_card_branch(
         logger.info("Current branch: %s", real_git_branch)
 
 
-async def get_existing_branch_for_card(card_id: str):
+async def get_existing_branch_for_task(task_id: str):
     """
-    Retrieves the existing git branch for a Trello card from the database.
-    Returns None if no branch exists for this card.
+    Retrieves the existing git branch for a task from the database.
+    Returns None if no branch exists for this task.
     """
     try:
         with current_app.app_context():
-            branch_name = get_branch_for_issue(card_id)
+            branch_name = get_branch_for_task(task_id)
             return branch_name
     except Exception as e:  # pylint: disable=broad-exception-caught
-        logger.warning("Failed to retrieve branch for card %s: %s", card_id, e)
+        logger.warning("Failed to retrieve branch for task %s: %s", task_id, e)
         return None
 
 
@@ -106,10 +106,10 @@ def _slugify(value: str | None) -> str:
     return value.strip("-")
 
 
-def _build_base_branch_name(card_id: str, card_name: str, role: str) -> str:
-    slug = _slugify(card_name)
-    sanitized_card_id = re.sub(r"[^a-z0-9]", "", card_id.lower())
-    short_id = sanitized_card_id[:8] if sanitized_card_id else "card"
+def _build_base_branch_name(task_id: str, task_name: str, role: str) -> str:
+    slug = _slugify(task_name)
+    sanitized_task_id = re.sub(r"[^a-z0-9]", "", task_id.lower())
+    short_id = sanitized_task_id[:8] if sanitized_task_id else "task"
     branch_suffix = slug[:48] if slug else "update"
     role_prefix = ROLE_PREFIXES.get(role, "task")
     return f"agent/{role_prefix}/{short_id}-{branch_suffix}"
@@ -142,38 +142,38 @@ def _resolve_unique_branch_name(base_name: str, existing_names: set[str]) -> str
     return candidate
 
 
-async def checkout_branch_for_card(
-    card_id: str, card_name: str, role: str, sys_config: dict
+async def checkout_branch_for_task(
+    task_id: str, task_name: str, role: str, sys_config: dict
 ):
     """
-    Checks out a new git branch for an issue.
-    The branch name is derived from the card name and guaranteed to be unique.
+    Checks out a new git branch for a task.
+    The branch name is derived from the task name and guaranteed to be unique.
     Includes role-specific prefixes for clarity.
     """
-    if not card_id or not card_name:
-        raise ValueError("card_id and card_name are required to create a git branch.")
+    if not task_id or not task_name:
+        raise ValueError("task_id and task_name are required to create a git branch.")
 
     repo = Repo(get_codespace())
     repo.git.reset("--hard")
     repo.git.fetch("--prune")
 
-    base_branch_name = _build_base_branch_name(card_id, card_name, role)
+    base_branch_name = _build_base_branch_name(task_id, task_name, role)
     existing_branches = _collect_branch_names(repo)
     branch_name = _resolve_unique_branch_name(base_branch_name, existing_branches)
 
     github_repo_url = sys_config.get("github_repo_url")
     if not github_repo_url:
         logger.warning(
-            "github_repo_url missing in sys_config; cannot checkout branch for card %s",
-            card_id,
+            "github_repo_url missing in sys_config; cannot checkout branch for task %s",
+            task_id,
         )
         return
 
     logger.info(
-        "Creating git branch '%s' for card %s - %s",
+        "Creating git branch '%s' for task %s - %s",
         branch_name,
-        card_id,
-        card_name,
+        task_id,
+        task_name,
     )
 
     repo.git.reset("--hard")
@@ -181,12 +181,12 @@ async def checkout_branch_for_card(
 
     try:
         with current_app.app_context():
-            upsert_issue(card_id, card_name, branch_name, github_repo_url)
+            upsert_task(task_id, task_name, branch_name, github_repo_url)
             logger.info(
-                "Persisted branch '%s' for card %s in database", branch_name, card_id
+                "Persisted branch '%s' for task %s in database", branch_name, task_id
             )
     except Exception as exc:  # pylint: disable=broad-exception-caught
-        logger.warning("Failed to persist branch mapping for card %s: %s", card_id, exc)
+        logger.warning("Failed to persist branch mapping for task %s: %s", task_id, exc)
 
     real_git_branch = subprocess.check_output(
         ["git", "rev-parse", "--abbrev-ref", "HEAD"],

@@ -49,7 +49,7 @@ def create_router_node(llm):
     Returns:
         A function that represents the router node.
     """
-    structured_llm = llm.with_structured_output(RouterDecision)
+    structured_llm = llm.with_structured_output(RouterDecision, method="json_mode")
 
     async def router_node(state: AgentState) -> Dict[str, str]:
         # Router only needs the original task to make routing decision

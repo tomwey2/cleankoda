@@ -28,9 +28,9 @@ class AgentState(TypedDict):
     retry_count: int  # Versuche, wie oft zwischen coder und tester gewechselt wurde
     test_result: Optional[str]
     error_log: Optional[str]  # Optional: Speichert den letzten Fehler explizit
-    trello_card_id: Optional[str]
-    trello_card_name: Optional[str]
-    trello_list_id: Optional[str]
+    task_id: Optional[str]
+    task_name: Optional[str]
+    task_state_id: Optional[str]
     git_branch: Optional[str]
     agent_skill_level: Optional[str]
     task_skill_level: Optional[str]
