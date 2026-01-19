@@ -7,10 +7,18 @@ all the necessary information for the agent to function, such as message history
 task details, and internal counters.
 """
 
+from enum import StrEnum
 from typing import Annotated, Optional, TypedDict
 
 from langchain_core.messages import BaseMessage
 from langgraph.graph.message import add_messages
+
+
+class PlanState(StrEnum):
+    REQUESTED = "requested"
+    CREATED = "created"
+    UPDATED = "updated"
+    APPROVED = "approved"
 
 
 class AgentState(TypedDict):
@@ -35,3 +43,4 @@ class AgentState(TypedDict):
     agent_skill_level: Optional[str]
     task_skill_level: Optional[str]
     agent_summary: Optional[list[str]]
+    plan_state: Optional[PlanState]

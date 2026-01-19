@@ -7,6 +7,7 @@ any modifications.
 """
 
 import logging
+from typing import Any
 
 from langchain.chat_models import BaseChatModel
 from langchain_core.messages import SystemMessage
@@ -58,7 +59,7 @@ def create_analyst_node(llm: BaseChatModel, tools, agent_stack):
             log_agent_response("analyst", response)
 
         recorded, agent_summary = record_finish_task_summary(state, "analyst", response)
-        result = {"messages": [response]}
+        result: dict[str, Any] = {"messages": [response]}
         if recorded:
             result["agent_summary"] = agent_summary
         return result
