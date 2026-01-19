@@ -113,7 +113,7 @@ def create_task_fetch_node(sys_config: dict):
                     date = comment.date.isoformat()
                     content += f"\n[{date}] {author}:\n{text}\n"
 
-            logger.info("Processing task ID: %s - %s", task.id, task.name)            
+            logger.info("Processing task ID: %s - %s", task.id, task.name)
 
             # Build SystemMessage with full context including rejection comments if present
             system_content = f"Task: {task.name}\n\nDescription:\n{task.description}"
