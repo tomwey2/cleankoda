@@ -86,6 +86,7 @@ async def _execute_agent_cycle(runtime: AgentRuntimeContext) -> None:
                 "agent_stack": runtime.agent_stack,
                 "agent_skill_level": runtime.agent_config.agent_skill_level,
                 "task_skill_level": None,
+                "plan_state": None,
             },
             {"recursion_limit": 200},
         )
