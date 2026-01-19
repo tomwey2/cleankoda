@@ -23,8 +23,8 @@ def agent_config():
     return AgentConfig(
         system_config={
             "board_provider": "trello",
-            "task_moveto_state": "Done",
-        }
+        },
+        task_moveto_state="Done",
     )
 
 

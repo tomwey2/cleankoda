@@ -90,9 +90,20 @@ class AgentConfig(db.Model):
     task_system_type = db.Column(
         db.String(50), nullable=False, default="TRELLO"
     )  # e.g., "TRELLO", "JIRA", "CUSTOM"
+
     system_config = db.Column(
-        EncryptedDict, nullable=True
+        db.JSON, nullable=True
     )  # Dict blob for credentials, IDs, etc.
+
+    task_backlog_state = db.Column(db.String(100), nullable=True)
+    task_readfrom_state = db.Column(db.String(100), nullable=True)
+    task_in_progress_state = db.Column(db.String(100), nullable=True)
+    task_moveto_state = db.Column(db.String(100), nullable=True)
+    llm_provider = db.Column(db.String(50), nullable=True)
+    llm_model_large = db.Column(db.String(100), nullable=True)
+    llm_model_small = db.Column(db.String(100), nullable=True)
+    llm_temperature = db.Column(db.String(16), nullable=True)
+
 
     # Existing Fields
     repo_type = db.Column(
@@ -109,8 +120,10 @@ class AgentConfig(db.Model):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
 
+    task_system = db.relationship("TaskSystem", back_populates="agent_configs")
+
     def __repr__(self):
-        return f"<AgentConfig {self.id}>"
+        return f"<AgentConfigNew {self.id} task_system_id={self.task_system_id}>"
 
     def as_dict(self) -> Dict[str, Any]:
         """Return a plain dictionary of column values for logging/debugging."""
@@ -134,7 +147,7 @@ class TaskSystem(db.Model):
     board_id = db.Column(db.String(100), nullable=True)
 
     agent_configs = db.relationship(
-        "AgentConfigNew", back_populates="task_system", cascade="all, delete-orphan"
+        "AgentConfig", back_populates="task_system", cascade="all, delete-orphan"
     )
 
     def __repr__(self):

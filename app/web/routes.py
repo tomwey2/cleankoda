@@ -45,6 +45,11 @@ def _missing_provider_env(provider: str) -> str | None:
     return env_name
 
 
+def _normalize_form_value(value: Any) -> Any:
+    """Convert empty strings to None for easier persistence."""
+    return value if value not in ("", None) else None
+
+
 def _get_trello_data() -> dict[str, Any]:
     """Get Trello data from form"""
     return {
@@ -112,11 +117,31 @@ def settings_post(config: AgentConfig):
     system_type = config.task_system_type
 
     if system_type == "TRELLO":
-        new_config_data.update(_get_trello_data())
+        trello_data = _get_trello_data()
+
+        config.task_backlog_state = _normalize_form_value(
+            trello_data.pop("task_backlog_state", None)
+        )
+        config.task_readfrom_state = _normalize_form_value(
+            trello_data.pop("task_readfrom_state", None)
+        )
+        config.task_in_progress_state = _normalize_form_value(
+            trello_data.pop("task_in_progress_state", None)
+        )
+        config.task_moveto_state = _normalize_form_value(
+            trello_data.pop("task_moveto_state", None)
+        )
+
+        new_config_data.update(trello_data)
     elif system_type == "JIRA":
         new_config_data.update(_get_jira_data())
 
-    new_config_data.update(_get_llm_config())
+    llm_config = _get_llm_config()
+    config.llm_provider = _normalize_form_value(llm_config.get("llm_provider")) or "mistral"
+    config.llm_model_large = _normalize_form_value(llm_config.get("llm_model_large"))
+    config.llm_model_small = _normalize_form_value(llm_config.get("llm_model_small"))
+    config.llm_temperature = _normalize_form_value(llm_config.get("llm_temperature"))
+
 
     # Assign dict directly; EncryptedString handles serialization/encryption
     config.system_config = new_config_data
@@ -129,15 +154,23 @@ def settings_post(config: AgentConfig):
     return redirect(url_for("web.settings"))
 
 
-def _set_trello_form_data(saved_data: dict[str, Any], form_data: dict):
+def _set_trello_form_data(config: AgentConfig, saved_data: dict[str, Any], form_data: dict):
     """Set Trello form data."""
     form_data["trello_api_key"] = saved_data.get("env", {}).get("TRELLO_API_KEY")
     form_data["trello_api_token"] = saved_data.get("env", {}).get("TRELLO_TOKEN")
     form_data["trello_board_id"] = saved_data.get("trello_board_id")
-    form_data["trello_backlog_list"] = saved_data.get("task_backlog_state")
-    form_data["trello_readfrom_list"] = saved_data.get("task_readfrom_state")
-    form_data["trello_progress_list"] = saved_data.get("task_in_progress_state")
-    form_data["trello_moveto_list"] = saved_data.get("task_moveto_state")
+    form_data["trello_backlog_list"] = config.task_backlog_state or saved_data.get(
+        "task_backlog_state"
+    )
+    form_data["trello_readfrom_list"] = config.task_readfrom_state or saved_data.get(
+        "task_readfrom_state"
+    )
+    form_data["trello_progress_list"] = (
+        config.task_in_progress_state or saved_data.get("task_in_progress_state")
+    )
+    form_data["trello_moveto_list"] = config.task_moveto_state or saved_data.get(
+        "task_moveto_state"
+    )
     form_data["trello_base_url"] = saved_data.get("env", {}).get(
         "TRELLO_BASE_URL", "https://api.trello.com/1"
     )
@@ -150,12 +183,21 @@ def _set_jira_form_data(saved_data: dict[str, Any], form_data: dict):
     form_data["jira_jql_query"] = saved_data.get("jql")
 
 
-def _set_llm_form_data(saved_data: dict[str, Any], form_data: dict):
+def _set_llm_form_data(config: AgentConfig, saved_data: dict[str, Any], form_data: dict):
     """Set LLM form data."""
-    form_data["llm_provider"] = saved_data.get("llm_provider", "mistral")
-    form_data["llm_model_large"] = saved_data.get("llm_model_large")
-    form_data["llm_model_small"] = saved_data.get("llm_model_small")
-    form_data["llm_temperature"] = saved_data.get("llm_temperature", 0.0)
+    form_data["llm_provider"] = (
+        config.llm_provider or saved_data.get("llm_provider") or "mistral"
+    )
+    form_data["llm_model_large"] = config.llm_model_large or saved_data.get(
+        "llm_model_large"
+    )
+    form_data["llm_model_small"] = config.llm_model_small or saved_data.get(
+        "llm_model_small"
+    )
+    form_data["llm_temperature"] = config.llm_temperature or saved_data.get(
+        "llm_temperature",
+        0.0,
+    )
 
 
 def settings_get(config: AgentConfig) -> str:
@@ -177,13 +219,13 @@ def settings_get(config: AgentConfig) -> str:
 
         # Populate form_data with prefixed keys for the template
         # Trello data
-        _set_trello_form_data(saved_data, form_data)
+        _set_trello_form_data(config, saved_data, form_data)
 
         # Jira data
         _set_jira_form_data(saved_data, form_data)
 
         # LLM data
-        _set_llm_form_data(saved_data, form_data)
+        _set_llm_form_data(config, saved_data, form_data)
     if not form_data.get("llm_provider"):
         form_data["llm_provider"] = "mistral"
 

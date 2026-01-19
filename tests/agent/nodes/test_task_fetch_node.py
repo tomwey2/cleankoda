@@ -24,10 +24,11 @@ def agent_config():
     return AgentConfig(
         system_config={
             "board_provider": "trello",
-            "task_readfrom_state": "To Do",
-            "task_in_progress_state": "In Progress",
-            "task_moveto_state": "Done",
-        }
+        },
+        task_backlog_state="Backlog",
+        task_readfrom_state="To Do",
+        task_in_progress_state="In Progress",
+        task_moveto_state="Done",
     )
 
 
@@ -81,9 +82,13 @@ async def test_task_fetch_node_success(agent_config, mock_board_provider):
 @pytest.mark.asyncio
 async def test_task_fetch_node_no_review_list(agent_config, mock_board_provider):
     """Test task fetch when no review list is configured."""
-    sys_config_no_review = dict(agent_config.system_config or {})
-    sys_config_no_review["task_moveto_state"] = None
-    temp_config = AgentConfig(system_config=sys_config_no_review)
+    temp_config = AgentConfig(
+        system_config=dict(agent_config.system_config or {}),
+        task_backlog_state=agent_config.task_backlog_state,
+        task_readfrom_state=agent_config.task_readfrom_state,
+        task_in_progress_state=agent_config.task_in_progress_state,
+        task_moveto_state=None,
+    )
     
     with patch(
         "app.agent.nodes.task_fetch_node.create_board_provider",

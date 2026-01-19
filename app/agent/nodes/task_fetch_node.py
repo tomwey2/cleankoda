@@ -19,9 +19,32 @@ from app.agent.state import AgentState
 logger = logging.getLogger(__name__)
 
 
+def _get_config_value(agent_config: AgentConfig, field_name: str) -> str | None:
+    """Return a configuration value from the dedicated column or legacy system_config."""
+    value = getattr(agent_config, field_name, None)
+    if value:
+        return value
+
+    sys_config = agent_config.system_config
+    if isinstance(sys_config, dict):
+        return sys_config.get(field_name)
+
+    if sys_config is not None:
+        logger.warning(
+            "AgentConfig %s has malformed system_config; expected dict but got %s",
+            getattr(agent_config, "id", "unknown"),
+            type(sys_config).__name__,
+        )
+    return None
+
+
 async def _get_task_context(board_provider: BoardProvider, agent_config: AgentConfig):
-    incoming_state_name = agent_config.system_config["task_readfrom_state"]
-    in_progress_state_name = agent_config.system_config.get("task_in_progress_state")
+    incoming_state_name = _get_config_value(agent_config, "task_readfrom_state")
+    if not incoming_state_name:
+        logger.warning("task_readfrom_state not configured")
+        return None
+
+    in_progress_state_name = agent_config.task_in_progress_state
 
     task_context = None
     if in_progress_state_name:
@@ -73,11 +96,11 @@ def create_task_fetch_node(agent_config: AgentConfig):
         try:
             board_provider = create_board_provider(agent_config)
 
-            review_state_name = agent_config.system_config.get("task_moveto_state")
+            review_state_name = agent_config.task_moveto_state
             if not review_state_name:
                 return {"task_id": None}
 
-            task_in_progress_state_name = agent_config.system_config.get("task_in_progress_state")
+            task_in_progress_state_name = agent_config.task_in_progress_state
 
             task_context = await _get_task_context(board_provider, agent_config)
             if not task_context:

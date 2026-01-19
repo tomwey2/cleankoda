@@ -55,7 +55,7 @@ def create_task_update_node(agent_config: AgentConfig):
             logger.error("Failed to add comment to task: %s", e)
 
         try:
-            task_moveto_state = agent_config.system_config["task_moveto_state"]
+            task_moveto_state = agent_config.task_moveto_state
             task_moveto_state_id = await board_provider.move_task_to_named_state(
                 task_id, task_moveto_state
             )
