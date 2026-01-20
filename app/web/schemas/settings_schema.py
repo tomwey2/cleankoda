@@ -40,6 +40,58 @@ class TrelloConfigSchema(BaseModel):
         return v
 
 
+class GitHubConfigSchema(BaseModel):
+    """Schema for GitHub Projects configuration form data."""
+
+    base_url: str = Field(
+        default="https://api.github.com", description="GitHub API base URL"
+    )
+    api_token: Optional[str] = Field(
+        default=None,
+        description="GitHub PAT for board operations (falls back to GITHUB_TOKEN env)",
+    )
+    project_owner: Optional[str] = Field(
+        default=None, description="GitHub project owner (user or organization)"
+    )
+    project_number: Optional[int] = Field(
+        default=None, description="GitHub project number"
+    )
+    board_id: Optional[str] = Field(
+        default=None, description="GitHub project node ID (fetched automatically)"
+    )
+    backlog_list: Optional[str] = Field(
+        default=None, description="Column name for backlog tasks"
+    )
+    readfrom_list: Optional[str] = Field(
+        default=None, description="Column name to read tasks from"
+    )
+    progress_list: Optional[str] = Field(
+        default=None, description="Column name for in-progress tasks"
+    )
+    moveto_list: Optional[str] = Field(
+        default=None, description="Column name to move completed tasks to"
+    )
+
+    @field_validator("project_owner", "board_id", "api_token", mode="before")
+    @classmethod
+    def empty_str_to_none(cls, v: Optional[str]) -> Optional[str]:
+        """Convert empty strings to None."""
+        if v == "":
+            return None
+        return v
+
+    @field_validator("project_number", mode="before")
+    @classmethod
+    def empty_str_to_none_int(cls, v) -> Optional[int]:
+        """Convert empty strings to None, parse int."""
+        if v == "" or v is None:
+            return None
+        try:
+            return int(v)
+        except (ValueError, TypeError):
+            return None
+
+
 class JiraConfigSchema(BaseModel):
     """Schema for Jira configuration form data."""
 
@@ -99,6 +151,9 @@ class SettingsFormSchema(BaseModel):
 
     trello_config: Optional[TrelloConfigSchema] = Field(
         default=None, description="Trello configuration"
+    )
+    github_config: Optional[GitHubConfigSchema] = Field(
+        default=None, description="GitHub Projects configuration"
     )
     jira_config: Optional[JiraConfigSchema] = Field(
         default=None, description="Jira configuration"

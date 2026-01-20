@@ -5,12 +5,14 @@ This module provides bidirectional mapping between:
 - Database layer models (SQLAlchemy ORM models)
 """
 
+import os
 from typing import Any, Dict
 
 from flask import request
 
 from app.core.models import AgentConfig, TaskSystem
 from app.web.schemas.settings_schema import (
+    GitHubConfigSchema,
     JiraConfigSchema,
     LLMConfigSchema,
     SettingsFormSchema,
@@ -30,28 +32,37 @@ class ConfigMapper:
         """
         task_system_type = request.form.get("task_system_type", "TRELLO")
 
-        trello_config = None
-        jira_config = None
-
-        if task_system_type == "TRELLO":
-            trello_config = TrelloConfigSchema(
-                api_key=request.form.get("trello_api_key"),
-                api_token=request.form.get("trello_api_token"),
-                base_url=request.form.get(
-                    "trello_base_url", "https://api.trello.com/1"
-                ),
-                board_id=request.form.get("trello_board_id"),
-                backlog_list=request.form.get("trello_backlog_list"),
-                readfrom_list=request.form.get("trello_readfrom_list"),
-                progress_list=request.form.get("trello_progress_list"),
-                moveto_list=request.form.get("trello_moveto_list"),
-            )
-        elif task_system_type == "JIRA":
-            jira_config = JiraConfigSchema(
-                username=request.form.get("jira_username"),
-                api_token=request.form.get("jira_api_token"),
-                jql_query=request.form.get("jira_jql_query"),
-            )
+        # Always parse all provider configs from form
+        trello_config = TrelloConfigSchema(
+            api_key=request.form.get("trello_api_key"),
+            api_token=request.form.get("trello_api_token"),
+            base_url=request.form.get(
+                "trello_base_url", "https://api.trello.com/1"
+            ),
+            board_id=request.form.get("trello_board_id"),
+            backlog_list=request.form.get("trello_backlog_list"),
+            readfrom_list=request.form.get("trello_readfrom_list"),
+            progress_list=request.form.get("trello_progress_list"),
+            moveto_list=request.form.get("trello_moveto_list"),
+        )
+        github_config = GitHubConfigSchema(
+            base_url=request.form.get(
+                "github_base_url", "https://api.github.com"
+            ),
+            api_token=request.form.get("github_api_token"),
+            project_owner=request.form.get("github_project_owner"),
+            project_number=request.form.get("github_project_number"),
+            board_id=request.form.get("github_board_id"),
+            backlog_list=request.form.get("github_backlog_list"),
+            readfrom_list=request.form.get("github_readfrom_list"),
+            progress_list=request.form.get("github_progress_list"),
+            moveto_list=request.form.get("github_moveto_list"),
+        )
+        jira_config = JiraConfigSchema(
+            username=request.form.get("jira_username"),
+            api_token=request.form.get("jira_api_token"),
+            jql_query=request.form.get("jira_jql_query"),
+        )
 
         llm_config = LLMConfigSchema(
             provider=request.form.get("llm_provider"),
@@ -68,6 +79,7 @@ class ConfigMapper:
             github_repo_url=request.form.get("github_repo_url"),
             is_active="is_active" in request.form,
             trello_config=trello_config,
+            github_config=github_config,
             jira_config=jira_config,
             llm_config=llm_config,
         )
@@ -94,8 +106,11 @@ class ConfigMapper:
 
         ConfigMapper._apply_llm_config(schema.llm_config, config)
 
-        if schema.task_system_type == "TRELLO" and schema.trello_config:
+        # Always save all provider configs
+        if schema.trello_config:
             ConfigMapper._apply_trello_config(schema.trello_config, config)
+        if schema.github_config:
+            ConfigMapper._apply_github_config(schema.github_config, config)
 
         return config
 
@@ -112,34 +127,52 @@ class ConfigMapper:
         trello_schema: TrelloConfigSchema, config: AgentConfig
     ) -> None:
         """Apply Trello configuration from schema to model."""
-        config.task_backlog_state = trello_schema.backlog_list
-        config.task_readfrom_state = trello_schema.readfrom_list
-        config.task_in_progress_state = trello_schema.progress_list
-        config.task_moveto_state = trello_schema.moveto_list
-
-        task_system = ConfigMapper._get_or_create_task_system(config)
+        task_system = ConfigMapper._get_or_create_task_system(config, "trello")
         task_system.board_provider = "trello"
+        task_system.task_system_type = "TRELLO"
 
-        if trello_schema.board_id:
-            task_system.board_id = trello_schema.board_id
-        if trello_schema.api_key:
-            task_system.api_key = trello_schema.api_key
-        if trello_schema.api_token:
-            task_system.token = trello_schema.api_token
-        if trello_schema.base_url:
-            task_system.base_url = trello_schema.base_url
+        task_system.board_id = trello_schema.board_id
+        task_system.api_key = trello_schema.api_key
+        task_system.token = trello_schema.api_token
+        task_system.base_url = trello_schema.base_url
+        task_system.backlog_state = trello_schema.backlog_list
+        task_system.readfrom_state = trello_schema.readfrom_list
+        task_system.in_progress_state = trello_schema.progress_list
+        task_system.moveto_state = trello_schema.moveto_list
 
     @staticmethod
-    def _get_or_create_task_system(config: AgentConfig) -> TaskSystem:
-        """Get existing TaskSystem or create a new one."""
-        if config.task_system:
-            return config.task_system
+    def _apply_github_config(
+        github_schema: GitHubConfigSchema, config: AgentConfig
+    ) -> None:
+        """Apply GitHub Projects configuration from schema to model."""
+        task_system = ConfigMapper._get_or_create_task_system(config, "github")
+        task_system.board_provider = "github"
+        task_system.task_system_type = "GITHUB"
+
+        task_system.token = github_schema.api_token
+        task_system.project_owner = github_schema.project_owner
+        task_system.project_number = github_schema.project_number
+        task_system.board_id = github_schema.board_id
+        task_system.base_url = github_schema.base_url
+        task_system.backlog_state = github_schema.backlog_list
+        task_system.readfrom_state = github_schema.readfrom_list
+        task_system.in_progress_state = github_schema.progress_list
+        task_system.moveto_state = github_schema.moveto_list
+
+    @staticmethod
+    def _get_or_create_task_system(
+        config: AgentConfig, provider: str
+    ) -> TaskSystem:
+        """Get existing TaskSystem for provider or create a new one."""
+        existing = config.get_task_system(provider)
+        if existing:
+            return existing
 
         task_system = TaskSystem(
-            task_system_type=config.task_system_type,
-            board_provider="trello",
+            task_system_type=provider.upper(),
+            board_provider=provider,
         )
-        config.task_system = task_system
+        config.task_systems.append(task_system)
         return task_system
 
     @staticmethod
@@ -161,6 +194,7 @@ class ConfigMapper:
         }
 
         ConfigMapper._add_trello_form_data(config, form_data)
+        ConfigMapper._add_github_form_data(config, form_data)
         ConfigMapper._add_jira_form_data(form_data)
 
         return form_data
@@ -168,22 +202,51 @@ class ConfigMapper:
     @staticmethod
     def _add_trello_form_data(config: AgentConfig, form_data: Dict[str, Any]) -> None:
         """Add Trello-specific fields to form data."""
-        task_system = config.task_system
+        task_system = config.get_task_system("trello")
         if task_system:
             form_data["trello_api_key"] = task_system.api_key
             form_data["trello_api_token"] = task_system.token
             form_data["trello_board_id"] = task_system.board_id
             form_data["trello_base_url"] = task_system.base_url
+            form_data["trello_backlog_list"] = task_system.backlog_state
+            form_data["trello_readfrom_list"] = task_system.readfrom_state
+            form_data["trello_progress_list"] = task_system.in_progress_state
+            form_data["trello_moveto_list"] = task_system.moveto_state
         else:
             form_data["trello_api_key"] = None
             form_data["trello_api_token"] = None
             form_data["trello_board_id"] = None
             form_data["trello_base_url"] = None
+            form_data["trello_backlog_list"] = None
+            form_data["trello_readfrom_list"] = None
+            form_data["trello_progress_list"] = None
+            form_data["trello_moveto_list"] = None
 
-        form_data["trello_backlog_list"] = config.task_backlog_state
-        form_data["trello_readfrom_list"] = config.task_readfrom_state
-        form_data["trello_progress_list"] = config.task_in_progress_state
-        form_data["trello_moveto_list"] = config.task_moveto_state
+    @staticmethod
+    def _add_github_form_data(config: AgentConfig, form_data: Dict[str, Any]) -> None:
+        """Add GitHub Projects-specific fields to form data."""
+        task_system = config.get_task_system("github")
+        env_token = os.environ.get("GITHUB_TOKEN")
+        if task_system:
+            form_data["github_api_token"] = task_system.token or env_token
+            form_data["github_project_owner"] = task_system.project_owner
+            form_data["github_project_number"] = task_system.project_number
+            form_data["github_board_id"] = task_system.board_id
+            form_data["github_base_url"] = task_system.base_url or "https://api.github.com"
+            form_data["github_backlog_list"] = task_system.backlog_state
+            form_data["github_readfrom_list"] = task_system.readfrom_state
+            form_data["github_progress_list"] = task_system.in_progress_state
+            form_data["github_moveto_list"] = task_system.moveto_state
+        else:
+            form_data["github_api_token"] = env_token
+            form_data["github_project_owner"] = None
+            form_data["github_project_number"] = None
+            form_data["github_board_id"] = None
+            form_data["github_base_url"] = "https://api.github.com"
+            form_data["github_backlog_list"] = None
+            form_data["github_readfrom_list"] = None
+            form_data["github_progress_list"] = None
+            form_data["github_moveto_list"] = None
 
     @staticmethod
     def _add_jira_form_data(form_data: Dict[str, Any]) -> None:

@@ -5,6 +5,7 @@ from __future__ import annotations
 from app.core.models import AgentConfig, TaskSystem
 from app.web.mappers.config_mapper import ConfigMapper
 from app.web.schemas.settings_schema import (
+    GitHubConfigSchema,
     LLMConfigSchema,
     SettingsFormSchema,
     TrelloConfigSchema,
@@ -73,14 +74,15 @@ class TestConfigMapperSchemaToModel:
 
         result = ConfigMapper.schema_to_model(schema, config)
 
-        assert result.task_backlog_state == "list-1"
-        assert result.task_readfrom_state == "list-2"
-        assert result.task_in_progress_state == "list-3"
-        assert result.task_moveto_state == "list-4"
-        assert result.task_system is not None
-        assert result.task_system.api_key == "test-key"
-        assert result.task_system.token == "test-token"
-        assert result.task_system.board_id == "board-123"
+        trello_ts = result.get_task_system("trello")
+        assert trello_ts is not None
+        assert trello_ts.backlog_state == "list-1"
+        assert trello_ts.readfrom_state == "list-2"
+        assert trello_ts.in_progress_state == "list-3"
+        assert trello_ts.moveto_state == "list-4"
+        assert trello_ts.api_key == "test-key"
+        assert trello_ts.token == "test-token"
+        assert trello_ts.board_id == "board-123"
 
     def test_creates_task_system_if_missing(self, app):
         """TaskSystem should be created if not present."""
@@ -90,12 +92,13 @@ class TestConfigMapperSchemaToModel:
             trello_config=trello_config,
         )
         config = AgentConfig()
-        assert config.task_system is None
+        assert len(config.task_systems) == 0
 
         result = ConfigMapper.schema_to_model(schema, config)
 
-        assert result.task_system is not None
-        assert result.task_system.board_provider == "trello"
+        trello_ts = result.get_task_system("trello")
+        assert trello_ts is not None
+        assert trello_ts.board_provider == "trello"
 
     def test_reuses_existing_task_system(self, app):
         """Existing TaskSystem should be reused."""
@@ -109,12 +112,14 @@ class TestConfigMapperSchemaToModel:
             task_system_type="TRELLO",
             trello_config=trello_config,
         )
-        config = AgentConfig(task_system=existing_task_system)
+        config = AgentConfig()
+        config.task_systems.append(existing_task_system)
 
         result = ConfigMapper.schema_to_model(schema, config)
 
-        assert result.task_system is existing_task_system
-        assert result.task_system.board_id == "new-board"
+        trello_ts = result.get_task_system("trello")
+        assert trello_ts is existing_task_system
+        assert trello_ts.board_id == "new-board"
 
 
 class TestConfigMapperModelToFormData:
@@ -129,13 +134,14 @@ class TestConfigMapperModelToFormData:
             llm_model_small="claude-instant",
             llm_temperature="0.5",
         )
-        config.task_system = TaskSystem(
+        trello_ts = TaskSystem(
             board_provider="trello",
             api_key="key",
             token="token",
             board_id="board",
             base_url="https://api.trello.com/1",
         )
+        config.task_systems.append(trello_ts)
 
         result = ConfigMapper.model_to_form_data(config)
 
@@ -147,19 +153,19 @@ class TestConfigMapperModelToFormData:
 
     def test_extracts_trello_fields(self, app):
         """Trello fields should be extracted from model."""
-        config = AgentConfig(
-            task_backlog_state="backlog",
-            task_readfrom_state="todo",
-            task_in_progress_state="doing",
-            task_moveto_state="done",
-        )
-        config.task_system = TaskSystem(
+        config = AgentConfig()
+        trello_ts = TaskSystem(
             board_provider="trello",
             api_key="api-key",
             token="api-token",
             board_id="board-id",
             base_url="https://api.trello.com/1",
+            backlog_state="backlog",
+            readfrom_state="todo",
+            in_progress_state="doing",
+            moveto_state="done",
         )
+        config.task_systems.append(trello_ts)
 
         result = ConfigMapper.model_to_form_data(config)
 
@@ -172,9 +178,8 @@ class TestConfigMapperModelToFormData:
         assert result["trello_moveto_list"] == "done"
 
     def test_handles_missing_task_system(self, app):
-        """Missing task_system should result in None values."""
+        """Missing task_systems should result in None values."""
         config = AgentConfig()
-        config.task_system = None
 
         result = ConfigMapper.model_to_form_data(config)
 
@@ -185,7 +190,6 @@ class TestConfigMapperModelToFormData:
     def test_defaults_llm_provider_to_mistral(self, app):
         """Missing llm_provider should default to mistral."""
         config = AgentConfig(llm_provider=None)
-        config.task_system = TaskSystem(board_provider="trello")
 
         result = ConfigMapper.model_to_form_data(config)
 
@@ -248,3 +252,140 @@ class TestConfigMapperFormToSchema:
         ):
             result = ConfigMapper.form_to_schema()
             assert result.is_active is False
+
+
+class TestConfigMapperGitHub:
+    """Tests for ConfigMapper with GitHub configuration."""
+
+    def test_applies_github_config(self, app):
+        """GitHub config should be applied to model and task_system."""
+        github_config = GitHubConfigSchema(
+            base_url="https://api.github.com",
+            api_token="ghp_test_token",
+            project_owner="octocat",
+            project_number=1,
+            board_id="PVT_kwDOxxxxxx",
+            backlog_list="Backlog",
+            readfrom_list="Todo",
+            progress_list="In Progress",
+            moveto_list="Done",
+        )
+        schema = SettingsFormSchema(
+            task_system_type="GITHUB",
+            github_config=github_config,
+        )
+        config = AgentConfig()
+
+        result = ConfigMapper.schema_to_model(schema, config)
+
+        github_ts = result.get_task_system("github")
+        assert github_ts is not None
+        assert github_ts.backlog_state == "Backlog"
+        assert github_ts.readfrom_state == "Todo"
+        assert github_ts.in_progress_state == "In Progress"
+        assert github_ts.moveto_state == "Done"
+        assert github_ts.board_provider == "github"
+        assert github_ts.token == "ghp_test_token"
+        assert github_ts.project_owner == "octocat"
+        assert github_ts.project_number == 1
+        assert github_ts.board_id == "PVT_kwDOxxxxxx"
+        assert github_ts.base_url == "https://api.github.com"
+
+    def test_creates_github_task_system_if_missing(self, app):
+        """TaskSystem should be created with github provider if not present."""
+        github_config = GitHubConfigSchema(project_owner="test-org")
+        schema = SettingsFormSchema(
+            task_system_type="GITHUB",
+            github_config=github_config,
+        )
+        config = AgentConfig()
+        assert len(config.task_systems) == 0
+
+        result = ConfigMapper.schema_to_model(schema, config)
+
+        github_ts = result.get_task_system("github")
+        assert github_ts is not None
+        assert github_ts.board_provider == "github"
+
+    def test_extracts_github_fields(self, app):
+        """GitHub fields should be extracted from model."""
+        config = AgentConfig(task_system_type="GITHUB")
+        github_ts = TaskSystem(
+            board_provider="github",
+            token="ghp_test_token",
+            project_owner="octocat",
+            project_number=1,
+            board_id="PVT_kwDOxxxxxx",
+            base_url="https://api.github.com",
+            backlog_state="Backlog",
+            readfrom_state="Todo",
+            in_progress_state="In Progress",
+            moveto_state="Done",
+        )
+        config.task_systems.append(github_ts)
+
+        result = ConfigMapper.model_to_form_data(config)
+
+        assert result["github_api_token"] == "ghp_test_token"
+        assert result["github_project_owner"] == "octocat"
+        assert result["github_project_number"] == 1
+        assert result["github_board_id"] == "PVT_kwDOxxxxxx"
+        assert result["github_base_url"] == "https://api.github.com"
+        assert result["github_backlog_list"] == "Backlog"
+        assert result["github_readfrom_list"] == "Todo"
+        assert result["github_progress_list"] == "In Progress"
+        assert result["github_moveto_list"] == "Done"
+
+    def test_parses_github_form_data(self, app):
+        """GitHub form data should be parsed into schema."""
+        with app.test_request_context(
+            "/settings",
+            method="POST",
+            data={
+                "task_system_type": "GITHUB",
+                "github_api_token": "ghp_test_token",
+                "github_project_owner": "octocat",
+                "github_project_number": "1",
+                "github_board_id": "PVT_kwDOxxxxxx",
+                "github_base_url": "https://api.github.com",
+                "github_backlog_list": "Backlog",
+                "github_readfrom_list": "Todo",
+                "github_progress_list": "In Progress",
+                "github_moveto_list": "Done",
+                "llm_provider": "openai",
+                "polling_interval_seconds": "90",
+                "repo_type": "GITHUB",
+            },
+        ):
+            result = ConfigMapper.form_to_schema()
+
+            assert result.task_system_type == "GITHUB"
+            assert result.github_config is not None
+            assert result.github_config.api_token == "ghp_test_token"
+            assert result.github_config.project_owner == "octocat"
+            assert result.github_config.project_number == 1
+            assert result.github_config.board_id == "PVT_kwDOxxxxxx"
+            assert result.github_config.backlog_list == "Backlog"
+            # trello_config is now always parsed (not None)
+            assert result.trello_config is not None
+
+    def test_handles_missing_github_task_system(self, app):
+        """Missing GitHub task_system should result in default values."""
+        config = AgentConfig(task_system_type="TRELLO")
+
+        result = ConfigMapper.model_to_form_data(config)
+
+        assert result["github_api_token"] is None
+        assert result["github_project_owner"] is None
+        assert result["github_project_number"] is None
+        assert result["github_board_id"] is None
+        assert result["github_base_url"] == "https://api.github.com"
+
+    def test_github_token_prefills_from_env(self, app, monkeypatch):
+        """GitHub token should fall back to GITHUB_TOKEN env when not stored."""
+        monkeypatch.setenv("GITHUB_TOKEN", "env_token")
+        config = AgentConfig(task_system_type="TRELLO")
+
+        result = ConfigMapper.model_to_form_data(config)
+
+        assert result["github_api_token"] == "env_token"

@@ -60,13 +60,12 @@ class TestSettingsService:
     def test_get_or_create_config_returns_existing(self, app):
         """Should return existing config if one exists."""
         with app.app_context():
-            existing = AgentConfig(
+            existing = AgentConfig(task_system_type="TRELLO")
+            trello_ts = TaskSystem(
                 task_system_type="TRELLO",
-                task_system=TaskSystem(
-                    task_system_type="TRELLO",
-                    board_provider="trello",
-                ),
+                board_provider="trello",
             )
+            existing.task_systems.append(trello_ts)
             db.session.add(existing)
             db.session.commit()
             existing_id = existing.id
@@ -82,19 +81,11 @@ class TestSettingsService:
 
             assert result is not None
             assert result.task_system_type == "TRELLO"
-            assert result.task_system is not None
-            assert result.task_system.board_provider == "trello"
 
     def test_save_settings_persists_to_db(self, app):
         """Should persist settings to database."""
         with app.app_context():
-            config = AgentConfig(
-                task_system_type="TRELLO",
-                task_system=TaskSystem(
-                    task_system_type="TRELLO",
-                    board_provider="trello",
-                ),
-            )
+            config = AgentConfig(task_system_type="TRELLO")
             schema = SettingsFormSchema(
                 task_system_type="TRELLO",
                 agent_skill_level="senior",
@@ -119,10 +110,6 @@ class TestSettingsService:
             existing = AgentConfig(
                 task_system_type="TRELLO",
                 agent_skill_level="junior",
-                task_system=TaskSystem(
-                    task_system_type="TRELLO",
-                    board_provider="trello",
-                ),
             )
             db.session.add(existing)
             db.session.commit()
@@ -145,10 +132,6 @@ class TestSettingsService:
             config = AgentConfig(
                 task_system_type="TRELLO",
                 llm_provider="mistral",
-                task_system=TaskSystem(
-                    task_system_type="TRELLO",
-                    board_provider="trello",
-                ),
             )
 
             result = SettingsService.get_template_context(config)
@@ -179,13 +162,7 @@ class TestSettingsService:
     def test_validate_and_save_success(self, app):
         """Should return success tuple on valid save."""
         with app.app_context():
-            config = AgentConfig(
-                task_system_type="TRELLO",
-                task_system=TaskSystem(
-                    task_system_type="TRELLO",
-                    board_provider="trello",
-                ),
-            )
+            config = AgentConfig(task_system_type="TRELLO")
 
             with app.test_request_context(
                 "/settings",

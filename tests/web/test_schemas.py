@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from app.web.schemas.settings_schema import (
+    GitHubConfigSchema,
     JiraConfigSchema,
     LLMConfigSchema,
     SettingsFormSchema,
@@ -154,3 +155,79 @@ class TestJiraConfigSchema:
         assert schema.username == "user@example.com"
         assert schema.api_token == "token-123"
         assert schema.jql_query == "project = TEST"
+
+
+class TestGitHubConfigSchema:
+    """Tests for GitHubConfigSchema validation."""
+
+    def test_empty_strings_converted_to_none(self):
+        """Empty strings should be converted to None."""
+        schema = GitHubConfigSchema(
+            project_owner="",
+            board_id="",
+            api_token="",
+        )
+        assert schema.project_owner is None
+        assert schema.board_id is None
+        assert schema.api_token is None
+
+    def test_empty_project_number_converted_to_none(self):
+        """Empty project number should be converted to None."""
+        schema = GitHubConfigSchema(project_number="")
+        assert schema.project_number is None
+
+    def test_project_number_parsed_from_string(self):
+        """Project number should be parsed from string."""
+        schema = GitHubConfigSchema(project_number="42")
+        assert schema.project_number == 42
+
+    def test_valid_values_preserved(self):
+        """Valid values should be preserved."""
+        schema = GitHubConfigSchema(
+            project_owner="octocat",
+            project_number=1,
+            board_id="PVT_kwDOxxxxxx",
+            api_token="ghp_test_token",
+            backlog_list="Backlog",
+            readfrom_list="Todo",
+            progress_list="In Progress",
+            moveto_list="Done",
+        )
+        assert schema.project_owner == "octocat"
+        assert schema.project_number == 1
+        assert schema.board_id == "PVT_kwDOxxxxxx"
+        assert schema.api_token == "ghp_test_token"
+        assert schema.backlog_list == "Backlog"
+        assert schema.readfrom_list == "Todo"
+        assert schema.progress_list == "In Progress"
+        assert schema.moveto_list == "Done"
+
+    def test_default_base_url(self):
+        """Base URL should default to GitHub API."""
+        schema = GitHubConfigSchema()
+        assert schema.base_url == "https://api.github.com"
+
+    def test_custom_base_url_for_enterprise(self):
+        """Custom base URL should be accepted for GitHub Enterprise."""
+        schema = GitHubConfigSchema(base_url="https://github.mycompany.com/api")
+        assert schema.base_url == "https://github.mycompany.com/api"
+
+
+class TestSettingsFormSchemaWithGitHub:
+    """Tests for SettingsFormSchema with GitHub configuration."""
+
+    def test_nested_github_config(self):
+        """Schema should accept nested GitHub config."""
+        github = GitHubConfigSchema(project_owner="octocat", project_number=1)
+        schema = SettingsFormSchema(
+            task_system_type="GITHUB",
+            github_config=github,
+        )
+        assert schema.github_config is not None
+        assert schema.github_config.project_owner == "octocat"
+        assert schema.github_config.project_number == 1
+
+    def test_github_task_system_type(self):
+        """Schema should accept GITHUB as task system type."""
+        schema = SettingsFormSchema(task_system_type="GITHUB")
+        assert schema.task_system_type == "GITHUB"

@@ -8,9 +8,10 @@ import logging
 import os
 from typing import Any, Dict, Optional, Tuple
 
+from app.agent.integrations.github_client import get_project_id_sync
 from app.core.constants import LLM_PROVIDER_API_ENV
 from app.core.extensions import db
-from app.core.models import AgentConfig, TaskSystem
+from app.core.models import AgentConfig
 from app.web.mappers.config_mapper import ConfigMapper
 from app.web.schemas.settings_schema import SettingsFormSchema
 
@@ -29,11 +30,7 @@ class SettingsService:
         """
         config = AgentConfig.query.first()
         if not config:
-            task_system = TaskSystem(
-                task_system_type="TRELLO",
-                board_provider="trello",
-            )
-            config = AgentConfig(task_system_type="TRELLO", task_system=task_system)
+            config = AgentConfig(task_system_type="TRELLO")
         return config
 
     @staticmethod
@@ -46,8 +43,14 @@ class SettingsService:
 
         Returns:
             Updated and persisted AgentConfig.
+
+        Raises:
+            ValueError: If GitHub project ID cannot be fetched.
         """
         ConfigMapper.schema_to_model(schema, config)
+
+        if schema.task_system_type == "GITHUB" and schema.github_config:
+            SettingsService._fetch_github_project_id(schema, config)
 
         if not config.id:
             db.session.add(config)
@@ -55,6 +58,58 @@ class SettingsService:
         db.session.commit()
         logger.info("Settings saved for config id=%s", config.id)
         return config
+
+    @staticmethod
+    def _fetch_github_project_id(
+        schema: SettingsFormSchema, config: AgentConfig
+    ) -> None:
+        """Fetch and store GitHub project ID if owner and number are provided.
+
+        Args:
+            schema: The validated settings form schema.
+            config: The AgentConfig to update.
+
+        Raises:
+            ValueError: If project cannot be found or API call fails.
+        """
+        github_config = schema.github_config
+        if not github_config:
+            return
+
+        project_owner = github_config.project_owner
+        project_number = github_config.project_number
+
+        if not project_owner or project_number is None:
+            logger.info("GitHub project owner or number not provided, skipping ID fetch")
+            return
+
+        if github_config.board_id:
+            logger.info("GitHub project ID already set: %s", github_config.board_id)
+            return
+
+        base_url = github_config.base_url or "https://api.github.com"
+
+        logger.info(
+            "Fetching GitHub project ID for owner=%s, number=%s",
+            project_owner,
+            project_number,
+        )
+
+        try:
+            api_token = github_config.api_token
+            project_id = get_project_id_sync(
+                project_owner, project_number, base_url, api_token
+            )
+            github_task_system = config.get_task_system("github")
+            if github_task_system:
+                github_task_system.board_id = project_id
+                logger.info("GitHub project ID fetched and stored: %s", project_id)
+        except RuntimeError as e:
+            logger.error("Failed to fetch GitHub project ID: %s", e)
+            raise ValueError(
+                f"Failed to fetch GitHub project ID: {e}. "
+                f"Please verify the project owner and number are correct."
+            ) from e
 
     @staticmethod
     def get_form_data(config: AgentConfig) -> Dict[str, Any]:
