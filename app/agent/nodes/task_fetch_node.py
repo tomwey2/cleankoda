@@ -19,12 +19,17 @@ from app.agent.state import AgentState
 logger = logging.getLogger(__name__)
 
 async def _get_task_context(board_provider: BoardProvider, agent_config: AgentConfig):
-    incoming_state_name = agent_config.task_readfrom_state
+    active_task_system = agent_config.get_active_task_system()
+    if not active_task_system:
+        logger.warning("No active task system configured")
+        return None
+
+    incoming_state_name = active_task_system.readfrom_state
     if not incoming_state_name:
         logger.warning("task_readfrom_state not configured")
         return None
 
-    in_progress_state_name = agent_config.task_in_progress_state
+    in_progress_state_name = active_task_system.in_progress_state
 
     task_context = None
     if in_progress_state_name:
@@ -76,11 +81,16 @@ def create_task_fetch_node(agent_config: AgentConfig):
         try:
             board_provider = create_board_provider(agent_config)
 
-            review_state_name = agent_config.task_moveto_state
+            active_task_system = agent_config.get_active_task_system()
+            if not active_task_system:
+                logger.warning("No active task system configured")
+                return {"task_id": None}
+
+            review_state_name = active_task_system.moveto_state
             if not review_state_name:
                 return {"task_id": None}
 
-            task_in_progress_state_name = agent_config.task_in_progress_state
+            task_in_progress_state_name = active_task_system.in_progress_state
 
             task_context = await _get_task_context(board_provider, agent_config)
             if not task_context:
