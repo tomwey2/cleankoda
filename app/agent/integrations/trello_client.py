@@ -18,13 +18,13 @@ logger = logging.getLogger(__name__)
 
 def get_safe_url(url: str, params: dict) -> str:
     """
-    Erstellt eine URL für das Logging, bei der sensitive Parameter maskiert sind.
+    Creates a URL for logging with sensitive parameters masked.
     """
-    # Wir bauen die volle URL inkl. Params nach, um sie zu parsen
+    # Build the full URL including params to parse it
     req = httpx.Request("GET", url, params=params)
     parsed_url = req.url
 
-    # Wir kopieren die Query-Parameter, aber überschreiben die Secrets
+    # Copy the query parameters, but overwrite the secrets
     new_query_params = []
     for key, value in parsed_url.params.items():
         if key in ["key", "token"]:
@@ -32,7 +32,7 @@ def get_safe_url(url: str, params: dict) -> str:
         else:
             new_query_params.append((key, value))
 
-    # URL mit sicherem Query-String zurückgeben
+    # Return URL with safe query string
     return str(parsed_url.copy_with(params=new_query_params))
 
 

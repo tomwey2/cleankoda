@@ -26,7 +26,7 @@ class AgentRuntimeContext:
 
 def prepare_runtime() -> Optional[AgentRuntimeContext]:
     """Build the runtime context needed by the agent worker."""
-    config :AgentConfig = _get_agent_config()
+    config: AgentConfig = _get_agent_config()
     if not config:
         return None
 

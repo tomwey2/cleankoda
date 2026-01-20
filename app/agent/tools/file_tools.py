@@ -16,7 +16,7 @@ def read_file(filepath: str):
     Reads the content of a file.
     """
     try:
-        # FIX: Führende Slashes entfernen, um absolute Pfade zu verhindern
+        # FIX: Remove leading slashes to prevent absolute paths
         clean_path = filepath.lstrip("/")
         full_path = os.path.join(get_workspace(), clean_path)
 
@@ -75,7 +75,7 @@ def write_to_file(filepath: str, content: str):
     Writes content to a file.
     """
     try:
-        # FIX: Führende Slashes entfernen
+        # FIX: Remove leading slashes
         clean_path = filepath.lstrip("/")
         full_path = os.path.join(get_workspace(), clean_path)
 

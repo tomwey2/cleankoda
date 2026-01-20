@@ -29,18 +29,18 @@ from mcp.client.stdio import stdio_client
 from pydantic import Field, create_model
 
 
-# --- GENERISCHE KLASSE ---
+# --- GENERIC CLASS ---
 class McpServerClient:
     """
-    Ein generischer Client, der sich mit EINEM beliebigen MCP-Server verbindet
-    und dessen Tools für LangChain bereitstellt.
+    A generic client that connects to ONE arbitrary MCP server
+    and provides its tools for LangChain.
     """
 
     def __init__(self, command: str, args: list[str], env: dict):
         """
-        :param command: Der Befehl zum Starten (z.B. "uv", "npx", sys.executable)
-        :param args: Argumente für den Befehl (z.B. ["mcp-server-git", ...])
-        :param env: Umgebungsvariablen (optional)
+        :param command: The command to start (e.g., "uv", "npx", sys.executable)
+        :param args: Arguments for the command (e.g., ["mcp-server-git", ...])
+        :param env: Environment variables (optional)
         """
         self.server_params = StdioServerParameters(
             command=command, args=args, env=env if env else os.environ.copy()
@@ -49,7 +49,7 @@ class McpServerClient:
         self.session = None
 
     async def __aenter__(self):
-        """Startet den Server und die Session."""
+        """Starts the server and the session."""
         try:
             read, write = await self.exit_stack.enter_async_context(
                 stdio_client(self.server_params)
@@ -60,18 +60,18 @@ class McpServerClient:
             await self.session.initialize()
             return self
         except Exception as e:
-            # Falls der Server nicht startet, räumen wir auf und werfen den Fehler weiter
+            # If the server doesn't start, clean up and re-raise the error
             await self.exit_stack.aclose()
             raise RuntimeError(
                 f"Failed to start MCP Server ({self.server_params.command}): {e}"
             ) from e
 
     async def __aexit__(self, exc_type, exc_val, exc_tb):
-        """Räumt auf und stoppt den Server."""
+        """Cleans up and stops the server."""
         await self.exit_stack.aclose()
 
     async def get_langchain_tools(self):
-        """Holt Tools vom Server und konvertiert sie."""
+        """Fetches tools from the server and converts them."""
         if not self.session:
             raise RuntimeError("MCP Session not started.")
 
@@ -85,29 +85,31 @@ class McpServerClient:
         return langchain_tools
 
     async def call_tool(self, tool_name: str, **kwargs):
-        """Ruft ein Tool direkt auf und gibt das rohe Ergebnis zurück."""
-        print(
-            f"DEBUG STEP 1 - START: Rufe Tool '{tool_name}' auf mit Argumenten: {kwargs}"
+        """Calls a tool directly and returns the raw result."""
+        import logging
+        logger = logging.getLogger(__name__)
+        logger.debug(
+            "STEP 1 - START: Calling tool '%s' with arguments: %s", tool_name, kwargs
         )
         if not self.session:
             raise RuntimeError("MCP Session not started.")
         try:
-            # Führe den Tool-Aufruf über die MCP-Session aus
+            # Execute the tool call via the MCP session
             result = await self.session.call_tool(tool_name, arguments=kwargs)
 
-            print(
-                f"DEBUG STEP 1 - SUCCESS: Tool hat geantwortet! Datentyp: {type(result)}"
+            logger.debug(
+                "STEP 1 - SUCCESS: Tool responded! Data type: %s", type(result)
             )
-            print(f"DEBUG STEP 1 - RAW DATA PREVIEW: {str(result)[:500]}")
+            logger.debug("STEP 1 - RAW DATA PREVIEW: %s", str(result)[:500])
 
-            # Überprüfe auf Fehler
+            # Check for errors
             if result.isError:
                 error_message = "Unknown error"
                 if result.content and result.content[0].type == "text":
                     error_message = result.content[0].text
                 raise RuntimeError(f"Error calling tool '{tool_name}': {error_message}")
 
-            # Extrahiere und gib den Inhalt zurück
+            # Extract and return the content
             if result.content:
                 content_item = result.content[0]
                 if content_item.type == "application/json":
@@ -123,11 +125,11 @@ class McpServerClient:
             return None
 
         except Exception as e:
-            print(f"DEBUG STEP 1 - ERROR: Tool-Aufruf gescheitert. Grund: {e}")
+            logger.error("STEP 1 - ERROR: Tool call failed. Reason: %s", e)
             raise RuntimeError(f"Failed to call tool '{tool_name}': {e}") from e
 
     def _convert_to_langchain_tool(self, tool_schema):
-        """Wandelt MCP Schema in LangChain Tool."""
+        """Converts MCP schema to LangChain tool."""
         tool_name = tool_schema.name
         tool_desc = tool_schema.description or "No description."
 
@@ -167,7 +169,7 @@ class McpServerClient:
                         + "an 'async with' block."
                     )
 
-                # Pfad-Injection für Git Server (Spezialfall, könnte man auch auslagern)
+                # Path injection for Git Server (special case, could be externalized)
                 if "repo_path" in kwargs:
                     kwargs["repo_path"] = "/app/work_dir"
 

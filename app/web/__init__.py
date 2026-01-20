@@ -28,6 +28,6 @@ def create_app(encryption_key: Fernet) -> Flask:
     db.init_app(app)
     # scheduler.init_app(app)
 
-    # Das fügt alle Routen aus web_bp zur App hinzu
+    # This adds all routes from web_bp to the app
     app.register_blueprint(web_bp)
     return app

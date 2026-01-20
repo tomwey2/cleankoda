@@ -26,9 +26,9 @@ from app.core.models import AgentConfig, TaskSystem
 
 logger = logging.getLogger(__name__)
 
-# 1. Blueprint erstellen
-# 'web' = Name des Blueprints (für url_for('web.index'))
-# __name__ = Damit Flask weiß, wo Templates/Static files für diesen Blueprint liegen
+# 1. Create Blueprint
+# 'web' = Name of the Blueprint (for url_for('web.index'))
+# __name__ = So Flask knows where Templates/Static files for this Blueprint are located
 web_bp = Blueprint(
     "web", __name__, template_folder="templates", static_folder="../static"
 )
@@ -267,7 +267,7 @@ def dashboard():
         try:
             with open(plan_path, "r", encoding="utf-8") as f:
                 plan_content = f.read()
-        except FileExistsError as e:
+        except (IOError, OSError) as e:
             logger.error("Error reading plan.md: %s", e)
             plan_content = f"Error reading plan.md: {e}"
     return render_template("index.html", plan_content=plan_content)
