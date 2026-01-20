@@ -24,7 +24,11 @@ def read_file(filepath: str):
         full_path_real = os.path.realpath(full_path)
         workspace_real = os.path.realpath(get_workspace())
         if not full_path_real.startswith(workspace_real):
-            logger.warning("Access denied target file: %s is not in workspace %s", full_path_real, workspace_real)
+            logger.warning(
+                "Access denied target file: %s is not in workspace %s",
+                full_path_real,
+                workspace_real,
+            )
             return "ERROR: Access denied."
 
         if not os.path.exists(full_path):
@@ -54,7 +58,11 @@ def list_files(directory: str = "."):
         target_dir_real = os.path.realpath(target_dir)
         workspace_real = os.path.realpath(get_workspace())
         if not target_dir_real.startswith(workspace_real):
-            logger.warning("Access denied target directory: %s is not in workspace %s", target_dir_real, workspace_real)
+            logger.warning(
+                "Access denied target directory: %s is not in workspace %s",
+                target_dir_real,
+                workspace_real,
+            )
             return "Access denied"
 
         file_list = []
@@ -82,7 +90,11 @@ def write_to_file(filepath: str, content: str):
         full_path_real = os.path.realpath(full_path)
         workspace_real = os.path.realpath(get_workspace())
         if not full_path_real.startswith(workspace_real):
-            logger.warning("Access denied target file: %s is not in workspace %s", full_path_real, workspace_real)
+            logger.warning(
+                "Access denied target file: %s is not in workspace %s",
+                full_path_real,
+                workspace_real,
+            )
             return "ERROR: Access denied."
 
         os.makedirs(os.path.dirname(full_path), exist_ok=True)

@@ -87,6 +87,7 @@ def has_required_skill_level(task_skill_level, agent_skill_level):
     return True
 
 
+# pylint: disable=too-few-public-methods
 class SkillLevelResult(BaseModel):
     """Represents the result of the agent skill level analysis."""
 

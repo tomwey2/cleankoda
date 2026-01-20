@@ -102,7 +102,7 @@ def _get_or_create_task_system(config: AgentConfig) -> TaskSystem:
     return task_system
 
 
-def _update_trello_config(config: AgentConfig, new_config_data: dict):
+def _update_trello_config(config: AgentConfig):
     """Update Trello configuration from form data."""
     trello_data = _get_trello_data()
 
@@ -138,8 +138,6 @@ def _update_trello_config(config: AgentConfig, new_config_data: dict):
     if base_url:
         task_system.base_url = base_url
 
-    new_config_data.update(trello_data)
-
 
 def _update_llm_config(config: AgentConfig):
     """Update LLM configuration from form data."""
@@ -154,9 +152,6 @@ def settings_post(config: AgentConfig):
     """Update agent settings from form"""
     # Update generic fields
     config.task_system_type = request.form.get("task_system_type")
-    config.repo_type = request.form.get("repo_type")
-    config.github_repo_url = request.form.get("github_repo_url")
-    config.is_active = "is_active" in request.form
     config.agent_skill_level = request.form.get("agent_skill_level")
     try:
         polling_interval = int(request.form.get("polling_interval_seconds", 60))
@@ -165,26 +160,18 @@ def settings_post(config: AgentConfig):
         flash("Invalid polling interval. Please enter a number.", "danger")
         polling_interval = 60  # Fallback
 
-    # Create JSON from the specific fields for the selected system
-
-    # Load existing data first, to not lose settings from other cards
-    existing_config = config.system_config or {}
-    if not isinstance(existing_config, dict):
-        existing_config = {}
-    new_config_data = dict(existing_config)
+    config.repo_type = request.form.get("repo_type")
+    config.github_repo_url = request.form.get("github_repo_url")
+    config.is_active = "is_active" in request.form
 
     system_type = config.task_system_type
 
     if system_type == "TRELLO":
-        _update_trello_config(config, new_config_data)
+        _update_trello_config(config)
     elif system_type == "JIRA":
-        new_config_data.update(_get_jira_data())
+        logger.warning("JIRA configuration not yet implemented")
 
     _update_llm_config(config)
-
-
-    # Assign dict directly; EncryptedString handles serialization/encryption
-    config.system_config = new_config_data
 
     if not config.id:
         db.session.add(config)
@@ -208,7 +195,7 @@ def _set_trello_form_data(config: AgentConfig, form_data: dict):
     form_data["trello_base_url"] = task_system.base_url
 
 
-def _set_jira_form_data(config: AgentConfig, form_data: dict):
+def _set_jira_form_data(config: AgentConfig, form_data: dict):  # pylint: disable=unused-argument
     """Set Jira form data."""
     form_data["jira_username"] = "JIRA_USERNAME"
     form_data["jira_api_token"] = "JIRA_API_TOKEN"
@@ -247,6 +234,9 @@ def settings_get(config: AgentConfig) -> str:
         "OLLAMA_API_KEY"
     )
 
+    if not config.github_repo_url:
+        config.github_repo_url = os.environ.get("GITHUB_REPO_URL", "")
+
     return render_template(
         "settings.html",
         config=config,
@@ -278,7 +268,8 @@ def settings():
     """Handles the settings page."""
     config = AgentConfig.query.first()
     if not config:
-        config = AgentConfig(task_system_type="TRELLO", system_config={})
+        task_system = TaskSystem()
+        config = AgentConfig(task_system_type="TRELLO", task_system=task_system)
 
     if request.method == "POST":
         return settings_post(config)

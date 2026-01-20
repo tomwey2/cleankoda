@@ -30,6 +30,7 @@ Respond ONLY with valid JSON that matches {"role":"coder"|"bugfixer"|"analyst"} 
 """
 
 
+# pylint: disable=too-few-public-methods
 class RouterDecision(BaseModel):
     """Classify the incoming task into the correct category."""
 

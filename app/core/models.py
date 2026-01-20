@@ -4,7 +4,6 @@ This module contains the class definitions for all database models used by
 SQLAlchemy. Each class corresponds to a table in the database.
 """
 
-import json
 import os
 from typing import Any, Dict
 
@@ -20,44 +19,47 @@ encryption_key = Fernet(key.encode())
 
 
 # pylint: disable=too-many-ancestors
-class EncryptedDict(TypeDecorator):
-    """Encrypts dictionaries on write and returns dicts on read."""
+class EncryptedString(TypeDecorator):
+    """Encrypts strings on write and decrypts on read."""
 
-    impl = LargeBinary  # Stored as Binary/Blob in the DB
+    impl = LargeBinary
     cache_ok = True
 
     @property
     def python_type(self):
-        return dict
+        """Return the Python type for this custom type."""
+        return str
 
-    def process_bind_param(self, value, dialect):
+    def process_bind_param(self, value, dialect):  # pylint: disable=unused-argument
         """Encrypt before saving."""
         if value is None:
             return value
 
-        if not isinstance(value, dict):
-            raise TypeError("EncryptedDict only supports dictionary values.")
+        if not isinstance(value, str):
+            raise TypeError("EncryptedString only supports string values.")
 
-        value_bytes = json.dumps(value).encode("utf-8")
+        value_bytes = value.encode("utf-8")
         return encryption_key.encrypt(value_bytes)
 
-    def process_result_value(self, value, dialect):
+    def process_result_value(self, value, dialect):  # pylint: disable=unused-argument
         """Decrypt after loading."""
         if value is None:
             return value
 
-        decrypted_value = encryption_key.decrypt(value)
-        decoded_value = decrypted_value.decode("utf-8")
+        # Handle backward compatibility: if value is already a string (unencrypted),
+        # return it as-is. This allows migration from unencrypted to encrypted data.
+        if isinstance(value, str):
+            return value
 
         try:
-            loaded_value = json.loads(decoded_value or "{}")
-        except json.JSONDecodeError as exc:
-            raise ValueError("Stored EncryptedDict value is not valid JSON") from exc
-
-        if not isinstance(loaded_value, dict):
-            raise ValueError("Stored EncryptedDict value did not decode to a dict")
-
-        return loaded_value
+            decrypted_value = encryption_key.decrypt(value)
+            return decrypted_value.decode("utf-8")
+        except Exception:  # pylint: disable=broad-exception-caught
+            # If decryption fails, assume it's legacy unencrypted data
+            # Try to decode as UTF-8 string
+            if isinstance(value, bytes):
+                return value.decode("utf-8")
+            return str(value)
 
     def process_literal_param(self, value, dialect):
         """Handles rendering of a literal parameter for this type.
@@ -122,9 +124,6 @@ class AgentConfig(db.Model):
         index=True,
     )
 
-    def __init__(self, **kwargs):
-        super().__init__(**kwargs)
-
     task_system = db.relationship(
         "TaskSystem",
         back_populates="agent_config",
@@ -150,8 +149,8 @@ class TaskSystem(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     task_system_type = db.Column(db.String(50), nullable=False, default="TRELLO")
     board_provider = db.Column(db.String(50), nullable=False)
-    api_key = db.Column(db.String(200), nullable=True) # encrypt later
-    token = db.Column(db.String(200), nullable=True) # encrypt later
+    api_key = db.Column(EncryptedString, nullable=True)
+    token = db.Column(EncryptedString, nullable=True)
     base_url = db.Column(db.String(200), nullable=True)
     board_id = db.Column(db.String(100), nullable=True)
 
@@ -180,9 +179,6 @@ class Task(db.Model):
     updated_at = db.Column(
         db.DateTime, server_default=db.func.now(), onupdate=db.func.now()
     )
-
-    def __init__(self, **kwargs):
-        super().__init__(**kwargs)
 
     def __repr__(self):
         return f"<Task id={self.task_id} branch={self.branch_name}>"
