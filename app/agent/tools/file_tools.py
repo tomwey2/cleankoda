@@ -21,10 +21,14 @@ def read_file(filepath: str):
         full_path = os.path.join(get_workspace(), clean_path)
 
         # Security
-        if not os.path.abspath(full_path).startswith(get_workspace()):
+        full_path_real = os.path.realpath(full_path)
+        workspace_real = os.path.realpath(get_workspace())
+        if not full_path_real.startswith(workspace_real):
+            logger.warning("Access denied target file: %s is not in workspace %s", full_path_real, workspace_real)
             return "ERROR: Access denied."
 
         if not os.path.exists(full_path):
+            logger.warning("Access denied target file: %s does not exist", full_path)
             return (
                 f"ERROR: File {clean_path} does not exist. "
                 + "(Current dir: {os.listdir(WORKSPACE)})"
@@ -47,7 +51,10 @@ def list_files(directory: str = "."):
     try:
         clean_dir = directory.lstrip("/")
         target_dir = os.path.join(get_workspace(), clean_dir)
-        if not os.path.abspath(target_dir).startswith(get_workspace()):
+        target_dir_real = os.path.realpath(target_dir)
+        workspace_real = os.path.realpath(get_workspace())
+        if not target_dir_real.startswith(workspace_real):
+            logger.warning("Access denied target directory: %s is not in workspace %s", target_dir_real, workspace_real)
             return "Access denied"
 
         file_list = []
@@ -72,7 +79,10 @@ def write_to_file(filepath: str, content: str):
         clean_path = filepath.lstrip("/")
         full_path = os.path.join(get_workspace(), clean_path)
 
-        if not os.path.abspath(full_path).startswith(get_workspace()):
+        full_path_real = os.path.realpath(full_path)
+        workspace_real = os.path.realpath(get_workspace())
+        if not full_path_real.startswith(workspace_real):
+            logger.warning("Access denied target file: %s is not in workspace %s", full_path_real, workspace_real)
             return "ERROR: Access denied."
 
         os.makedirs(os.path.dirname(full_path), exist_ok=True)

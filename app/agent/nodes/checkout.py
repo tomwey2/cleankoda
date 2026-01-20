@@ -70,7 +70,7 @@ async def checkout_task_branch(
             task_name,
         )
 
-        github_repo_url = (agent_config.system_config or {}).get("github_repo_url")
+        github_repo_url = agent_config.github_repo_url
         if github_repo_url:
             checkout_branch(github_repo_url, git_branch, get_codespace())
         else:
@@ -165,7 +165,7 @@ async def checkout_branch_for_task(
     existing_branches = _collect_branch_names(repo)
     branch_name = _resolve_unique_branch_name(base_branch_name, existing_branches)
 
-    github_repo_url = agent_config.system_config.get("github_repo_url")
+    github_repo_url = agent_config.github_repo_url
     if not github_repo_url:
         logger.warning(
             "github_repo_url missing in agent_config; cannot checkout branch for task %s",
