@@ -49,7 +49,7 @@ class SettingsService:
         """
         ConfigMapper.schema_to_model(schema, settings)
 
-        if schema.task_system_type == "GITHUB" and schema.github_config:
+        if schema.github_config:
             SettingsService._fetch_github_project_id(schema, settings)
 
         if not settings.id:
@@ -83,10 +83,6 @@ class SettingsService:
             logger.info("GitHub project owner or number not provided, skipping ID fetch")
             return
 
-        if github_config.board_id:
-            logger.info("GitHub project ID already set: %s", github_config.board_id)
-            return
-
         base_url = github_config.base_url or "https://api.github.com"
 
         logger.info(
@@ -95,20 +91,25 @@ class SettingsService:
             project_number,
         )
 
+        github_task_system = setting.get_task_system("github")
+        if github_task_system:
+            # Reset the stored board id before attempting to fetch a new one
+            github_task_system.board_id = None
+
         try:
             api_token = github_config.api_token
             project_id = get_project_id_sync(
                 project_owner, project_number, base_url, api_token
             )
-            github_task_system = setting.get_task_system("github")
             if github_task_system:
                 github_task_system.board_id = project_id
                 logger.info("GitHub project ID fetched and stored: %s", project_id)
         except RuntimeError as e:
             logger.error("Failed to fetch GitHub project ID: %s", e)
             raise ValueError(
-                f"Failed to fetch GitHub project ID: {e}. "
-                f"Please verify the project owner and number are correct."
+                "Failed to fetch GitHub project ID. "
+                "The stored Project ID has been cleared. "
+                "Please verify the project owner, project number, and API token are correct."
             ) from e
 
     @staticmethod

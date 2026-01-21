@@ -203,9 +203,10 @@ class ConfigMapper:
     def _add_trello_form_data(settings: AgentSettings, form_data: Dict[str, Any]) -> None:
         """Add Trello-specific fields to form data."""
         task_system = settings.get_task_system("trello")
+        env_token = os.environ.get("TRELLO_TOKEN")
         if task_system:
             form_data["trello_api_key"] = task_system.api_key
-            form_data["trello_api_token"] = task_system.token
+            form_data["trello_api_token"] = task_system.token or env_token
             form_data["trello_board_id"] = task_system.board_id
             form_data["trello_base_url"] = task_system.base_url
             form_data["trello_backlog_list"] = task_system.backlog_state
@@ -214,7 +215,7 @@ class ConfigMapper:
             form_data["trello_moveto_list"] = task_system.moveto_state
         else:
             form_data["trello_api_key"] = None
-            form_data["trello_api_token"] = None
+            form_data["trello_api_token"] = env_token
             form_data["trello_board_id"] = None
             form_data["trello_base_url"] = None
             form_data["trello_backlog_list"] = None
