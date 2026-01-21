@@ -435,19 +435,84 @@ async def move_item_to_named_column(
     return target_column["id"]
 
 
+async def _resolve_to_issue_id(
+    node_id: str,
+    agent_settings: AgentSettings,
+) -> str:
+    """
+    Resolve a node ID to an Issue ID.
+    
+    If the node_id is a ProjectV2Item, extract the content Issue ID.
+    If it's already an Issue ID, return it as-is.
+    
+    Args:
+        node_id: Either an Issue ID or ProjectV2Item ID
+        agent_settings: Agent configuration
+        
+    Returns:
+        The Issue ID
+        
+    Raises:
+        RuntimeError: If the node cannot be resolved to an Issue
+    """
+    query = """
+    query($nodeId: ID!) {
+        node(id: $nodeId) {
+            __typename
+            ... on Issue {
+                id
+            }
+            ... on ProjectV2Item {
+                content {
+                    ... on Issue {
+                        id
+                    }
+                }
+            }
+        }
+    }
+    """
+    
+    variables = {"nodeId": node_id}
+    data = await _execute_graphql(query, variables, agent_settings)
+    
+    node = data.get("data", {}).get("node", {})
+    if not node:
+        raise RuntimeError(f"Could not resolve node {node_id}")
+    
+    node_type = node.get("__typename")
+    
+    # If it's already an Issue, return its ID
+    if node_type == "Issue":
+        return node.get("id", node_id)
+    
+    # If it's a ProjectV2Item, extract the Issue ID from content
+    if node_type == "ProjectV2Item":
+        content = node.get("content", {})
+        issue_id = content.get("id")
+        if issue_id:
+            return issue_id
+        raise RuntimeError(f"ProjectV2Item {node_id} does not have an Issue as content")
+    
+    raise RuntimeError(f"Node {node_id} is neither an Issue nor a ProjectV2Item (type: {node_type})")
+
+
 async def add_comment_to_issue(
     issue_id: str,
     comment: str,
     agent_settings: AgentSettings,
 ) -> None:
     """
-    Add a comment to a GitHub issue.
+    Add a comment to a GitHub issue or project item.
 
     Args:
-        issue_id: The issue node ID.
+        issue_id: Either an Issue ID or ProjectV2Item ID.
         comment: The comment text to add.
         agent_settings: Agent configuration.
     """
+    # First, resolve the ID to get the actual Issue ID if it's a ProjectV2Item
+    resolved_issue_id = await _resolve_to_issue_id(issue_id, agent_settings)
+    
     mutation = """
     mutation($issueId: ID!, $body: String!) {
         addComment(input: { subjectId: $issueId, body: $body }) {
@@ -460,9 +525,9 @@ async def add_comment_to_issue(
     }
     """
 
-    variables = {"issueId": issue_id, "body": comment}
+    variables = {"issueId": resolved_issue_id, "body": comment}
     await _execute_graphql(mutation, variables, agent_settings)
-    logger.info("Added comment to issue %s", issue_id)
+    logger.info("Added comment to issue %s", resolved_issue_id)
 
 
 async def get_issue_comments(
