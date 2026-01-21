@@ -7,7 +7,7 @@ from flask import Flask
 from app.agent import runtime as runtime_module
 from app.agent.runtime import AgentRuntimeContext, prepare_runtime
 from app.core.extensions import db
-from app.core.models import AgentConfig
+from app.core.models import AgentSettings
 
 
 def _create_app(database_uri: str) -> Flask:
@@ -37,7 +37,7 @@ def test_prepare_runtime_returns_context(tmp_path, monkeypatch):
 
     with app.app_context():
         db.create_all()
-        config = AgentConfig(
+        config = AgentSettings(
             task_system_type="TRELLO",
             github_repo_url="https://example.com/foo/bar.git",
             is_active=True,
@@ -76,7 +76,7 @@ def test_prepare_runtime_uses_default_repo(tmp_path, monkeypatch):
 
     with app.app_context():
         db.create_all()
-        config = AgentConfig(
+        config = AgentSettings(
             task_system_type="TRELLO",
             github_repo_url=None,
             is_active=True,
@@ -109,7 +109,7 @@ def test_prepare_runtime_returns_none_for_unknown_system(tmp_path, monkeypatch):
 
     with app.app_context():
         db.create_all()
-        config = AgentConfig(
+        config = AgentSettings(
             task_system_type="UNKNOWN",
             github_repo_url="https://example.com/foo/bar.git",
             is_active=True,

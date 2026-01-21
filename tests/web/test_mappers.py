@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from app.core.models import AgentConfig, TaskSystem
+from app.core.models import AgentSettings, TaskSystem
 from app.web.mappers.config_mapper import ConfigMapper
 from app.web.schemas.settings_schema import (
     GitHubConfigSchema,
@@ -25,7 +25,7 @@ class TestConfigMapperSchemaToModel:
             github_repo_url="https://github.com/test/repo.git",
             is_active=True,
         )
-        config = AgentConfig()
+        config = AgentSettings()
 
         result = ConfigMapper.schema_to_model(schema, config)
 
@@ -45,7 +45,7 @@ class TestConfigMapperSchemaToModel:
             temperature="0.7",
         )
         schema = SettingsFormSchema(llm_config=llm_config)
-        config = AgentConfig()
+        config = AgentSettings()
 
         result = ConfigMapper.schema_to_model(schema, config)
 
@@ -70,7 +70,7 @@ class TestConfigMapperSchemaToModel:
             task_system_type="TRELLO",
             trello_config=trello_config,
         )
-        config = AgentConfig()
+        config = AgentSettings()
 
         result = ConfigMapper.schema_to_model(schema, config)
 
@@ -91,7 +91,7 @@ class TestConfigMapperSchemaToModel:
             task_system_type="TRELLO",
             trello_config=trello_config,
         )
-        config = AgentConfig()
+        config = AgentSettings()
         assert len(config.task_systems) == 0
 
         result = ConfigMapper.schema_to_model(schema, config)
@@ -112,7 +112,7 @@ class TestConfigMapperSchemaToModel:
             task_system_type="TRELLO",
             trello_config=trello_config,
         )
-        config = AgentConfig()
+        config = AgentSettings()
         config.task_systems.append(existing_task_system)
 
         result = ConfigMapper.schema_to_model(schema, config)
@@ -127,7 +127,7 @@ class TestConfigMapperModelToFormData:
 
     def test_extracts_basic_fields(self, app):
         """Basic fields should be extracted from model."""
-        config = AgentConfig(
+        config = AgentSettings(
             agent_skill_level="junior",
             llm_provider="anthropic",
             llm_model_large="claude-3",
@@ -153,7 +153,7 @@ class TestConfigMapperModelToFormData:
 
     def test_extracts_trello_fields(self, app):
         """Trello fields should be extracted from model."""
-        config = AgentConfig()
+        config = AgentSettings()
         trello_ts = TaskSystem(
             board_provider="trello",
             api_key="api-key",
@@ -179,7 +179,7 @@ class TestConfigMapperModelToFormData:
 
     def test_handles_missing_task_system(self, app):
         """Missing task_systems should result in None values."""
-        config = AgentConfig()
+        config = AgentSettings()
 
         result = ConfigMapper.model_to_form_data(config)
 
@@ -189,7 +189,7 @@ class TestConfigMapperModelToFormData:
 
     def test_defaults_llm_provider_to_mistral(self, app):
         """Missing llm_provider should default to mistral."""
-        config = AgentConfig(llm_provider=None)
+        config = AgentSettings(llm_provider=None)
 
         result = ConfigMapper.model_to_form_data(config)
 
@@ -274,7 +274,7 @@ class TestConfigMapperGitHub:
             task_system_type="GITHUB",
             github_config=github_config,
         )
-        config = AgentConfig()
+        config = AgentSettings()
 
         result = ConfigMapper.schema_to_model(schema, config)
 
@@ -298,7 +298,7 @@ class TestConfigMapperGitHub:
             task_system_type="GITHUB",
             github_config=github_config,
         )
-        config = AgentConfig()
+        config = AgentSettings()
         assert len(config.task_systems) == 0
 
         result = ConfigMapper.schema_to_model(schema, config)
@@ -309,7 +309,7 @@ class TestConfigMapperGitHub:
 
     def test_extracts_github_fields(self, app):
         """GitHub fields should be extracted from model."""
-        config = AgentConfig(task_system_type="GITHUB")
+        config = AgentSettings(task_system_type="GITHUB")
         github_ts = TaskSystem(
             board_provider="github",
             token="ghp_test_token",
@@ -371,7 +371,7 @@ class TestConfigMapperGitHub:
 
     def test_handles_missing_github_task_system(self, app):
         """Missing GitHub task_system should result in default values."""
-        config = AgentConfig(task_system_type="TRELLO")
+        config = AgentSettings(task_system_type="TRELLO")
 
         result = ConfigMapper.model_to_form_data(config)
 
@@ -384,7 +384,7 @@ class TestConfigMapperGitHub:
     def test_github_token_prefills_from_env(self, app, monkeypatch):
         """GitHub token should fall back to GITHUB_TOKEN env when not stored."""
         monkeypatch.setenv("GITHUB_TOKEN", "env_token")
-        config = AgentConfig(task_system_type="TRELLO")
+        config = AgentSettings(task_system_type="TRELLO")
 
         result = ConfigMapper.model_to_form_data(config)
 

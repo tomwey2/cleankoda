@@ -22,7 +22,7 @@ from langchain_ollama import ChatOllama
 from langchain_openai import ChatOpenAI
 from pydantic import SecretStr
 
-from app.core.models import AgentConfig
+from app.core.models import AgentSettings
 
 logger = logging.getLogger(__name__)
 
@@ -98,7 +98,7 @@ LLM_PROVIDERS: Dict[str, Callable[[str, float], BaseChatModel]] = {
 }
 
 
-def get_llm(agent_config: AgentConfig, large: bool = True) -> BaseChatModel:
+def get_llm(agent_config: AgentSettings, large: bool = True) -> BaseChatModel:
     """
     Factory function to get an LLM instance based on the provider.
 

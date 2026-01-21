@@ -13,14 +13,14 @@ from typing import Any, Optional
 
 import httpx
 
-from app.core.models import AgentConfig
+from app.core.models import AgentSettings
 
 logger = logging.getLogger(__name__)
 
 GITHUB_GRAPHQL_ENDPOINT = "/graphql"
 
 
-def _get_github_token(agent_config: Optional[AgentConfig] = None) -> str:
+def _get_github_token(agent_config: Optional[AgentSettings] = None) -> str:
     """Get GitHub token from config or environment variable.
 
     Args:
@@ -46,7 +46,7 @@ def _get_github_token(agent_config: Optional[AgentConfig] = None) -> str:
     return token
 
 
-def _get_base_url(agent_config: AgentConfig) -> str:
+def _get_base_url(agent_config: AgentSettings) -> str:
     """Get the GitHub API base URL from config or default."""
     task_system = agent_config.get_task_system("github")
     if task_system and task_system.base_url:
@@ -54,7 +54,7 @@ def _get_base_url(agent_config: AgentConfig) -> str:
     return "https://api.github.com"
 
 
-def _get_graphql_url(agent_config: AgentConfig) -> str:
+def _get_graphql_url(agent_config: AgentSettings) -> str:
     """Get the full GraphQL endpoint URL."""
     return f"{_get_base_url(agent_config)}{GITHUB_GRAPHQL_ENDPOINT}"
 
@@ -62,7 +62,7 @@ def _get_graphql_url(agent_config: AgentConfig) -> str:
 async def _execute_graphql(
     query: str,
     variables: dict[str, Any],
-    agent_config: AgentConfig,
+    agent_config: AgentSettings,
 ) -> dict[str, Any]:
     """Execute a GraphQL query against the GitHub API."""
     url = _get_graphql_url(agent_config)
@@ -94,7 +94,7 @@ async def _execute_graphql(
 async def get_project_id(
     owner: str,
     project_number: int,
-    agent_config: AgentConfig,
+    agent_config: AgentSettings,
 ) -> str:
     """
     Fetch the project node ID for a GitHub Project v2.
@@ -156,7 +156,7 @@ async def get_project_id(
     )
 
 
-async def get_project_columns(agent_config: AgentConfig) -> list[dict[str, str]]:
+async def get_project_columns(agent_config: AgentSettings) -> list[dict[str, str]]:
     """
     Fetch all columns (status field options) from the GitHub Project.
 
@@ -193,7 +193,7 @@ async def get_project_columns(agent_config: AgentConfig) -> list[dict[str, str]]
     return [{"id": opt["id"], "name": opt["name"]} for opt in options]
 
 
-async def get_status_field_id(agent_config: AgentConfig) -> str:
+async def get_status_field_id(agent_config: AgentSettings) -> str:
     """Get the ID of the Status field for the project."""
     task_system = agent_config.get_task_system("github")
     project_id = task_system.board_id if task_system else None
@@ -226,7 +226,7 @@ async def get_status_field_id(agent_config: AgentConfig) -> str:
 
 async def get_items_from_column(
     column_name: str,
-    agent_config: AgentConfig,
+    agent_config: AgentSettings,
 ) -> list[dict[str, Any]]:
     """
     Fetch all items from a specific column (status) in the GitHub Project.
@@ -315,7 +315,7 @@ async def get_items_from_column(
 async def move_item_to_column(
     item_id: str,
     column_id: str,
-    agent_config: AgentConfig,
+    agent_config: AgentSettings,
 ) -> None:
     """
     Move a project item to a different column (status).
@@ -360,7 +360,7 @@ async def move_item_to_column(
 async def move_item_to_named_column(
     item_id: str,
     column_name: str,
-    agent_config: AgentConfig,
+    agent_config: AgentSettings,
 ) -> str:
     """
     Move a project item to a column identified by name.
@@ -383,7 +383,7 @@ async def move_item_to_named_column(
 async def add_comment_to_issue(
     issue_id: str,
     comment: str,
-    agent_config: AgentConfig,
+    agent_config: AgentSettings,
 ) -> None:
     """
     Add a comment to a GitHub issue.
@@ -412,7 +412,7 @@ async def add_comment_to_issue(
 
 async def get_issue_comments(
     issue_id: str,
-    agent_config: AgentConfig,
+    agent_config: AgentSettings,
 ) -> list[dict[str, Any]]:
     """
     Fetch all comments for a GitHub issue.
@@ -457,7 +457,7 @@ async def get_issue_comments(
 
 async def get_item_status_history(
     item_id: str,
-    agent_config: AgentConfig,
+    agent_config: AgentSettings,
 ) -> list[dict[str, Any]]:
     """
     Fetch status change history for a project item.
@@ -477,7 +477,7 @@ async def create_draft_issue(
     title: str,
     body: str,
     column_name: str,
-    agent_config: AgentConfig,
+    agent_config: AgentSettings,
 ) -> dict[str, Any]:
     """
     Create a new draft issue in the GitHub Project.

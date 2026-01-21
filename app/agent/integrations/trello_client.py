@@ -11,7 +11,7 @@ import logging
 
 import httpx
 
-from app.core.models import AgentConfig
+from app.core.models import AgentSettings
 
 logger = logging.getLogger(__name__)
 
@@ -36,7 +36,7 @@ def get_safe_url(url: str, params: dict) -> str:
     return str(parsed_url.copy_with(params=new_query_params))
 
 
-async def get_all_trello_lists(agent_config: AgentConfig) -> list[dict]:
+async def get_all_trello_lists(agent_config: AgentSettings) -> list[dict]:
     """Fetches all lists for the configured Trello board."""
     task_system = agent_config.get_task_system("trello")
     board_id = task_system.board_id if task_system else None
@@ -56,7 +56,7 @@ async def get_all_trello_lists(agent_config: AgentConfig) -> list[dict]:
     return [{"name": list_item["name"], "id": list_item["id"]} for list_item in data]
 
 
-async def get_all_trello_cards(list_id: str, agent_config: AgentConfig) -> list[dict]:
+async def get_all_trello_cards(list_id: str, agent_config: AgentSettings) -> list[dict]:
     """Fetches all cards from a specific Trello list."""
     task_system = agent_config.get_task_system("trello")
 
@@ -77,14 +77,14 @@ async def get_all_trello_cards(list_id: str, agent_config: AgentConfig) -> list[
     ]
 
 
-async def move_trello_card_to_list(card_id: str, list_id: str, agent_config: AgentConfig):
+async def move_trello_card_to_list(card_id: str, list_id: str, agent_config: AgentSettings):
     """
     Move a Trello card to a specified list.
 
     Args:
         card_id (str): The ID of the card to move.
         list_id (str): The ID of the target list.
-        agent_config (AgentConfig): The agent configuration containing Trello API credentials.
+        agent_config (AgentSettings): The agent configuration containing Trello API credentials.
 
     Raises:
         ValueError: If the environment is not found in agent_config.
@@ -110,7 +110,7 @@ async def move_trello_card_to_list(card_id: str, list_id: str, agent_config: Age
 
 
 async def move_trello_card_to_named_list(
-    card_id: str, list_name: str, agent_config: AgentConfig
+    card_id: str, list_name: str, agent_config: AgentSettings
 ) -> str:
     """
     Helper that resolves the Trello list ID by name and moves the
@@ -131,7 +131,7 @@ async def move_trello_card_to_named_list(
     return target_list_id
 
 
-async def add_comment_to_trello_card(card_id: str, comment: str, agent_config: AgentConfig):
+async def add_comment_to_trello_card(card_id: str, comment: str, agent_config: AgentSettings):
     """Adds a comment to a specified Trello card."""
     task_system = agent_config.get_task_system("trello")
     url = f"https://api.trello.com/1/cards/{card_id}/actions/comments"
@@ -152,7 +152,7 @@ async def add_comment_to_trello_card(card_id: str, comment: str, agent_config: A
         )
 
 
-async def get_trello_card_comments(card_id: str, agent_config: AgentConfig) -> list[dict]:
+async def get_trello_card_comments(card_id: str, agent_config: AgentSettings) -> list[dict]:
     """
     Fetches all comments for the provided Trello card ID.
     """
@@ -186,7 +186,7 @@ async def get_trello_card_comments(card_id: str, agent_config: AgentConfig) -> l
     ]
 
 
-async def get_trello_card_list_moves(card_id: str, agent_config: AgentConfig) -> list[dict]:
+async def get_trello_card_list_moves(card_id: str, agent_config: AgentSettings) -> list[dict]:
     """
     Fetches all list move actions (updateCard:idList) for the provided Trello card ID.
     """
@@ -221,7 +221,7 @@ async def get_trello_card_list_moves(card_id: str, agent_config: AgentConfig) ->
 
 
 async def create_trello_card(
-    name: str, description: str, list_name: str, agent_config: AgentConfig
+    name: str, description: str, list_name: str, agent_config: AgentSettings
 ) -> dict:
     """
     Creates a new Trello card in the specified list.
@@ -230,7 +230,7 @@ async def create_trello_card(
         name (str): The title/name of the card.
         description (str): The description/body of the card.
         list_name (str): The name of the list to create the card in.
-        agent_config (AgentConfig): The agent configuration containing Trello API credentials.
+        agent_config (AgentSettings): The agent configuration containing Trello API credentials.
 
     Returns:
         dict: The created card data including id, name, and url.

@@ -25,7 +25,7 @@ from app.agent.integrations.trello_client import (
     move_trello_card_to_list,
     move_trello_card_to_named_list,
 )
-from app.core.models import AgentConfig
+from app.core.models import AgentSettings
 
 logger = logging.getLogger(__name__)
 
@@ -38,7 +38,7 @@ class TrelloProvider(BoardProvider):
     a consistent interface for board operations.
     """
 
-    def __init__(self, agent_config: AgentConfig):
+    def __init__(self, agent_config: AgentSettings):
         """
         Initialize the Trello provider.
         

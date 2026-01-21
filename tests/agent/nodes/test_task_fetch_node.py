@@ -15,13 +15,13 @@ from app.agent.nodes.task_fetch_node import (
     filter_comments_between_timestamps,
     get_latest_move_to_in_progress,
 )
-from app.core.models import AgentConfig, TaskSystem
+from app.core.models import AgentSettings, TaskSystem
 
 
 @pytest.fixture
 def agent_config():
     """Fixture for agent configuration."""
-    config = AgentConfig(task_system_type="TRELLO")
+    config = AgentSettings(task_system_type="TRELLO")
     task_system = TaskSystem(
         task_system_type="TRELLO",
         board_provider="trello",
@@ -84,7 +84,7 @@ async def test_task_fetch_node_success(agent_config, mock_board_provider):
 @pytest.mark.asyncio
 async def test_task_fetch_node_no_review_list(agent_config, mock_board_provider):
     """Test task fetch when no review list is configured."""
-    temp_config = AgentConfig(task_system_type="TRELLO")
+    temp_config = AgentSettings(task_system_type="TRELLO")
     task_system = TaskSystem(
         task_system_type="TRELLO",
         board_provider="trello",

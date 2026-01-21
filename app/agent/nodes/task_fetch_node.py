@@ -13,12 +13,12 @@ from langchain_core.messages import SystemMessage
 from app.core.task_repository import remove_task_from_db
 from app.agent.integrations.board_factory import create_board_provider
 from app.agent.integrations.board_provider import BoardProvider, BoardTask  # pylint: disable=unused-import
-from app.core.models import AgentConfig
+from app.core.models import AgentSettings
 from app.agent.state import AgentState
 
 logger = logging.getLogger(__name__)
 
-async def _get_task_context(board_provider: BoardProvider, agent_config: AgentConfig):
+async def _get_task_context(board_provider: BoardProvider, agent_config: AgentSettings):
     active_task_system = agent_config.get_active_task_system()
     if not active_task_system:
         logger.warning("No active task system configured")
@@ -69,7 +69,7 @@ async def _ensure_task_in_progress(
     return task_context
 
 
-async def _fetch_rejection_comments(
+async def _fetch_review_comments(
     board_provider: BoardProvider,
     task_id: str,
     original_state_name: str,
@@ -140,7 +140,7 @@ def _build_system_message_content(task_name: str, task_description: str, comment
     return system_content
 
 
-def create_task_fetch_node(agent_config: AgentConfig):
+def create_task_fetch_node(agent_config: AgentSettings):
     """Creates a task fetch node for the agent graph."""
 
     async def task_fetch(state: AgentState) -> dict:  # pylint: disable=unused-argument
@@ -177,7 +177,7 @@ def create_task_fetch_node(agent_config: AgentConfig):
                 task_in_progress_state_name,
             )
 
-            comments = await _fetch_rejection_comments(
+            comments = await _fetch_review_comments(
                 board_provider,
                 task.id,
                 original_state_name,

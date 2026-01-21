@@ -7,7 +7,7 @@ import tempfile
 from unittest.mock import patch
 
 from app.core.extensions import db
-from app.core.models import AgentConfig, TaskSystem
+from app.core.models import AgentSettings, TaskSystem
 from app.web.schemas.settings_schema import (
     LLMConfigSchema,
     SettingsFormSchema,
@@ -60,7 +60,7 @@ class TestSettingsService:
     def test_get_or_create_config_returns_existing(self, app):
         """Should return existing config if one exists."""
         with app.app_context():
-            existing = AgentConfig(task_system_type="TRELLO")
+            existing = AgentSettings(task_system_type="TRELLO")
             trello_ts = TaskSystem(
                 task_system_type="TRELLO",
                 board_provider="trello",
@@ -85,7 +85,7 @@ class TestSettingsService:
     def test_save_settings_persists_to_db(self, app):
         """Should persist settings to database."""
         with app.app_context():
-            config = AgentConfig(task_system_type="TRELLO")
+            config = AgentSettings(task_system_type="TRELLO")
             schema = SettingsFormSchema(
                 task_system_type="TRELLO",
                 agent_skill_level="senior",
@@ -101,13 +101,13 @@ class TestSettingsService:
             assert result.polling_interval_seconds == 120
             assert result.is_active is True
 
-            reloaded = db.session.get(AgentConfig, result.id)
+            reloaded = db.session.get(AgentSettings, result.id)
             assert reloaded.agent_skill_level == "senior"
 
     def test_save_settings_updates_existing(self, app):
         """Should update existing config."""
         with app.app_context():
-            existing = AgentConfig(
+            existing = AgentSettings(
                 task_system_type="TRELLO",
                 agent_skill_level="junior",
             )
@@ -129,7 +129,7 @@ class TestSettingsService:
     def test_get_template_context_includes_required_keys(self, app):
         """Template context should include all required keys."""
         with app.app_context():
-            config = AgentConfig(
+            config = AgentSettings(
                 task_system_type="TRELLO",
                 llm_provider="mistral",
             )
@@ -162,7 +162,7 @@ class TestSettingsService:
     def test_validate_and_save_success(self, app):
         """Should return success tuple on valid save."""
         with app.app_context():
-            config = AgentConfig(task_system_type="TRELLO")
+            config = AgentSettings(task_system_type="TRELLO")
 
             with app.test_request_context(
                 "/settings",

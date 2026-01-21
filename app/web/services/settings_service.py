@@ -11,7 +11,7 @@ from typing import Any, Dict, Optional, Tuple
 from app.agent.integrations.github_client import get_project_id_sync
 from app.core.constants import LLM_PROVIDER_API_ENV
 from app.core.extensions import db
-from app.core.models import AgentConfig
+from app.core.models import AgentSettings
 from app.web.mappers.config_mapper import ConfigMapper
 from app.web.schemas.settings_schema import SettingsFormSchema
 
@@ -22,27 +22,27 @@ class SettingsService:
     """Service for managing agent configuration settings."""
 
     @staticmethod
-    def get_or_create_config() -> AgentConfig:
+    def get_or_create_config() -> AgentSettings:
         """Retrieve existing config or create a new one with defaults.
 
         Returns:
-            AgentConfig instance (may be transient if newly created).
+            AgentSettings instance (may be transient if newly created).
         """
-        config = AgentConfig.query.first()
+        config = AgentSettings.query.first()
         if not config:
-            config = AgentConfig(task_system_type="TRELLO")
+            config = AgentSettings(task_system_type="TRELLO")
         return config
 
     @staticmethod
-    def save_settings(schema: SettingsFormSchema, config: AgentConfig) -> AgentConfig:
+    def save_settings(schema: SettingsFormSchema, config: AgentSettings) -> AgentSettings:
         """Save settings from validated schema to database.
 
         Args:
             schema: Validated settings form schema.
-            config: AgentConfig to update.
+            config: AgentSettings to update.
 
         Returns:
-            Updated and persisted AgentConfig.
+            Updated and persisted AgentSettings.
 
         Raises:
             ValueError: If GitHub project ID cannot be fetched.
@@ -61,13 +61,13 @@ class SettingsService:
 
     @staticmethod
     def _fetch_github_project_id(
-        schema: SettingsFormSchema, config: AgentConfig
+        schema: SettingsFormSchema, config: AgentSettings
     ) -> None:
         """Fetch and store GitHub project ID if owner and number are provided.
 
         Args:
             schema: The validated settings form schema.
-            config: The AgentConfig to update.
+            config: The AgentSettings to update.
 
         Raises:
             ValueError: If project cannot be found or API call fails.
@@ -112,11 +112,11 @@ class SettingsService:
             ) from e
 
     @staticmethod
-    def get_form_data(config: AgentConfig) -> Dict[str, Any]:
+    def get_form_data(config: AgentSettings) -> Dict[str, Any]:
         """Get form data dictionary for template rendering.
 
         Args:
-            config: AgentConfig to convert.
+            config: AgentSettings to convert.
 
         Returns:
             Dictionary suitable for populating the settings form.
@@ -124,11 +124,11 @@ class SettingsService:
         return ConfigMapper.model_to_form_data(config)
 
     @staticmethod
-    def get_template_context(config: AgentConfig) -> Dict[str, Any]:
+    def get_template_context(config: AgentSettings) -> Dict[str, Any]:
         """Build complete template context for settings page.
 
         Args:
-            config: AgentConfig model.
+            config: AgentSettings model.
 
         Returns:
             Dictionary with all template variables.
@@ -176,11 +176,11 @@ class SettingsService:
         return env_name
 
     @staticmethod
-    def validate_and_save(config: AgentConfig) -> Tuple[bool, Optional[str]]:
+    def validate_and_save(config: AgentSettings) -> Tuple[bool, Optional[str]]:
         """Validate form data and save settings.
 
         Args:
-            config: AgentConfig to update.
+            config: AgentSettings to update.
 
         Returns:
             Tuple of (success, error_message).

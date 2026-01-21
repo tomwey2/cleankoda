@@ -79,7 +79,7 @@ class EncryptedString(TypeDecorator):
 DEFAULT_TRELLO_BASE_URL = "https://api.trello.com/1"
 
 
-class AgentConfig(db.Model):
+class AgentSettings(db.Model):
     """Represents the configuration for the AI agent.
 
     This model stores settings required for the agent to operate, including
@@ -136,7 +136,7 @@ class AgentConfig(db.Model):
         return self.get_task_system(provider)
 
     def __repr__(self):
-        return f"<AgentConfig {self.id} type={self.task_system_type}>"
+        return f"<AgentSettings {self.id} type={self.task_system_type}>"
 
     def as_dict(self) -> Dict[str, Any]:
         """Return a plain dictionary of column values for logging/debugging."""
@@ -174,7 +174,7 @@ class TaskSystem(db.Model):
     moveto_state = db.Column(db.String(100), nullable=True)
 
     agent_config = db.relationship(
-        "AgentConfig",
+        "AgentSettings",
         back_populates="task_systems",
     )
 

@@ -14,13 +14,13 @@ from app.agent.nodes.task_update_node import (
     create_task_update_node,
     get_agent_result,
 )
-from app.core.models import AgentConfig, TaskSystem
+from app.core.models import AgentSettings, TaskSystem
 
 
 @pytest.fixture
 def agent_config():
     """Fixture for agent configuration."""
-    config = AgentConfig(task_system_type="TRELLO")
+    config = AgentSettings(task_system_type="TRELLO")
     task_system = TaskSystem(
         task_system_type="TRELLO",
         board_provider="trello",

@@ -10,7 +10,7 @@ from typing import Any, Dict, Optional
 from app.agent.services.git_workspace import ensure_repository_exists
 from app.agent.system_mappings import MCP_SYSTEM_DEFINITIONS
 from app.agent.utils import get_codespace, get_workbench
-from app.core.models import AgentConfig
+from app.core.models import AgentSettings
 
 logger = logging.getLogger(__name__)
 
@@ -19,14 +19,14 @@ logger = logging.getLogger(__name__)
 class AgentRuntimeContext:
     """Aggregated runtime inputs required to execute one agent cycle."""
 
-    agent_config: AgentConfig
+    agent_config: AgentSettings
     agent_stack: str
     mcp_system_def: Dict[str, Any]
 
 
 def prepare_runtime() -> Optional[AgentRuntimeContext]:
     """Build the runtime context needed by the agent worker."""
-    config: AgentConfig = _get_agent_config()
+    config: AgentSettings = _get_agent_config()
     if not config:
         return None
 
@@ -55,9 +55,9 @@ def prepare_runtime() -> Optional[AgentRuntimeContext]:
     )
 
 
-def _get_agent_config() -> Optional[AgentConfig]:
+def _get_agent_config() -> Optional[AgentSettings]:
     """Load the active agent configuration from the database."""
-    config = AgentConfig.query.first()
+    config = AgentSettings.query.first()
     if not config or not config.is_active:
         logger.info("Agent is not active or not configured. Skipping cycle.")
         return None

@@ -14,14 +14,14 @@ from langchain_core.messages import AIMessage, ToolMessage
 from app.agent.integrations.board_factory import create_board_provider
 from app.agent.services.summaries import get_agent_summary_entries
 from app.agent.state import AgentState
-from app.core.models import AgentConfig
+from app.core.models import AgentSettings
 
 AGENT_DEFAULT_COMMENT = "Task completed by AI Agent."
 
 logger = logging.getLogger(__name__)
 
 
-def create_task_update_node(agent_config: AgentConfig):
+def create_task_update_node(agent_config: AgentSettings):
     """
     Factory function that creates the task update node.
 

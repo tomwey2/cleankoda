@@ -25,7 +25,7 @@ from app.agent.integrations.github_client import (
     move_item_to_column,
     move_item_to_named_column,
 )
-from app.core.models import AgentConfig
+from app.core.models import AgentSettings
 
 logger = logging.getLogger(__name__)
 
@@ -38,7 +38,7 @@ class GitHubProvider(BoardProvider):
     a consistent interface for board operations.
     """
 
-    def __init__(self, agent_config: AgentConfig):
+    def __init__(self, agent_config: AgentSettings):
         """
         Initialize the GitHub provider.
 

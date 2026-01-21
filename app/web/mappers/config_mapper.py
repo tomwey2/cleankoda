@@ -10,7 +10,7 @@ from typing import Any, Dict
 
 from flask import request
 
-from app.core.models import AgentConfig, TaskSystem
+from app.core.models import AgentSettings, TaskSystem
 from app.web.schemas.settings_schema import (
     GitHubConfigSchema,
     JiraConfigSchema,
@@ -86,16 +86,16 @@ class ConfigMapper:
 
     @staticmethod
     def schema_to_model(
-        schema: SettingsFormSchema, config: AgentConfig
-    ) -> AgentConfig:
-        """Apply schema values to an AgentConfig model.
+        schema: SettingsFormSchema, config: AgentSettings
+    ) -> AgentSettings:
+        """Apply schema values to an AgentSettings model.
 
         Args:
             schema: Validated settings form schema.
-            config: Existing AgentConfig to update (or new instance).
+            config: Existing AgentSettings to update (or new instance).
 
         Returns:
-            Updated AgentConfig model (not yet committed).
+            Updated AgentSettings model (not yet committed).
         """
         config.task_system_type = schema.task_system_type
         config.agent_skill_level = schema.agent_skill_level
@@ -115,7 +115,7 @@ class ConfigMapper:
         return config
 
     @staticmethod
-    def _apply_llm_config(llm_schema: LLMConfigSchema, config: AgentConfig) -> None:
+    def _apply_llm_config(llm_schema: LLMConfigSchema, config: AgentSettings) -> None:
         """Apply LLM configuration from schema to model."""
         config.llm_provider = llm_schema.provider
         config.llm_model_large = llm_schema.model_large
@@ -124,7 +124,7 @@ class ConfigMapper:
 
     @staticmethod
     def _apply_trello_config(
-        trello_schema: TrelloConfigSchema, config: AgentConfig
+        trello_schema: TrelloConfigSchema, config: AgentSettings
     ) -> None:
         """Apply Trello configuration from schema to model."""
         task_system = ConfigMapper._get_or_create_task_system(config, "trello")
@@ -142,7 +142,7 @@ class ConfigMapper:
 
     @staticmethod
     def _apply_github_config(
-        github_schema: GitHubConfigSchema, config: AgentConfig
+        github_schema: GitHubConfigSchema, config: AgentSettings
     ) -> None:
         """Apply GitHub Projects configuration from schema to model."""
         task_system = ConfigMapper._get_or_create_task_system(config, "github")
@@ -161,7 +161,7 @@ class ConfigMapper:
 
     @staticmethod
     def _get_or_create_task_system(
-        config: AgentConfig, provider: str
+        config: AgentSettings, provider: str
     ) -> TaskSystem:
         """Get existing TaskSystem for provider or create a new one."""
         existing = config.get_task_system(provider)
@@ -176,11 +176,11 @@ class ConfigMapper:
         return task_system
 
     @staticmethod
-    def model_to_form_data(config: AgentConfig) -> Dict[str, Any]:
-        """Convert AgentConfig model to form data dictionary for template rendering.
+    def model_to_form_data(config: AgentSettings) -> Dict[str, Any]:
+        """Convert AgentSettings model to form data dictionary for template rendering.
 
         Args:
-            config: AgentConfig model to convert.
+            config: AgentSettings model to convert.
 
         Returns:
             Dictionary suitable for populating the settings form template.
@@ -200,7 +200,7 @@ class ConfigMapper:
         return form_data
 
     @staticmethod
-    def _add_trello_form_data(config: AgentConfig, form_data: Dict[str, Any]) -> None:
+    def _add_trello_form_data(config: AgentSettings, form_data: Dict[str, Any]) -> None:
         """Add Trello-specific fields to form data."""
         task_system = config.get_task_system("trello")
         if task_system:
@@ -223,7 +223,7 @@ class ConfigMapper:
             form_data["trello_moveto_list"] = None
 
     @staticmethod
-    def _add_github_form_data(config: AgentConfig, form_data: Dict[str, Any]) -> None:
+    def _add_github_form_data(config: AgentSettings, form_data: Dict[str, Any]) -> None:
         """Add GitHub Projects-specific fields to form data."""
         task_system = config.get_task_system("github")
         env_token = os.environ.get("GITHUB_TOKEN")

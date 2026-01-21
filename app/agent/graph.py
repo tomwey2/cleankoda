@@ -12,7 +12,7 @@ from langchain_core.messages import AIMessage
 from langgraph.graph import END, StateGraph
 from langgraph.prebuilt import ToolNode
 
-from app.core.models import AgentConfig
+from app.core.models import AgentSettings
 
 from app.agent.nodes.agent_skill_level import create_agent_skill_level_node
 from app.agent.nodes.analyst import create_analyst_node
@@ -126,7 +126,7 @@ def route_after_tools_analyst(state: AgentState) -> str:
 def create_workflow(
     llm_large: BaseChatModel,
     llm_small: BaseChatModel,
-    agent_config: AgentConfig,
+    agent_config: AgentSettings,
     agent_stack: str,
 ) -> StateGraph:
     """Creates and configures the main LangGraph workflow."""
