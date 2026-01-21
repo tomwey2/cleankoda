@@ -87,6 +87,7 @@ def has_required_skill_level(task_skill_level, agent_skill_level):
     return True
 
 
+# pylint: disable=too-few-public-methods
 class SkillLevelResult(BaseModel):
     """Represents the result of the agent skill level analysis."""
 
@@ -117,8 +118,8 @@ def create_agent_skill_level_node(llm):
             response = await structured_llm.ainvoke(messages)
             logger.info(
                 "Skill Level Decision: %s (%s)",
-                {response.classification},
-                {response.reasoning},
+                response.classification,
+                response.reasoning,
             )
             summary_entries = list(state.get("agent_summary") or [])
             if not has_required_skill_level(
@@ -138,7 +139,7 @@ def create_agent_skill_level_node(llm):
             }
         except OutputParserException as e:
             logger.warning(
-                "coder_skill_check_node produced invalid JSON %s",
+                "agent_skill_level_node produced invalid JSON: %s",
                 e,
             )
             return {"task_skill_level": "junior"}

@@ -35,9 +35,9 @@ class AgentState(TypedDict):
     messages: Annotated[list[BaseMessage], add_messages]
     next_step: str
     agent_stack: str  # Backend or Frontend
-    retry_count: int  # Versuche, wie oft zwischen coder und tester gewechselt wurde
+    retry_count: int  # Attempts: how often switched between coder and tester
     test_result: Optional[str]
-    error_log: Optional[str]  # Optional: Speichert den letzten Fehler explizit
+    error_log: Optional[str]  # Optional: Stores the last error explicitly
     task_id: Optional[str]
     task_name: Optional[str]
     task_state_id: Optional[str]

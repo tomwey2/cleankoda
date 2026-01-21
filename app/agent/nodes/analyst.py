@@ -45,8 +45,8 @@ def create_analyst_node(llm: BaseChatModel, tools, agent_stack):
         filtered_messages = filter_messages_for_llm(state["messages"], max_messages=20)
         current_messages = [SystemMessage(content=sys_msg)] + filtered_messages
 
-        # Wir erlauben dem Analysten etwas mehr Freiheit ("auto"), da er oft chatten muss,
-        # um zu denken. Aber am Ende soll er finish_task nutzen.
+        # We allow the analyst more freedom ("auto") since they often need to chat
+        # to think. But in the end they should use finish_task.
         chain = llm.bind_tools(tools, tool_choice="auto")
 
         response = await chain.ainvoke(current_messages)

@@ -21,6 +21,7 @@ from app.agent.tools.report_test_result import report_test_result
 logger = logging.getLogger(__name__)
 
 
+# pylint: disable=too-few-public-methods
 class TesterResult(BaseModel):
     """Call this tool ONLY when you have completed the testing process."""
 

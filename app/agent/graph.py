@@ -12,6 +12,8 @@ from langchain_core.messages import AIMessage
 from langgraph.graph import END, StateGraph
 from langgraph.prebuilt import ToolNode
 
+from app.core.models import AgentConfig
+
 from app.agent.nodes.agent_skill_level import create_agent_skill_level_node
 from app.agent.nodes.analyst import create_analyst_node
 from app.agent.nodes.bugfixer import create_bugfixer_node
@@ -44,79 +46,79 @@ def route_after_tools_tester(state: AgentState):
     """
     messages = state["messages"]
 
-    # Sicherstellen, dass wir genug Nachrichten haben
+    # Ensure we have enough messages
     if len(messages) < 2:
         return "tester"
 
-    # Wir schauen auf die Nachricht VOR dem Tool-Output (die AIMessage des Testers)
+    # Look at the message BEFORE the tool output (the tester's AIMessage)
     last_ai_msg = messages[-2]
 
     if isinstance(last_ai_msg, AIMessage) and last_ai_msg.tool_calls:
-        # Wir iterieren durch ALLE Tool Calls, falls der Agent mehrere gemacht hat
+        # Iterate through ALL tool calls in case the agent made multiple
         for tool_call in last_ai_msg.tool_calls:
             if tool_call["name"] == "report_test_result":
                 args = tool_call["args"]
                 result = args.get("result")
 
                 if result == "pass":
-                    return "pass"  # Erfolg -> Ende
-                # Fehlgeschlagen -> Zurück zum Bearbeiter
+                    return "pass"  # Success -> End
+                # Failed -> Back to the handler
                 previous_agent = state.get("next_step", "coder")
                 return f"{previous_agent} failed"
 
-    # Wenn kein 'report_test_result' dabei war (z.B. nur 'run_command' oder 'git_add')
-    # dann geht es zurück zum Tester (Loop), damit er weitermachen kann.
+    # If no 'report_test_result' was present (e.g., only 'run_command' or 'git_add')
+    # then return to the tester (loop) so it can continue.
     return "tester"
 
 
 def check_agent_exit(state: AgentState) -> str:
     """
-    Prüft nach Coder/Bugfixer/Analyst:
-    - Hat das LLM ein Tool gewählt? -> tools
-    - Hat es Text gelabert? -> no tool (Korrektur)
+    Checks after Coder/Bugfixer/Analyst:
+    - Did the LLM choose a tool? -> tools
+    - Did it output text? -> no tool (correction)
     """
     last_msg = state["messages"][-1]
 
     if not isinstance(last_msg, AIMessage) or not last_msg.tool_calls:
         return "no tool"
 
-    # Wir führen ALLE Tools aus, auch finish_task
+    # We execute ALL tools, including finish_task
     return "tools"
 
 
 def route_after_tools_coder(state: AgentState) -> str:
     """
-    Entscheidet NACHDEM die Tools für Coder/Bugfixer liefen:
-    - War das letzte Tool 'finish_task'? -> Weiter zum Tester.
-    - Sonst -> Loop zurück zum aktuellen Agenten (Coder oder Bugfixer).
+    Decides AFTER the tools for Coder/Bugfixer have run:
+    - Was the last tool 'finish_task'? -> Continue to Tester.
+    - Otherwise -> Loop back to the current agent (Coder or Bugfixer).
     """
     messages = state["messages"]
 
-    # 1. Bestimmen, wer gerade dran war (Coder oder Bugfixer)
+    # 1. Determine who was active (Coder or Bugfixer)
     current_agent = state.get("next_step", "coder")
 
-    # 2. Prüfen auf finish_task
+    # 2. Check for finish_task
     if len(messages) >= 2:
-        ai_msg = messages[-2]  # Die Nachricht VOR dem Tool-Output
+        ai_msg = messages[-2]  # The message BEFORE the tool output
         if has_finish_task_call(ai_msg):
             return "finish"
 
-    # 3. Kein Finish? Dann Loop zurück zum Agenten
+    # 3. No finish? Then loop back to the agent
     return current_agent
 
 
 def route_after_tools_analyst(state: AgentState) -> str:
     """
-    Spezial-Router für Analyst:
-    - finish_task -> task_update (Nicht Tester!)
-    - Sonst -> Loop zurück zum Analyst
+    Special router for Analyst:
+    - finish_task -> task_update (Not Tester!)
+    - Otherwise -> Loop back to Analyst
     """
     messages = state["messages"]
 
     if len(messages) >= 2:
         ai_msg = messages[-2]
         if has_finish_task_call(ai_msg):
-            return "finish"  # Geht zu task_update
+            return "finish"  # Goes to task_update
 
     return "analyst"
 
@@ -124,18 +126,18 @@ def route_after_tools_analyst(state: AgentState) -> str:
 def create_workflow(
     llm_large: BaseChatModel,
     llm_small: BaseChatModel,
-    sys_config: dict,
+    agent_config: AgentConfig,
     agent_stack: str,
 ) -> StateGraph:
     """Creates and configures the main LangGraph workflow."""
     # --- Tool Sets ---
-    impl_task_target_state = sys_config.get("task_backlog_state")
+    impl_task_target_state = agent_config.task_backlog_state
     analyst_tools = [
         list_files,
         read_file,
         write_to_file,
         thinking,
-        create_task_tool(sys_config, impl_task_target_state),
+        create_task_tool(agent_config, impl_task_target_state),
         finish_task,
     ]
     coder_tools = [
@@ -153,8 +155,8 @@ def create_workflow(
     # --- Graph Nodes ---
     workflow = StateGraph(AgentState)
 
-    workflow.add_node("task_fetch", create_task_fetch_node(sys_config))
-    workflow.add_node("checkout", create_checkout_node(sys_config))
+    workflow.add_node("task_fetch", create_task_fetch_node(agent_config))
+    workflow.add_node("checkout", create_checkout_node(agent_config))
     workflow.add_node("router", create_router_node(llm_small))
     workflow.add_node("agent_skill_level", create_agent_skill_level_node(llm_small))
 
@@ -177,7 +179,7 @@ def create_workflow(
 
     workflow.add_node("correction", create_correction_node())
     workflow.add_node("pull_request", create_pull_request_node())
-    workflow.add_node("task_update", create_task_update_node(sys_config))
+    workflow.add_node("task_update", create_task_update_node(agent_config))
 
     workflow.set_entry_point("task_fetch")
 
@@ -192,7 +194,7 @@ def create_workflow(
 
     workflow.add_edge("checkout", "router")
 
-    # 2. Router -> Spezialisten: Coder | Bugfixer | Analyst
+    # 2. Router -> Specialists: Coder | Bugfixer | Analyst
     workflow.add_conditional_edges(
         "router",
         lambda state: state.get("next_step", "coder"),
@@ -237,45 +239,45 @@ def create_workflow(
         },
     )
 
-    # 6. ROUTING NACH DEN TOOLS
+    # 6. ROUTING AFTER TOOLS
 
-    # Für Coder & Bugfixer:
-    # Prüft auf finish_task -> Tester. Sonst -> Zurück zum Agenten (Loop).
+    # For Coder & Bugfixer:
+    # Check for finish_task -> Tester. Otherwise -> Back to agent (Loop).
     workflow.add_conditional_edges(
         "tools_coder",
         route_after_tools_coder,
         {
             "coder": "coder",  # Loop
             "bugfixer": "bugfixer",  # Loop
-            "finish": "tester",  # Exit zu Tester
+            "finish": "tester",  # Exit to Tester
         },
     )
 
-    # Für Analyst:
-    # Prüft auf finish_task -> Task Update. Sonst -> Loop.
+    # For Analyst:
+    # Check for finish_task -> Task Update. Otherwise -> Loop.
     workflow.add_conditional_edges(
         "tools_analyst",
         route_after_tools_analyst,
         {"analyst": "analyst", "finish": "task_update"},
     )
 
-    # 7. Tester Logik
+    # 7. Tester Logic
     # 7.1. Tester -> Tools
     workflow.add_edge("tester", "tools_tester")
 
-    # 7.2. Tools -> Entscheidung
+    # 7.2. Tools -> Decision
     workflow.add_conditional_edges(
         "tools_tester",
         route_after_tools_tester,
         {
-            "tester": "tester",  # Loop (für git, mvn)
-            "pass": "pull_request",  # Erfolg
+            "tester": "tester",  # Loop (for git, mvn)
+            "pass": "pull_request",  # Success
             "coder failed": "coder",  # Tests failed back to coder or bugfixer
             "bugfixer failed": "bugfixer",
         },
     )
 
-    # 8. Correction & Ende
+    # 8. Correction & End
     workflow.add_conditional_edges(
         "correction",
         lambda state: state.get("next_step"),

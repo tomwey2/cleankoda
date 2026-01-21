@@ -23,4 +23,4 @@ def test_load_system_prompt_missing_file_returns_default(tmp_path, monkeypatch):
 
     content = load_system_prompt("backend", "coder")
 
-    assert content == "You are a helpful coding assistent."
+    assert content == "You are a helpful coding assistant."

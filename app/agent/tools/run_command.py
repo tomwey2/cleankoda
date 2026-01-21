@@ -66,7 +66,7 @@ def run_command(command: str) -> str:
             f"Error: Container '{get_workbench()}' not found. "
             "Please start the docker-compose setup."
         )
-    except APIError as exc:
-        return f"Docker API Error: {exc}"
-    except Exception as exc:  # pylint: disable=broad-exception-caught
-        return f"System Error: {exc}"
+    except APIError as api_exc:
+        return f"Docker API Error: {api_exc}"
+    except Exception as err:  # pylint: disable=broad-exception-caught
+        return f"System Error: {err}"

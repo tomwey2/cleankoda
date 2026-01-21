@@ -11,18 +11,20 @@ import logging
 
 import httpx
 
+from app.core.models import AgentConfig
+
 logger = logging.getLogger(__name__)
 
 
 def get_safe_url(url: str, params: dict) -> str:
     """
-    Erstellt eine URL für das Logging, bei der sensitive Parameter maskiert sind.
+    Creates a URL for logging with sensitive parameters masked.
     """
-    # Wir bauen die volle URL inkl. Params nach, um sie zu parsen
+    # Build the full URL including params to parse it
     req = httpx.Request("GET", url, params=params)
     parsed_url = req.url
 
-    # Wir kopieren die Query-Parameter, aber überschreiben die Secrets
+    # Copy the query parameters, but overwrite the secrets
     new_query_params = []
     for key, value in parsed_url.params.items():
         if key in ["key", "token"]:
@@ -30,19 +32,17 @@ def get_safe_url(url: str, params: dict) -> str:
         else:
             new_query_params.append((key, value))
 
-    # URL mit sicherem Query-String zurückgeben
+    # Return URL with safe query string
     return str(parsed_url.copy_with(params=new_query_params))
 
 
-async def get_all_trello_lists(sys_config: dict) -> list[dict]:
+async def get_all_trello_lists(agent_config: AgentConfig) -> list[dict]:
     """Fetches all lists for the configured Trello board."""
-    env = sys_config.get("env")
-    if not env:
-        raise ValueError("Environment not found in sys_config")
+    board_id = agent_config.task_system.board_id
 
-    url = f"https://api.trello.com/1/boards/{sys_config.get('trello_board_id')}/lists"
+    url = f"https://api.trello.com/1/boards/{board_id}/lists"
     headers = {"Accept": "application/json"}
-    query = {"key": env.get("TRELLO_API_KEY"), "token": env.get("TRELLO_TOKEN")}
+    query = {"key": agent_config.task_system.api_key, "token": agent_config.task_system.token}
 
     logger.info("Trello GET: %s", get_safe_url(url, query))
     async with httpx.AsyncClient() as client:
@@ -55,15 +55,12 @@ async def get_all_trello_lists(sys_config: dict) -> list[dict]:
     return [{"name": list_item["name"], "id": list_item["id"]} for list_item in data]
 
 
-async def get_all_trello_cards(list_id: str, sys_config: dict) -> list[dict]:
+async def get_all_trello_cards(list_id: str, agent_config: AgentConfig) -> list[dict]:
     """Fetches all cards from a specific Trello list."""
-    env = sys_config.get("env")
-    if not env:
-        raise ValueError("Environment not found in sys_config")
 
     url = f"https://api.trello.com/1/lists/{list_id}/cards"
     headers = {"Accept": "application/json"}
-    query = {"key": env.get("TRELLO_API_KEY"), "token": env.get("TRELLO_TOKEN")}
+    query = {"key": agent_config.task_system.api_key, "token": agent_config.task_system.token}
 
     logger.info("Trello GET: %s", get_safe_url(url, query))
     async with httpx.AsyncClient() as client:
@@ -78,29 +75,25 @@ async def get_all_trello_cards(list_id: str, sys_config: dict) -> list[dict]:
     ]
 
 
-async def move_trello_card_to_list(card_id: str, list_id: str, sys_config: dict):
+async def move_trello_card_to_list(card_id: str, list_id: str, agent_config: AgentConfig):
     """
     Move a Trello card to a specified list.
 
     Args:
         card_id (str): The ID of the card to move.
         list_id (str): The ID of the target list.
-        sys_config (dict): The system configuration containing Trello API credentials.
+        agent_config (AgentConfig): The agent configuration containing Trello API credentials.
 
     Raises:
-        ValueError: If the environment is not found in sys_config.
+        ValueError: If the environment is not found in agent_config.
         RuntimeError: If the card move operation fails.
     """
-    env = sys_config.get("env")
-    if not env:
-        raise ValueError("Environment not found in sys_config")
-
     url = f"https://api.trello.com/1/cards/{card_id}"
     headers = {"Accept": "application/json"}
     query = {
         "idList": list_id,
-        "key": env.get("TRELLO_API_KEY"),
-        "token": env.get("TRELLO_TOKEN"),
+        "key": agent_config.task_system.api_key,
+        "token": agent_config.task_system.token,
     }
 
     logger.info("Trello PUT: %s", get_safe_url(url, query))
@@ -114,13 +107,13 @@ async def move_trello_card_to_list(card_id: str, list_id: str, sys_config: dict)
 
 
 async def move_trello_card_to_named_list(
-    card_id: str, list_name: str, sys_config: dict
+    card_id: str, list_name: str, agent_config: AgentConfig
 ) -> str:
     """
     Helper that resolves the Trello list ID by name and moves the
     given card to that list. Returns the resolved list ID.
     """
-    trello_lists = await get_all_trello_lists(sys_config)
+    trello_lists = await get_all_trello_lists(agent_config)
     target_list = next(
         (data for data in trello_lists if data["name"] == list_name), None
     )
@@ -130,23 +123,19 @@ async def move_trello_card_to_named_list(
 
     target_list_id = target_list["id"]
     logger.info("Found %s list id: %s", list_name, target_list_id)
-    await move_trello_card_to_list(card_id, target_list_id, sys_config)
+    await move_trello_card_to_list(card_id, target_list_id, agent_config)
 
     return target_list_id
 
 
-async def add_comment_to_trello_card(card_id: str, comment: str, sys_config: dict):
+async def add_comment_to_trello_card(card_id: str, comment: str, agent_config: AgentConfig):
     """Adds a comment to a specified Trello card."""
-    env = sys_config.get("env")
-    if not env:
-        raise ValueError("Environment not found in sys_config")
-
     url = f"https://api.trello.com/1/cards/{card_id}/actions/comments"
     headers = {"Accept": "application/json"}
     query = {
         "text": comment,
-        "key": env.get("TRELLO_API_KEY"),
-        "token": env.get("TRELLO_TOKEN"),
+        "key": agent_config.task_system.api_key,
+        "token": agent_config.task_system.token,
     }
 
     logger.info("Trello POST: %s", get_safe_url(url, query))
@@ -159,20 +148,16 @@ async def add_comment_to_trello_card(card_id: str, comment: str, sys_config: dic
         )
 
 
-async def get_trello_card_comments(card_id: str, sys_config: dict) -> list[dict]:
+async def get_trello_card_comments(card_id: str, agent_config: AgentConfig) -> list[dict]:
     """
     Fetches all comments for the provided Trello card ID.
     """
-    env = sys_config.get("env")
-    if not env:
-        raise ValueError("Environment not found in sys_config")
-
     url = f"https://api.trello.com/1/cards/{card_id}/actions"
     headers = {"Accept": "application/json"}
     query = {
         "filter": "commentCard",
-        "key": env.get("TRELLO_API_KEY"),
-        "token": env.get("TRELLO_TOKEN"),
+        "key": agent_config.task_system.api_key,
+        "token": agent_config.task_system.token,
     }
 
     logger.info("Trello GET: %s", get_safe_url(url, query))
@@ -196,20 +181,16 @@ async def get_trello_card_comments(card_id: str, sys_config: dict) -> list[dict]
     ]
 
 
-async def get_trello_card_list_moves(card_id: str, sys_config: dict) -> list[dict]:
+async def get_trello_card_list_moves(card_id: str, agent_config: AgentConfig) -> list[dict]:
     """
     Fetches all list move actions (updateCard:idList) for the provided Trello card ID.
     """
-    env = sys_config.get("env")
-    if not env:
-        raise ValueError("Environment not found in sys_config")
-
     url = f"https://api.trello.com/1/cards/{card_id}/actions"
     headers = {"Accept": "application/json"}
     query = {
         "filter": "updateCard:idList",
-        "key": env.get("TRELLO_API_KEY"),
-        "token": env.get("TRELLO_TOKEN"),
+        "key": agent_config.task_system.api_key,
+        "token": agent_config.task_system.token,
     }
 
     logger.info("Trello GET: %s", get_safe_url(url, query))
@@ -234,7 +215,7 @@ async def get_trello_card_list_moves(card_id: str, sys_config: dict) -> list[dic
 
 
 async def create_trello_card(
-    name: str, description: str, list_name: str, sys_config: dict
+    name: str, description: str, list_name: str, agent_config: AgentConfig
 ) -> dict:
     """
     Creates a new Trello card in the specified list.
@@ -243,7 +224,7 @@ async def create_trello_card(
         name (str): The title/name of the card.
         description (str): The description/body of the card.
         list_name (str): The name of the list to create the card in.
-        sys_config (dict): The system configuration containing Trello API credentials.
+        agent_config (AgentConfig): The agent configuration containing Trello API credentials.
 
     Returns:
         dict: The created card data including id, name, and url.
@@ -252,11 +233,7 @@ async def create_trello_card(
         ValueError: If the environment is not found or list name is invalid.
         RuntimeError: If the card creation fails.
     """
-    env = sys_config.get("env")
-    if not env:
-        raise ValueError("Environment not found in sys_config")
-
-    trello_lists = await get_all_trello_lists(sys_config)
+    trello_lists = await get_all_trello_lists(agent_config)
     target_list = next(
         (data for data in trello_lists if data["name"] == list_name), None
     )
@@ -273,8 +250,8 @@ async def create_trello_card(
         "idList": list_id,
         "name": name,
         "desc": description,
-        "key": env.get("TRELLO_API_KEY"),
-        "token": env.get("TRELLO_TOKEN"),
+        "key": agent_config.task_system.api_key,
+        "token": agent_config.task_system.token,
     }
 
     logger.info("Trello POST: %s", get_safe_url(url, query))

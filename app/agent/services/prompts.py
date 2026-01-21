@@ -19,5 +19,5 @@ def load_system_prompt(stack: str, role: str) -> str:
         with open(file_path, "r", encoding="utf-8") as handle:
             return handle.read()
     except FileNotFoundError:
-        logger.warning("WARNUNG: System Prompt not found: %s", file_path)
-        return "You are a helpful coding assistent."
+        logger.warning("System Prompt not found: %s", file_path)
+        return "You are a helpful coding assistant."
