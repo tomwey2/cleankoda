@@ -20,12 +20,13 @@ from app.agent.integrations.trello_client import (
     create_trello_card,
     get_all_trello_cards,
     get_all_trello_lists,
+    get_trello_card,
     get_trello_card_comments,
     get_trello_card_list_moves,
     move_trello_card_to_list,
     move_trello_card_to_named_list,
 )
-from app.core.models import AgentConfig
+from app.core.models import AgentSettings
 
 logger = logging.getLogger(__name__)
 
@@ -38,23 +39,39 @@ class TrelloProvider(BoardProvider):
     a consistent interface for board operations.
     """
 
-    def __init__(self, agent_config: AgentConfig):
+    def __init__(self, agent_settings: AgentSettings):
         """
         Initialize the Trello provider.
         
         Args:
-            agent_config: Agent configuration containing Trello credentials and settings
+            agent_settings: Agent settings containing Trello credentials and settings
         """
-        self.agent_config = agent_config
+        self.agent_settings = agent_settings
 
     async def get_states(self) -> list[dict]:
         """Fetch all states (Trello lists) from the board."""
-        return await get_all_trello_lists(self.agent_config)
+        return await get_all_trello_lists(self.agent_settings)
+
+    async def get_task(self, task_id: str) -> BoardTask:
+        """Fetch a specific Trello card."""
+        card = await get_trello_card(task_id, self.agent_settings)
+
+        if not card:
+            raise RuntimeError(f"Trello card {task_id} not found")
+
+        return BoardTask(
+            id=card["id"],
+            name=card.get("name", ""),
+            description=card.get("desc", ""),
+            state_id=card.get("list_id", ""),
+            state_name=card.get("list_name", ""),
+            url=card.get("url", ""),
+        )
 
     async def get_tasks_from_state(self, state_id: str) -> list[BoardTask]:
         """Fetch all tasks from a specific state (Trello list)."""
         # state_id corresponds to Trello list_id
-        cards = await get_all_trello_cards(state_id, self.agent_config)
+        cards = await get_all_trello_cards(state_id, self.agent_settings)
 
         return [
             BoardTask(
@@ -71,22 +88,22 @@ class TrelloProvider(BoardProvider):
     async def move_task_to_state(self, task_id: str, state_id: str) -> None:
         """Move a task to a different state (Trello list)."""
         # state_id corresponds to Trello list_id
-        await move_trello_card_to_list(task_id, state_id, self.agent_config)
+        await move_trello_card_to_list(task_id, state_id, self.agent_settings)
 
     async def move_task_to_named_state(self, task_id: str, state_name: str) -> str:
         """Move a task to a state (Trello list) identified by name."""
         # state_name corresponds to Trello list_name
         return await move_trello_card_to_named_list(
-            task_id, state_name, self.agent_config
+            task_id, state_name, self.agent_settings
         )
 
     async def add_comment(self, task_id: str, comment: str) -> None:
         """Add a comment to a Trello task."""
-        await add_comment_to_trello_card(task_id, comment, self.agent_config)
+        await add_comment_to_trello_card(task_id, comment, self.agent_settings)
 
     async def get_comments(self, task_id: str) -> list[BoardComment]:
         """Fetch all comments for a Trello task."""
-        comments = await get_trello_card_comments(task_id, self.agent_config)
+        comments = await get_trello_card_comments(task_id, self.agent_settings)
 
         return [
             BoardComment(
@@ -100,7 +117,7 @@ class TrelloProvider(BoardProvider):
 
     async def get_state_moves(self, task_id: str) -> list[BoardStateMove]:
         """Fetch the history of state moves (Trello list moves) for a task."""
-        moves = await get_trello_card_list_moves(task_id, self.agent_config)
+        moves = await get_trello_card_list_moves(task_id, self.agent_settings)
 
         return [
             BoardStateMove(
@@ -121,7 +138,7 @@ class TrelloProvider(BoardProvider):
             name,
             description,
             state_name,
-            self.agent_config,
+            self.agent_settings,
         )
 
         return BoardTask(
@@ -132,6 +149,10 @@ class TrelloProvider(BoardProvider):
             state_name=result["list"],
             url=result.get("url", ""),
         )
+
+    def get_type(self) -> str:
+        """Return the provider identifier."""
+        return "trello"
 
     def _parse_timestamp(self, value: str | None) -> datetime:
         """

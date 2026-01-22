@@ -7,6 +7,8 @@ import os
 import shutil
 from datetime import datetime
 from typing import Final
+import subprocess
+from typing import Final, Optional
 
 from app.agent.state import AgentState, PlanState
 
@@ -15,6 +17,7 @@ __all__ = [
     "get_workspace",
     "get_codespace",
     "save_state_to_workspace",
+    "get_current_git_branch",
 ]
 
 
@@ -75,3 +78,19 @@ def save_state_to_workspace(state: dict, filename: str = "agent_state.json") -> 
     # 2. Atomares Verschieben (Das ist im OS eine einzige Operation)
     shutil.move(temp_path, file_path)
     return file_path
+def get_current_git_branch() -> Optional[str]:
+    """
+    Get the current git branch name.
+
+    Returns:
+        Current branch name or None if unable to determine
+    """
+    try:
+        current_branch = subprocess.check_output(
+            ["git", "rev-parse", "--abbrev-ref", "HEAD"],
+            cwd=get_codespace(),
+            text=True,
+        ).strip()
+        return current_branch
+    except subprocess.CalledProcessError:
+        return None

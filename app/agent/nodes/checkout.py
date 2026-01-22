@@ -11,8 +11,7 @@ from git import Repo
 from app.agent.services.git_workspace import checkout_branch
 from app.agent.state import AgentState
 from app.agent.utils import get_codespace
-from app.core.models import AgentConfig
-from app.core.task_repository import get_branch_for_task, upsert_task
+from app.core.models import AgentSettings
 
 logger = logging.getLogger(__name__)
 
@@ -22,7 +21,7 @@ ROLE_PREFIXES = {
 }
 
 
-def create_checkout_node(agent_config: AgentConfig):
+def create_checkout_node(agent_settings: AgentSettings):
     """Create a checkout node"""
 
     async def checkout_node(state: AgentState) -> Dict[str, Any]:  # pylint: disable=unused-argument
@@ -34,7 +33,7 @@ def create_checkout_node(agent_config: AgentConfig):
                 task_id,
                 task_name,
                 "coder",
-                agent_config,
+                agent_settings,
             )
         else:
             raise ValueError("Missing task_id or task_name in AgentState")
@@ -45,7 +44,7 @@ def create_checkout_node(agent_config: AgentConfig):
 
 
 async def checkout_task_branch(
-    task_id: str, task_name: str, role: str, agent_config: AgentConfig
+    task_id: str, task_name: str, role: str, agent_settings: AgentSettings
 ):
     """
     Checks out the existing git branch for a task from the database.
@@ -61,7 +60,7 @@ async def checkout_task_branch(
 
     if not git_branch:
         logger.info("No git branch found for task %s", task_id)
-        await checkout_branch_for_task(task_id, task_name, role, agent_config)
+        await checkout_branch_for_task(task_id, task_name, role, agent_settings)
     else:
         logger.info(
             "Checking out existing git branch: %s for task %s - %s",
@@ -70,7 +69,7 @@ async def checkout_task_branch(
             task_name,
         )
 
-        github_repo_url = agent_config.github_repo_url
+        github_repo_url = agent_settings.github_repo_url
         if github_repo_url:
             checkout_branch(github_repo_url, git_branch, get_codespace())
         else:
@@ -147,7 +146,7 @@ def _resolve_unique_branch_name(base_name: str, existing_names: set[str]) -> str
 
 
 async def checkout_branch_for_task(
-    task_id: str, task_name: str, role: str, agent_config: AgentConfig
+    task_id: str, task_name: str, role: str, agent_settings: AgentSettings
 ):
     """
     Checks out a new git branch for a task.
@@ -165,10 +164,10 @@ async def checkout_branch_for_task(
     existing_branches = _collect_branch_names(repo)
     branch_name = _resolve_unique_branch_name(base_branch_name, existing_branches)
 
-    github_repo_url = agent_config.github_repo_url
+    github_repo_url = agent_settings.github_repo_url
     if not github_repo_url:
         logger.warning(
-            "github_repo_url missing in agent_config; cannot checkout branch for task %s",
+            "github_repo_url missing in agent settings; cannot checkout branch for task %s",
             task_id,
         )
         return

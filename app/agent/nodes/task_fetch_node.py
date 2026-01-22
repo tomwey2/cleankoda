@@ -10,20 +10,17 @@ from datetime import datetime
 
 from langchain_core.messages import SystemMessage
 
+from app.core.task_repository import remove_task_from_db, get_branch_for_task
 from app.agent.integrations.board_factory import create_board_provider
-from app.agent.integrations.board_provider import (  # pylint: disable=unused-import
-    BoardProvider,
-    BoardTask,
-)
+from app.agent.integrations.board_provider import BoardProvider, BoardTask  # pylint: disable=unused-import
+from app.core.models import AgentSettings
 from app.agent.state import AgentState
-from app.core.models import AgentConfig
-from app.core.task_repository import remove_task_from_db
+from app.agent.services.pull_request import check_pr_exists_for_branch
 
 logger = logging.getLogger(__name__)
 
-
-async def _get_task_context(board_provider: BoardProvider, agent_config: AgentConfig):
-    active_task_system = agent_config.get_active_task_system()
+async def _get_task_context(board_provider: BoardProvider, agent_settings: AgentSettings):
+    active_task_system = agent_settings.get_active_task_system()
     if not active_task_system:
         logger.warning("No active task system configured")
         return None
@@ -71,7 +68,7 @@ async def _ensure_task_in_progress(
     return task_context
 
 
-async def _fetch_rejection_comments(
+async def _fetch_review_comments(
     board_provider: BoardProvider,
     task_id: str,
     original_state_name: str,
@@ -81,17 +78,37 @@ async def _fetch_rejection_comments(
     """
     Fetch comments from review if task was returned from review to in-progress.
 
+<<<<<<< HEAD
+=======
+    Args:
+        board_provider: BoardProvider
+        task_id: id of task
+        original_state_name: name of state before task was moved to in-progress
+        task_in_progress_state_name: name of in-progress state
+        review_state_name: name of review state
+
+>>>>>>> master
     Returns:
         List of comments if task was in review and returned, empty list otherwise.
     """
     comments = []
+    # if task was in review and returned to in-progress,
+    # fetch comments between review and move to in-progress
     if original_state_name == task_in_progress_state_name:
+        all_comments = await board_provider.get_comments(task_id)
+
+        if board_provider.get_type() == "github":
+            # For GitHub, only return last comment if a PR exists for the branch
+            branch_name = get_branch_for_task(task_id)
+            if branch_name and check_pr_exists_for_branch(branch_name):
+                return all_comments[-1:] if all_comments else []
+            return []
+
         latest_move = await get_latest_move_to_in_progress(
             board_provider, task_id, review_state_name, task_in_progress_state_name
         )
         logger.info("Latest move: %s", latest_move)
         if latest_move:
-            all_comments = await board_provider.get_comments(task_id)
             comments = filter_comments_between_timestamps(
                 all_comments,
                 latest_move["review_timestamp"],
@@ -144,7 +161,7 @@ def _build_system_message_content(
     return system_content
 
 
-def create_task_fetch_node(agent_config: AgentConfig):
+def create_task_fetch_node(agent_settings: AgentSettings):
     """Creates a task fetch node for the agent graph."""
 
     async def task_fetch(state: AgentState) -> dict:  # pylint: disable=unused-argument
@@ -154,9 +171,9 @@ def create_task_fetch_node(agent_config: AgentConfig):
         logger.info("Fetching tasks from board")
 
         try:
-            board_provider = create_board_provider(agent_config)
+            board_provider = create_board_provider(agent_settings)
 
-            active_task_system = agent_config.get_active_task_system()
+            active_task_system = agent_settings.get_active_task_system()
             if not active_task_system:
                 logger.warning("No active task system configured")
                 return {"task_id": None}
@@ -167,7 +184,7 @@ def create_task_fetch_node(agent_config: AgentConfig):
 
             task_in_progress_state_name = active_task_system.in_progress_state
 
-            task_context = await _get_task_context(board_provider, agent_config)
+            task_context = await _get_task_context(board_provider, agent_settings)
             if not task_context:
                 return {"task_id": None}
 
@@ -181,7 +198,7 @@ def create_task_fetch_node(agent_config: AgentConfig):
                 task_in_progress_state_name,
             )
 
-            comments = await _fetch_rejection_comments(
+            comments = await _fetch_review_comments(
                 board_provider,
                 task.id,
                 original_state_name,

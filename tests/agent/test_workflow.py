@@ -7,7 +7,7 @@ from collections import OrderedDict
 import pytest
 
 import app.agent.graph as graph_module
-from app.core.models import AgentConfig
+from app.core.models import AgentSettings
 
 
 class RecordingStateGraph:
@@ -79,7 +79,7 @@ def workflow_mocks(monkeypatch):
 def test_create_workflow_registers_all_nodes(workflow_mocks):
     llm_large = DummyLLM()
     llm_small = DummyLLM()
-    agent_config = AgentConfig(
+    agent_settings = AgentSettings(
         task_system_type="TRELLO",
         task_readfrom_state="todo",
     )
@@ -87,7 +87,7 @@ def test_create_workflow_registers_all_nodes(workflow_mocks):
     workflow = graph_module.create_workflow(
         llm_large,
         llm_small,
-        agent_config,
+        agent_settings,
         "backend",
     )
 
