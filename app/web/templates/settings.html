@@ -245,7 +245,7 @@
     document.addEventListener('DOMContentLoaded', function() {
         const activeSection = sessionStorage.getItem('activeSection');
         const activeTaskTab = sessionStorage.getItem('activeTaskTab');
-        
+
         if (activeSection) {
             const sectionLink = document.querySelector(`[href="#${activeSection}"]`);
             if (sectionLink) {
@@ -253,7 +253,7 @@
                 tab.show();
             }
         }
-        
+
         if (activeTaskTab) {
             const taskTabButton = document.querySelector(`[data-bs-target="#${activeTaskTab}"]`);
             if (taskTabButton) {

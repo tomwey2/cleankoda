@@ -80,17 +80,6 @@ class GitHubConfigSchema(BaseModel):
             return None
         return v
 
-    @field_validator("project_number", mode="before")
-    @classmethod
-    def empty_str_to_none_int(cls, v) -> Optional[int]:
-        """Convert empty strings to None, parse int."""
-        if v == "" or v is None:
-            return None
-        try:
-            return int(v)
-        except (ValueError, TypeError):
-            return None
-
 
 class JiraConfigSchema(BaseModel):
     """Schema for Jira configuration form data."""
