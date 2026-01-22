@@ -7,6 +7,7 @@ all the necessary information for the agent to function, such as message history
 task details, and internal counters.
 """
 
+from datetime import datetime
 from enum import StrEnum
 from typing import Annotated, Optional, TypedDict
 
@@ -40,9 +41,12 @@ class AgentState(TypedDict):
     error_log: Optional[str]  # Optional: Stores the last error explicitly
     task_id: Optional[str]
     task_name: Optional[str]
+    task_description: Optional[str]
     task_state_id: Optional[str]
     git_branch: Optional[str]
     agent_skill_level: Optional[str]
     task_skill_level: Optional[str]
     agent_summary: Optional[list[str]]
     plan_state: Optional[PlanState]
+    current_node: Optional[str]
+    last_update: Optional[datetime]

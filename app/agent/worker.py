@@ -14,6 +14,7 @@ from typing import Optional, cast
 
 from flask import Flask
 from langchain.chat_models import BaseChatModel
+from langchain_core.runnables import RunnableConfig
 from langgraph.graph import StateGraph
 
 from app.agent.graph import create_workflow
@@ -87,21 +88,6 @@ async def _execute_agent_cycle(runtime: AgentRuntimeContext) -> None:
         save_graph_as_png(app_graph)
         save_graph_as_mermaid(app_graph)
         logger.info("Executing graph cycle...")
-        #        final_state = await app_graph.ainvoke(
-        #            {
-        #                "messages": [],
-        #                "next_step": "",
-        #                "task_id": None,
-        #                "task_name": None,
-        #                "task_state_id": None,
-        #                "agent_stack": runtime.agent_stack,
-        #                "agent_skill_level": runtime.agent_config.agent_skill_level,
-        #                "task_skill_level": None,
-        #                "plan_state": None,
-        #            },
-        #            {"recursion_limit": 200},
-        #        )
-        #        log_agent_state(final_state)
 
         inputs = {
             "messages": [],
@@ -114,17 +100,16 @@ async def _execute_agent_cycle(runtime: AgentRuntimeContext) -> None:
             "task_skill_level": None,
             "plan_state": None,
         }
-        # Config für Thread-Level Persistence (wichtig für get_state)
-        thread_config = {"configurable": {"thread_id": "1"}, "recursion_limit": 200}
-
-        # STATT graph.invoke(inputs, thread_config)
-        # Nutzen wir stream(), um jeden Schritt zu sehen
+        # Config for threa level persistence
+        thread_config: RunnableConfig = {
+            "configurable": {"thread_id": "1"},
+            "recursion_limit": 200,
+        }
 
         # stream_mode="values" gibt uns den kompletten State nach jedem Node zurück
         async for current_state in app_graph.astream(
             inputs, config=thread_config, stream_mode="values"
         ):
-            logger.info("Speichere State nach Schritt...")
             save_state_to_workspace(current_state)
 
         logger.info("Finish graph cycle.")

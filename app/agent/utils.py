@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 import os
 import shutil
+from datetime import datetime
 from typing import Final
 
 from app.agent.state import AgentState, PlanState
@@ -63,7 +64,7 @@ def save_state_to_workspace(state: dict, filename: str = "agent_state.json") -> 
             {"type": msg.type, "content": str(msg.content)}
             for msg in serializable_state["messages"]
         ]
-
+    serializable_state["last_update"] = datetime.now().astimezone().isoformat()
     temp_path = file_path + ".tmp"
 
     # 1. In temporäre Datei schreiben
