@@ -53,7 +53,7 @@ class GitHubConfigSchema(BaseModel):
     project_owner: Optional[str] = Field(
         default=None, description="GitHub project owner (user or organization)"
     )
-    project_number: Optional[int] = Field(
+    project_number: Optional[str] = Field(
         default=None, description="GitHub project number"
     )
     board_id: Optional[str] = Field(
