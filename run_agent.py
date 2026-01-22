@@ -4,7 +4,7 @@ from dotenv import load_dotenv
 
 from app.agent.worker import run_agent_cycle
 from app.core.extensions import db
-from app.core.models import AgentConfig
+from app.core.models import AgentSettings
 from app.core.utils import log_and_validate_env, setup_logging
 from app.web import create_app
 
@@ -30,8 +30,8 @@ if __name__ == "__main__":
         with app.app_context():
             try:
                 # Polling Interval dynamisch aus DB lesen
-                config = AgentConfig.query.first()
-                polling_interval = config.polling_interval_seconds if config else 60
+                settings = AgentSettings.query.first()
+                polling_interval = settings.polling_interval_seconds if settings else 60
 
                 # Den eigentlichen Job ausführen
                 # Hinweis: run_agent_cycle muss so angepasst sein,

@@ -5,12 +5,12 @@ import logging
 from langchain_core.tools import StructuredTool
 
 from app.agent.integrations.board_factory import create_board_provider
-from app.core.models import AgentConfig
+from app.core.models import AgentSettings
 
 logger = logging.getLogger(__name__)
 
 
-def create_task_tool(agent_config: AgentConfig, target_state: str) -> StructuredTool:
+def create_task_tool(agent_settings: AgentSettings, target_state: str) -> StructuredTool:
     """Factory that creates a tool for creating tasks on the configured board."""
 
     async def create_task(
@@ -32,7 +32,7 @@ def create_task_tool(agent_config: AgentConfig, target_state: str) -> Structured
             if not target_state:
                 return "Error: target state not configured"
 
-            board_provider = create_board_provider(agent_config)
+            board_provider = create_board_provider(agent_settings)
             task = await board_provider.create_task(
                 name=title,
                 description=instructions,

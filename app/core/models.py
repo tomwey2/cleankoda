@@ -79,7 +79,7 @@ class EncryptedString(TypeDecorator):
 DEFAULT_TRELLO_BASE_URL = "https://api.trello.com/1"
 
 
-class AgentConfig(db.Model):
+class AgentSettings(db.Model):
     """Represents the configuration for the AI agent.
 
     This model stores settings required for the agent to operate, including
@@ -88,7 +88,7 @@ class AgentConfig(db.Model):
     polling frequency.
     """
 
-    __tablename__ = "agent_config"
+    __tablename__ = "agent_settings"
 
     id = db.Column(db.Integer, primary_key=True)
     # Generic Task System Fields
@@ -118,7 +118,7 @@ class AgentConfig(db.Model):
     agent_skill_level = db.Column(db.String(50), nullable=True)
     task_systems = db.relationship(
         "TaskSystem",
-        back_populates="agent_config",
+        back_populates="agent_settings",
         cascade="all, delete-orphan",
         lazy="selectin",
     )
@@ -136,7 +136,7 @@ class AgentConfig(db.Model):
         return self.get_task_system(provider)
 
     def __repr__(self):
-        return f"<AgentConfig {self.id} type={self.task_system_type}>"
+        return f"<AgentSettings {self.id} type={self.task_system_type}>"
 
     def as_dict(self) -> Dict[str, Any]:
         """Return a plain dictionary of column values for logging/debugging."""
@@ -152,9 +152,9 @@ class TaskSystem(db.Model):
     __tablename__ = "task_system"
 
     id = db.Column(db.Integer, primary_key=True)
-    agent_config_id = db.Column(
+    agent_settings_id = db.Column(
         db.Integer,
-        ForeignKey("agent_config.id"),
+        ForeignKey("agent_settings.id"),
         nullable=False,
         index=True,
     )
@@ -173,13 +173,15 @@ class TaskSystem(db.Model):
     in_progress_state = db.Column(db.String(100), nullable=True)
     moveto_state = db.Column(db.String(100), nullable=True)
 
-    agent_config = db.relationship(
-        "AgentConfig",
+    agent_settings = db.relationship(
+        "AgentSettings",
         back_populates="task_systems",
     )
 
     __table_args__ = (
-        db.UniqueConstraint('agent_config_id', 'board_provider', name='uq_agent_config_provider'),
+        db.UniqueConstraint(
+            "agent_settings_id", "board_provider", name="uq_agent_settings_provider"
+        ),
     )
 
     def __repr__(self):

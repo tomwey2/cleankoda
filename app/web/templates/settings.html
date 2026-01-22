@@ -21,10 +21,18 @@
                             <div class="card-body">
                                 <div class="mb-3">
                                     <label for="polling_interval_seconds" class="form-label">Polling Interval (seconds)</label>
-                                    <input type="number" class="form-control" id="polling_interval_seconds" name="polling_interval_seconds" value="{{ config.polling_interval_seconds or 60 }}" required>
+                                    <input
+                                        type="number"
+                                        class="form-control"
+                                        id="polling_interval_seconds"
+                                        name="polling_interval_seconds"
+                                        value="{{ settings.polling_interval_seconds or 60 }}"
+                                        placeholder="e.g. 60"
+                                        required
+                                    />
                                 </div>
                                 <div class="form-check form-switch mb-3">
-                                    <input class="form-check-input" type="checkbox" id="is_active" name="is_active" {% if config.is_active %}checked{% endif %}>
+                                    <input class="form-check-input" type="checkbox" id="is_active" name="is_active" {% if settings.is_active %}checked{% endif %}>
                                     <label class="form-check-label" for="is_active">Activate Agent Polling</label>
                                 </div>
                                 <div class="mb-3">
@@ -53,11 +61,11 @@
                                     <label class="form-label">Active Task System</label>
                                     <div class="d-flex gap-3">
                                         <div class="form-check form-check-inline">
-                                            <input class="form-check-input" type="radio" name="task_system_type" id="radio-trello" value="TRELLO" {% if config.task_system_type=="TRELLO" %}checked{% endif %}>
+                                            <input class="form-check-input" type="radio" name="task_system_type" id="radio-trello" value="TRELLO" {% if settings.task_system_type=="TRELLO" %}checked{% endif %}>
                                             <label class="form-check-label" for="radio-trello">Trello</label>
                                         </div>
                                         <div class="form-check form-check-inline">
-                                            <input class="form-check-input" type="radio" name="task_system_type" id="radio-github" value="GITHUB" {% if config.task_system_type=="GITHUB" %}checked{% endif %}>
+                                            <input class="form-check-input" type="radio" name="task_system_type" id="radio-github" value="GITHUB" {% if settings.task_system_type=="GITHUB" %}checked{% endif %}>
                                             <label class="form-check-label" for="radio-github">GitHub Project Board</label>
                                         </div>
                                     </div>
@@ -76,37 +84,37 @@
                                         <fieldset id="fieldset-trello">
                                             <div class="mb-3">
                                                 <label for="trello_api_key" class="form-label">Trello API Key</label>
-                                                <input type="text" class="form-control" id="trello_api_key" name="trello_api_key" value="{{ form_data.trello_api_key or '' }}">
+                                                <input type="text" class="form-control" id="trello_api_key" name="trello_api_key" value="{{ form_data.trello_api_key or '' }}" placeholder="Enter Trello API key">
                                             </div>
                                             <div class="mb-3">
                                                 <label for="trello_api_token" class="form-label">Trello API Token</label>
-                                                <input type="password" class="form-control" id="trello_api_token" name="trello_api_token" value="{{ form_data.trello_api_token or '' }}">
+                                                <input type="password" class="form-control" id="trello_api_token" name="trello_api_token" value="{{ form_data.trello_api_token or '' }}" placeholder="Enter Trello API token">
                                             </div>
                                             <div class="mb-3">
                                                 <label for="trello_board_id" class="form-label">Board ID</label>
-                                                <input type="text" class="form-control" id="trello_board_id" name="trello_board_id" value="{{ form_data.trello_board_id or '' }}">
+                                                <input type="text" class="form-control" id="trello_board_id" name="trello_board_id" value="{{ form_data.trello_board_id or '' }}" placeholder="Trello board ID (e.g. 64d4...)">
                                             </div>
                                             <hr>
                                             <h6 class="mb-3">Column Mapping</h6>
                                             <div class="mb-3">
                                                 <label for="trello_backlog_list" class="form-label">Backlog state</label>
-                                                <input type="text" class="form-control" id="trello_backlog_list" name="trello_backlog_list" value="{{ form_data.trello_backlog_list or '' }}">
+                                                <input type="text" class="form-control" id="trello_backlog_list" name="trello_backlog_list" value="{{ form_data.trello_backlog_list or '' }}" placeholder="Enter Trello backlog state (e.g. Backlog)">
                                             </div>
                                             <div class="mb-3">
                                                 <label for="trello_readfrom_list" class="form-label">Read first card from state</label>
-                                                <input type="text" class="form-control" id="trello_readfrom_list" name="trello_readfrom_list" value="{{ form_data.trello_readfrom_list or '' }}">
+                                                <input type="text" class="form-control" id="trello_readfrom_list" name="trello_readfrom_list" value="{{ form_data.trello_readfrom_list or '' }}" placeholder="e.g. Todo">
                                             </div>
                                             <div class="mb-3">
                                                 <label for="trello_progress_list" class="form-label">Move card to in progress state</label>
-                                                <input type="text" class="form-control" id="trello_progress_list" name="trello_progress_list" value="{{ form_data.trello_progress_list or '' }}">
+                                                <input type="text" class="form-control" id="trello_progress_list" name="trello_progress_list" value="{{ form_data.trello_progress_list or '' }}" placeholder="e.g. In Progress">
                                             </div>
                                             <div class="mb-3">
                                                 <label for="trello_moveto_list" class="form-label">Move updated card to state</label>
-                                                <input type="text" class="form-control" id="trello_moveto_list" name="trello_moveto_list" value="{{ form_data.trello_moveto_list or '' }}">
+                                                <input type="text" class="form-control" id="trello_moveto_list" name="trello_moveto_list" value="{{ form_data.trello_moveto_list or '' }}" placeholder="e.g. Done">
                                             </div>
                                             <div class="mb-3">
                                                 <label for="trello_base_url" class="form-label">Trello Base URL</label>
-                                                <input type="text" class="form-control" id="trello_base_url" name="trello_base_url" value="{{ form_data.trello_base_url or 'https://api.trello.com' }}">
+                                                <input type="text" class="form-control" id="trello_base_url" name="trello_base_url" value="{{ form_data.trello_base_url or 'https://api.trello.com' }}" placeholder="https://api.trello.com/1">
                                             </div>
                                         </fieldset>
                                     </div>
@@ -114,7 +122,7 @@
                                         <fieldset id="fieldset-github">
                                             <div class="mb-3">
                                                 <label for="github_api_token" class="form-label">GitHub API Token (PAT)</label>
-                                                <input type="password" class="form-control" id="github_api_token" name="github_api_token" value="{{ form_data.github_api_token or '' }}">
+                                                <input type="password" class="form-control" id="github_api_token" name="github_api_token" value="{{ form_data.github_api_token or '' }}" placeholder="Enter GitHub PAT">
                                                 <small class="form-text text-muted">Personal Access Token for board operations. Leave the content as is to use the GITHUB_TOKEN environment variable.</small>
                                             </div>
                                             <div class="mb-3">
@@ -127,7 +135,7 @@
                                             </div>
                                             <div class="mb-3">
                                                 <label for="github_board_id" class="form-label">Project ID (fetched automatically)</label>
-                                                <input type="text" class="form-control" id="github_board_id" name="github_board_id" value="{{ form_data.github_board_id or '' }}" readonly>
+                                                <input type="text" class="form-control" id="github_board_id" value="{{ form_data.github_board_id or '' }}" placeholder="Populated automatically" readonly>
                                                 <small class="form-text text-muted">This field is populated automatically when you save with a valid project owner and number.</small>
                                             </div>
                                             <hr>
@@ -150,7 +158,7 @@
                                             </div>
                                             <div class="mb-3">
                                                 <label for="github_base_url" class="form-label">GitHub API Base URL</label>
-                                                <input type="text" class="form-control" id="github_base_url" name="github_base_url" value="{{ form_data.github_base_url or 'https://api.github.com' }}">
+                                                <input type="text" class="form-control" id="github_base_url" name="github_base_url" value="{{ form_data.github_base_url or 'https://api.github.com' }}" placeholder="https://api.github.com">
                                                 <small class="form-text text-muted">Change this for GitHub Enterprise installations.</small>
                                             </div>
                                         </fieldset>
@@ -166,14 +174,14 @@
                                 <div class="mb-3">
                                     <label for="repo_type" class="form-label">Repository Type</label>
                                     <select class="form-select" id="repo_type" name="repo_type">
-                                        <option value="GITHUB" {% if config.repo_type=="GITHUB" %}selected{% endif %}>GitHub</option>
-                                        <option value="BITBUCKET" {% if config.repo_type=="BITBUCKET" %}selected{% endif %}>Bitbucket</option>
-                                        <option value="GITLAB" {% if config.repo_type=="GITLAB" %}selected{% endif %}>GitLab</option>
+                                        <option value="GITHUB" {% if settings.repo_type=="GITHUB" %}selected{% endif %}>GitHub</option>
+                                        <option value="BITBUCKET" {% if settings.repo_type=="BITBUCKET" %}selected{% endif %}>Bitbucket</option>
+                                        <option value="GITLAB" {% if settings.repo_type=="GITLAB" %}selected{% endif %}>GitLab</option>
                                     </select>
                                 </div>
                                 <div class="mb-3">
                                     <label for="github_repo_url" class="form-label">Repository URL</label>
-                                    <input type="text" class="form-control" id="github_repo_url" name="github_repo_url" value="{{ config.github_repo_url }}">
+                                    <input type="text" class="form-control" id="github_repo_url" name="github_repo_url" value="{{ settings.github_repo_url }}" placeholder="https://github.com/org/repo.git">
                                 </div>
                             </div>
                         </div>
@@ -208,7 +216,7 @@
                                 </div>
                                 <div class="mb-3">
                                     <label for="llm_model_small" class="form-label">LLM for simple tasks</label>
-                                    <input type="text" class="form-control" id="llm_model_small" name="llm_model_small" placeholder="e.g. devstral-latest or gpt-4o" value="{{ form_data.llm_model_small or '' }}">
+                                    <input type="text" class="form-control" id="llm_model_small" name="llm_model_small" placeholder="e.g. mistral-small" value="{{ form_data.llm_model_small or '' }}">
                                 </div>
                                 <div class="mb-3">
                                     <label for="llm_temperature" class="form-label">Temperature (Creativity) <span id="temperature_value">{{ form_data.llm_temperature or 0.0 }}</span></label>
@@ -232,5 +240,43 @@
             temperature_value.innerHTML = this.value;
         };
     }
+
+    // Restore active tabs from sessionStorage
+    document.addEventListener('DOMContentLoaded', function() {
+        const activeSection = sessionStorage.getItem('activeSection');
+        const activeTaskTab = sessionStorage.getItem('activeTaskTab');
+        
+        if (activeSection) {
+            const sectionLink = document.querySelector(`[href="#${activeSection}"]`);
+            if (sectionLink) {
+                const tab = new bootstrap.Tab(sectionLink);
+                tab.show();
+            }
+        }
+        
+        if (activeTaskTab) {
+            const taskTabButton = document.querySelector(`[data-bs-target="#${activeTaskTab}"]`);
+            if (taskTabButton) {
+                const tab = new bootstrap.Tab(taskTabButton);
+                tab.show();
+            }
+        }
+    });
+
+    // Save active section when changed
+    document.querySelectorAll('.list-group [data-bs-toggle="list"]').forEach(function(item) {
+        item.addEventListener('shown.bs.tab', function(event) {
+            const targetId = event.target.getAttribute('href').substring(1);
+            sessionStorage.setItem('activeSection', targetId);
+        });
+    });
+
+    // Save active task system tab when changed
+    document.querySelectorAll('#taskSystemTabs [data-bs-toggle="tab"]').forEach(function(button) {
+        button.addEventListener('shown.bs.tab', function(event) {
+            const targetId = event.target.getAttribute('data-bs-target').substring(1);
+            sessionStorage.setItem('activeTaskTab', targetId);
+        });
+    });
 </script>
 {% endblock %}

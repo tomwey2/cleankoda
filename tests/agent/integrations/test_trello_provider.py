@@ -9,11 +9,11 @@ import pytest
 
 from app.agent.integrations.board_provider import BoardTask, BoardComment, BoardStateMove
 from app.agent.integrations.trello_provider import TrelloProvider
-from app.core.models import AgentConfig, TaskSystem
+from app.core.models import AgentSettings, TaskSystem
 
 
 @pytest.fixture
-def agent_config():
+def agent_settings():
     """Fixture for agent configuration."""
     task_system = TaskSystem(
         board_provider="trello",
@@ -21,15 +21,15 @@ def agent_config():
         token="test_token",
         board_id="test_board_id",
     )
-    config = AgentConfig(task_system_type="TRELLO")
-    config.task_system = task_system
-    return config
+    settings = AgentSettings(task_system_type="TRELLO")
+    settings.task_system = task_system
+    return settings
 
 
 @pytest.fixture
-def trello_provider(agent_config):
+def trello_provider(agent_settings):
     """Fixture for TrelloProvider instance."""
-    return TrelloProvider(agent_config)
+    return TrelloProvider(agent_settings)
 
 
 @pytest.mark.asyncio
@@ -47,6 +47,34 @@ async def test_get_states(trello_provider):
         states = await trello_provider.get_states()
         
         assert states == mock_lists
+
+
+@pytest.mark.asyncio
+async def test_get_task(trello_provider):
+    """Test fetching a single Trello card via provider."""
+    mock_card = {
+        "id": "card123",
+        "name": "Test Card",
+        "desc": "Details",
+        "list_id": "list1",
+        "list_name": "To Do",
+        "url": "https://trello/card123",
+    }
+
+    with patch(
+        "app.agent.integrations.trello_provider.get_trello_card",
+        new=AsyncMock(return_value=mock_card),
+    ) as mock_get:
+        task = await trello_provider.get_task("card123")
+
+        mock_get.assert_called_once_with("card123", trello_provider.agent_settings)
+        assert isinstance(task, BoardTask)
+        assert task.id == "card123"
+        assert task.name == "Test Card"
+        assert task.description == "Details"
+        assert task.state_id == "list1"
+        assert task.state_name == "To Do"
+        assert task.url == "https://trello/card123"
 
 
 @pytest.mark.asyncio
@@ -79,7 +107,7 @@ async def test_move_task_to_state(trello_provider):
     ) as mock_move:
         await trello_provider.move_task_to_state("card1", "list2")
         
-        mock_move.assert_called_once_with("card1", "list2", trello_provider.agent_config)
+        mock_move.assert_called_once_with("card1", "list2", trello_provider.agent_settings)
 
 
 @pytest.mark.asyncio
@@ -104,7 +132,7 @@ async def test_add_comment(trello_provider):
     ) as mock_add:
         await trello_provider.add_comment("card1", "Test comment")
         
-        mock_add.assert_called_once_with("card1", "Test comment", trello_provider.agent_config)
+        mock_add.assert_called_once_with("card1", "Test comment", trello_provider.agent_settings)
 
 
 @pytest.mark.asyncio

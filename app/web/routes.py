@@ -10,10 +10,8 @@ import logging
 from flask import (
     Blueprint,
     flash,
-    redirect,
     render_template,
     request,
-    url_for,
 )
 
 from app.web.services.dashboard_service import DashboardService
@@ -36,15 +34,16 @@ def dashboard():
 @web_bp.route("/settings", methods=["GET", "POST"])
 def settings():
     """Handles the settings page."""
-    config = SettingsService.get_or_create_config()
+    agent_settings = SettingsService.get_or_create_settings()
 
     if request.method == "POST":
-        success, error_msg = SettingsService.validate_and_save(config)
+        success, error_msg = SettingsService.validate_and_save(agent_settings)
         if success:
             flash("Settings saved successfully!", "success")
         else:
             flash(f"Error saving settings: {error_msg}", "danger")
-        return redirect(url_for("web.settings"))
+        # Re-fetch settings to show updated values
+        agent_settings = SettingsService.get_or_create_settings()
 
-    context = SettingsService.get_template_context(config)
+    context = SettingsService.get_template_context(agent_settings)
     return render_template("settings.html", **context)
