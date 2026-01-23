@@ -4,6 +4,7 @@ import logging
 import os
 import re
 import subprocess
+import json
 from dataclasses import dataclass
 from typing import Dict, List, Optional
 
@@ -58,7 +59,8 @@ class PRReviewComment:
     reviewer: str
     body: str
     path: Optional[str]
-    line: Optional[int]
+    start_line: Optional[int]
+    end_line: Optional[int]
     created_at: str
 
 
@@ -443,13 +445,17 @@ def fetch_pr_review_comments(
 
         if response.status_code == 200:
             comments_data = response.json()
+            logger.info("Raw review comments response: %s", json.dumps(comments_data, indent=2))
+            
             comments = [
                 PRReviewComment(
                     id=str(c["id"]),
                     reviewer=c.get("user", {}).get("login", "unknown"),
                     body=c.get("body", "") or "",
                     path=c.get("path"),
-                    line=c.get("line") or c.get("original_line"),
+                    # We should also handle the case where the comment is on a deleted file or a deleted part of the file
+                    start_line=c.get("start_line") or c.get("original_start_line"),
+                    end_line=c.get("line") or c.get("original_line"),
                     created_at=c.get("created_at", ""),
                 )
                 for c in comments_data
@@ -610,6 +616,32 @@ def format_pr_review_message(
         "",
     ]
 
+    def _format_multiline(label: str, text: str) -> List[str]:
+        if not text:
+            return []
+        split_lines = text.splitlines() or [""]
+        formatted = [f"{label}{split_lines[0]}"]
+        formatted.extend(f"{' ' * len(label)}{line}" for line in split_lines[1:])
+        return formatted
+
+    def _format_location(comment: PRReviewComment) -> str:
+        if comment.path:
+            if comment.start_line and comment.end_line and comment.start_line != comment.end_line:
+                line_desc = f"{comment.start_line}-{comment.end_line}"
+            elif comment.start_line:
+                line_desc = f"{comment.start_line}"
+            else:
+                line_desc = "?"
+            return f"{comment.path}:{line_desc}"
+
+        if comment.start_line and comment.end_line:
+            if comment.start_line == comment.end_line:
+                return f"Line {comment.start_line}"
+            return f"Lines {comment.start_line}-{comment.end_line}"
+        if comment.start_line:
+            return f"Line {comment.start_line}"
+        return "General"
+
     if rejection_reviews:
         latest = rejection_reviews[-1]
         lines.extend(
@@ -620,14 +652,9 @@ def format_pr_review_message(
                 "",
             ]
         )
+        lines.extend(_format_multiline("Review Comment: ", latest.body))
         if latest.body:
-            lines.extend(
-                [
-                    "Review Comment:",
-                    latest.body,
-                    "",
-                ]
-            )
+            lines.append("")
 
     if code_comments:
         lines.extend(
@@ -638,14 +665,11 @@ def format_pr_review_message(
             ]
         )
         for comment in code_comments:
-            location = f"{comment.path}:{comment.line}" if comment.path else "General"
-            lines.extend(
-                [
-                    f"Location: {location} (by {comment.reviewer})",
-                    f"  {comment.body}",
-                    "",
-                ]
-            )
+            location = _format_location(comment)
+            lines.append(f"Location: {location} (by {comment.reviewer})")
+            body_lines = _format_multiline("  ", comment.body)
+            lines.extend(body_lines or ["  "])
+            lines.append("")
 
     lines.append("=" * 60)
     return "\n".join(lines)

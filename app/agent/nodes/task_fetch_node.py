@@ -275,6 +275,7 @@ def create_task_fetch_node(agent_settings: AgentSettings):
             _, pr_review_message = _fetch_pr_review_info(task.id)
 
             logger.info("Processing task ID: %s - %s", task.id, task.name)
+            logger.info("Appending PR review message: %s", pr_review_message)
 
             system_content = _build_system_message_content(
                 task.name,
