@@ -3,6 +3,7 @@ Tests for the task fetch node.
 """
 
 from datetime import datetime, timezone
+from types import SimpleNamespace
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
@@ -61,6 +62,15 @@ def mock_board_provider():
     provider.get_comments = AsyncMock(return_value=[])
     provider.get_state_moves = AsyncMock(return_value=[])
     provider.move_task_to_named_state = AsyncMock(return_value="list2")
+    provider.get_task = AsyncMock(
+        return_value=BoardTask(
+            id="card1",
+            name="Test Task",
+            description="Moved Description",
+            state_id="list2",
+            state_name="In Progress",
+        )
+    )
 
     return provider
 
@@ -77,9 +87,33 @@ async def test_task_fetch_node_success(agent_settings, mock_board_provider):
     ), patch(
         "app.agent.nodes.task_fetch_node.get_branch_for_task",
         return_value=None,
+    ), patch(
+        "app.agent.nodes.task_fetch_node.fetch_task_from_state",
+        new=AsyncMock(
+            return_value=BoardTask(
+                id="card1",
+                name="Test Task",
+                description="Test Description",
+                state_id="list1",
+                state_name="Todo",
+            )
+        ),
+    ), patch(
+        "app.agent.nodes.task_fetch_node.move_task_to_state",
+        new=AsyncMock(
+            return_value=BoardTask(
+                id="card1",
+                name="Test Task",
+                description="Test Description",
+                state_id="list2",
+                state_name="In Progress",
+            )
+        ),
     ):
         task_fetch = create_task_fetch_node(agent_settings, None)
         result = await task_fetch({})
+
+        print("result:", result)
 
         assert result["task"].id == "card1"
         assert result["task"].name == "Test Task"
@@ -97,10 +131,10 @@ async def test_task_fetch_node_no_review_list(agent_settings, mock_board_provide
     task_system = TaskSystem(
         task_system_type="TRELLO",
         board_provider="trello",
-        backlog_state="Backlog",
-        readfrom_state="To Do",
-        in_progress_state="In Progress",
-        moveto_state=None,
+        state_backlog="Backlog",
+        state_todo="To Do",
+        state_in_progress="In Progress",
+        state_in_review=None,
     )
     temp_settings.task_systems.append(task_system)
 
@@ -114,10 +148,10 @@ async def test_task_fetch_node_no_review_list(agent_settings, mock_board_provide
         "app.agent.nodes.task_fetch_node.get_branch_for_task",
         return_value=None,
     ):
-        task_fetch = create_task_fetch_node(temp_settings)
+        task_fetch = create_task_fetch_node(temp_settings, None)
         result = await task_fetch({})
 
-        assert result["task_id"] is None
+        assert result["task"] is None
 
 
 @pytest.mark.asyncio
@@ -135,10 +169,10 @@ async def test_task_fetch_node_no_cards(agent_settings, mock_board_provider):
         "app.agent.nodes.task_fetch_node.get_branch_for_task",
         return_value=None,
     ):
-        task_fetch = create_task_fetch_node(agent_settings)
+        task_fetch = create_task_fetch_node(agent_settings, None)
         result = await task_fetch({})
 
-        assert result["task_id"] is None
+        assert result["task"] is None
 
 
 @pytest.mark.asyncio
@@ -197,7 +231,9 @@ async def test_task_fetch_node_with_comments(agent_settings, mock_board_provider
         "app.agent.nodes.task_fetch_node.get_branch_for_task",
         return_value=None,
     ):
-        task_fetch = create_task_fetch_node(agent_settings)
+        task_fetch = create_task_fetch_node(
+            agent_settings, SimpleNamespace(task_id="card1")
+        )
         result = await task_fetch({})
 
         # Comments should be included since task was already in In Progress (returned from review)
@@ -257,7 +293,7 @@ async def test_task_fetch_node_no_comments_from_todo(
         "app.agent.nodes.task_fetch_node.get_branch_for_task",
         return_value=None,
     ):
-        task_fetch = create_task_fetch_node(agent_settings)
+        task_fetch = create_task_fetch_node(agent_settings, None)
         result = await task_fetch({})
 
         # Comments should NOT be included since task was picked from To Do
@@ -274,9 +310,9 @@ async def test_fetch_task_from_state_success(mock_board_provider):
     )
 
     assert result is not None
-    assert result["task"].id == "card1"
-    assert result["state_id"] == "list1"
-    assert result["state_name"] == "To Do"
+    assert result.id == "card1"
+    assert result.state_id == "list1"
+    assert result.state_name == "To Do"
 
 
 @pytest.mark.asyncio
