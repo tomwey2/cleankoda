@@ -1,6 +1,7 @@
 """Tool for executing commands inside the workbench development container."""
 
 import logging
+import os
 
 import docker
 from docker.errors import APIError, NotFound
@@ -39,18 +40,20 @@ def run_command(command: str) -> str:
     if not DOCKER_CLIENT:
         return "Error: Docker client not initialized. Is the socket mounted?"
 
-    try:
-        container = DOCKER_CLIENT.containers.get(get_workbench())
+    container_name = os.environ.get("WORKBENCH_CONTAINER_NAME", get_workbench())
+    workbench_workdir = os.environ.get("WORKBENCH_CODESPACE", get_codespace())
+    try:        
+        container = DOCKER_CLIENT.containers.get(container_name)
 
         if container.status != "running":
             return (
-                f"Error: Container {get_workbench()} is not running "
+                f"Error: Container {container_name} is not running "
                 f"(Status: {container.status})."
             )
 
-        logger.info("Executing in workbench: %s", command)
+        logger.info("Executing in %s: %s", container_name, command)
 
-        exec_result = container.exec_run(command, workdir=get_codespace())
+        exec_result = container.exec_run(command, workdir=workbench_workdir)
         output = exec_result.output.decode("utf-8")
         exit_code = exec_result.exit_code
 
@@ -63,7 +66,7 @@ def run_command(command: str) -> str:
 
     except NotFound:
         return (
-            f"Error: Container '{get_workbench()}' not found. "
+            f"Error: Container '{container_name}' not found. "
             "Please start the docker-compose setup."
         )
     except APIError as api_exc:

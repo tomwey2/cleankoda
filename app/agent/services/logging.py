@@ -104,7 +104,7 @@ def log_agent_state(
 
     messages = state.get("messages", [])
     logger.info("\n--- Messages (%d) ---", len(messages))
-    for idx, message in enumerate(messages, start=1):
+    for idx, message in enumerate(messages, start=0):
         _log_message_detail(idx, message, content_limit)
         _log_additional_kwargs(message, arg_limit)
         _log_tool_calls(message, arg_limit)
