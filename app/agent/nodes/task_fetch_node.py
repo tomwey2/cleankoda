@@ -34,7 +34,7 @@ from app.core.plan_services import delete_plan
 logger = logging.getLogger(__name__)
 
 
-def create_task_fetch_node(agent_settings: AgentSettings, db_task: Optional[Task]):
+def create_task_fetch_node(agent_settings: AgentSettings):
     """Creates a task fetch node for the agent graph."""
 
     async def task_fetch(state: AgentState) -> dict:  # pylint: disable=unused-argument

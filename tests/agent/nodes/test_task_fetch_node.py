@@ -115,7 +115,7 @@ async def test_task_fetch_node_success(agent_settings, mock_board_provider):
     ), patch(
         "app.agent.nodes.task_fetch_node.delete_plan"
     ):
-        task_fetch = create_task_fetch_node(agent_settings, None)
+        task_fetch = create_task_fetch_node(agent_settings)
         result = await task_fetch({})
 
         assert result["task"].id == "card1"
@@ -151,7 +151,7 @@ async def test_task_fetch_node_no_review_list(agent_settings, mock_board_provide
         "app.agent.nodes.task_fetch_node.get_branch_for_task",
         return_value=None,
     ):
-        task_fetch = create_task_fetch_node(temp_settings, None)
+        task_fetch = create_task_fetch_node(temp_settings)
         result = await task_fetch({})
 
         assert result["task"] is None
@@ -172,7 +172,7 @@ async def test_task_fetch_node_no_cards(agent_settings, mock_board_provider):
         "app.agent.nodes.task_fetch_node.get_branch_for_task",
         return_value=None,
     ):
-        task_fetch = create_task_fetch_node(agent_settings, None)
+        task_fetch = create_task_fetch_node(agent_settings)
         result = await task_fetch({})
 
         assert result["task"] is None
@@ -235,7 +235,7 @@ async def test_task_fetch_node_with_comments(agent_settings, mock_board_provider
         return_value=None,
     ):
         task_fetch = create_task_fetch_node(
-            agent_settings, SimpleNamespace(task_id="card1")
+            agent_settings
         )
         result = await task_fetch({})
 
@@ -296,7 +296,7 @@ async def test_task_fetch_node_no_comments_from_todo(
         "app.agent.nodes.task_fetch_node.get_branch_for_task",
         return_value=None,
     ):
-        task_fetch = create_task_fetch_node(agent_settings, None)
+        task_fetch = create_task_fetch_node(agent_settings)
         result = await task_fetch({})
 
         # Comments should NOT be included since task was picked from To Do

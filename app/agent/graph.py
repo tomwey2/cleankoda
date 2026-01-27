@@ -151,7 +151,7 @@ def create_workflow(runtime: AgentRuntimeContext) -> StateGraph:
     workflow = StateGraph(AgentState)
 
     workflow.add_node(
-        "task_fetch", create_task_fetch_node(runtime.agent_settings, runtime.db_task)
+        "task_fetch", create_task_fetch_node(runtime.agent_settings)
     )
     workflow.add_node("checkout", create_checkout_node(runtime.agent_settings))
     workflow.add_node("router", create_router_node(runtime.llm_small))
