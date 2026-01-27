@@ -113,7 +113,10 @@ async def test_task_fetch_node_success(agent_settings, mock_board_provider):
         ),
     ), patch(
         "app.agent.nodes.task_fetch_node.delete_plan"
-    ):
+    ), patch(
+        "app.agent.nodes.task_fetch_node.remove_task_from_db",
+        return_value=True,
+    ) as remove_task_mock:
         task_fetch = create_task_fetch_node(agent_settings)
         result = await task_fetch({})
 
@@ -124,6 +127,7 @@ async def test_task_fetch_node_success(agent_settings, mock_board_provider):
         assert isinstance(result["messages"][0], SystemMessage)
         assert "Test Task" in result["messages"][0].content
         assert "Test Description" in result["messages"][0].content
+        remove_task_mock.assert_called_once_with("card1")
 
 
 @pytest.mark.asyncio
@@ -231,7 +235,7 @@ async def test_task_fetch_node_with_comments(agent_settings, mock_board_provider
         return_value=(None, None),
     ), patch(
         "app.agent.nodes.task_fetch_node.get_branch_for_task",
-        return_value=None,
+        return_value="feature/existing-branch",
     ):
         task_fetch = create_task_fetch_node(
             agent_settings
@@ -242,6 +246,7 @@ async def test_task_fetch_node_with_comments(agent_settings, mock_board_provider
         assert result["task_comments"] is not None
         assert len(result["task_comments"]) == 1
         assert result["task_comments"][0].text == "Please fix the bug"
+        assert result["git_branch"] == "feature/existing-branch"
 
 
 @pytest.mark.asyncio
@@ -294,13 +299,17 @@ async def test_task_fetch_node_no_comments_from_todo(
     ), patch(
         "app.agent.nodes.task_fetch_node.get_branch_for_task",
         return_value=None,
-    ):
+    ), patch(
+        "app.agent.nodes.task_fetch_node.remove_task_from_db",
+        return_value=True,
+    ) as remove_task_mock:
         task_fetch = create_task_fetch_node(agent_settings)
         result = await task_fetch({})
 
         # Comments should NOT be included since task was picked from To Do
         assert result["task_comments"] is not None
         assert len(result["task_comments"]) == 0
+        remove_task_mock.assert_called_once_with("card1")
 
 
 @pytest.mark.asyncio

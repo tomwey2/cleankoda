@@ -141,7 +141,7 @@ def _build_pr_inputs(state: AgentState) -> tuple[str, str]:
         line_separator="\n",
     )
     pr_body_summary = aggregated_summary
-    task_title = state.get("task_name") or ""
+    task_title = state.get("task").name if state.get("task") else ""
     pr_title = task_title or "Automated Fix"
     pr_body = "Automated changes after successful tests."
     if pr_body_summary:

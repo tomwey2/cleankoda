@@ -19,7 +19,7 @@ from app.agent.services.tasks_services import (
 )
 
 
-from app.core.task_repository import get_pr_info_for_task
+from app.core.task_repository import get_pr_info_for_task, remove_task_from_db
 from app.agent.services.pull_request import (
     format_pr_review_message,
     get_latest_open_pr_for_branch,
@@ -54,7 +54,7 @@ def create_task_fetch_node(agent_settings: AgentSettings):
                 logger.warning("No review state configured in task system")
                 return {"task": None}
 
-            task, comments, pr_review_message = await _resolve_task(
+            task, comments, pr_review_message, git_branch = await _resolve_task(
                 board_provider,
                 active_task_system.state_in_progress,
                 active_task_system.state_todo,
@@ -73,12 +73,14 @@ def create_task_fetch_node(agent_settings: AgentSettings):
                 comments,
                 pr_review_message,
             )
-            return {
+            result = {
                 "task": task,
                 "messages": [SystemMessage(content=system_content)],
                 "task_comments": comments,
                 "current_node": "task_fetch",
+                "git_branch": git_branch,
             }
+            return result
 
         except Exception as e:  # pylint: disable=broad-exception-caught
             logger.error("Error fetching tasks: %s", e)
@@ -92,7 +94,7 @@ async def _resolve_task(
     in_progress_state: str,
     todo_state: str,
     review_state: str,
-) -> tuple[BoardTask | None, list, str]:
+) -> tuple[BoardTask | None, list, str, str | None]:
     """
     Resolve which task to work on: either continue in-progress task or fetch new from todo.
 
@@ -115,16 +117,20 @@ async def _resolve_task(
             review_state,
         )
         _, pr_review_message = _fetch_pr_review_info(task_in_progress.id)
-        return task_in_progress, comments, pr_review_message
+        branch_name = get_branch_for_task(task_in_progress.id)
+        return task_in_progress, comments, pr_review_message, branch_name
 
     logger.info("fetch new task from todo")
     task = await fetch_task_from_state(board_provider, todo_state)
     if task:
+        removed = remove_task_from_db(task.id)
+        if removed:
+            logger.info("Removed stale task %s from DB before reassignment", task.id)
         task = await move_task_to_state(board_provider, task, in_progress_state)
         logger.info("Moved task to %s", task.state_name)
         delete_plan()
 
-    return task, [], ""
+    return task, [], "", None
 
 
 def _fetch_pr_review_info(task_id: str) -> tuple[bool, str]:

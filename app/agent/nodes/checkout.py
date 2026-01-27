@@ -35,6 +35,7 @@ def create_checkout_node(agent_settings: AgentSettings):
                 task.id,
                 task.name,
                 "coder",
+                state["git_branch"],
                 agent_settings,
             )
         else:
@@ -46,23 +47,18 @@ def create_checkout_node(agent_settings: AgentSettings):
 
 
 async def checkout_task_branch(
-    task_id: str, task_name: str, role: str, agent_settings: AgentSettings
+    task_id: str, task_name: str, role: str, git_branch: str, agent_settings: AgentSettings
 ):
     """
     Checks out the existing git branch for a task from the database.
     """
 
-    if role not in ["coder", "bugfixer"]:
-        repo = Repo(get_codespace())
-        repo.git.fetch()
-        repo.git.reset("--hard")
-        return
-
-    git_branch = await get_existing_branch_for_task(task_id)
+    repo = Repo(get_codespace())
+    _reset_workspace(repo)
 
     if not git_branch:
         logger.info("No git branch found for task %s", task_id)
-        await checkout_branch_for_task(task_id, task_name, role, agent_settings)
+        await checkout_branch_for_task(repo, task_id, task_name, role, agent_settings)
     else:
         logger.info(
             "Checking out existing git branch: %s for task %s - %s",
@@ -132,6 +128,51 @@ def _collect_branch_names(repo: Repo) -> set[str]:
     return names
 
 
+def _ensure_default_branch_checked_out(repo: Repo) -> str | None:
+    """Checkout the remote default branch locally."""
+    try:
+        origin_head = repo.git.symbolic_ref("refs/remotes/origin/HEAD")
+        default_branch = origin_head.split("/")[-1]
+    except Exception as exc:  # pylint: disable=broad-exception-caught
+        logger.warning("Unable to determine default branch: %s", exc)
+        default_branch = None
+
+    if not default_branch:
+        return None
+
+    local_branches = {head.name for head in repo.heads}
+    target = f"origin/{default_branch}"
+
+    try:
+        if default_branch in local_branches:
+            repo.git.checkout(default_branch)
+        else:
+            repo.git.checkout("-B", default_branch, target)
+    except Exception as exc:  # pylint: disable=broad-exception-caught
+        logger.warning("Failed to checkout default branch %s: %s", default_branch, exc)
+        return None
+
+    return default_branch
+
+
+def _reset_workspace(repo: Repo) -> None:
+    """Reset repo to clean state, pruning stale branches."""
+    repo.git.fetch("--prune")
+    default_branch = _ensure_default_branch_checked_out(repo)
+    repo.git.reset("--hard")
+    repo.git.clean("-fdx")
+
+    active_branch = (
+        repo.active_branch.name
+        if not repo.head.is_detached
+        else default_branch
+    )
+    for head in list(repo.heads):
+        if head.name == active_branch:
+            continue
+        logger.info("Deleting local branch '%s'", head.name)
+        repo.git.branch("-D", head.name)
+
 def _resolve_unique_branch_name(base_name: str, existing_names: set[str]) -> str:
     candidate = base_name
     suffix_counter = 1
@@ -148,7 +189,7 @@ def _resolve_unique_branch_name(base_name: str, existing_names: set[str]) -> str
 
 
 async def checkout_branch_for_task(
-    task_id: str, task_name: str, role: str, agent_settings: AgentSettings
+    repo: Repo, task_id: str, task_name: str, role: str, agent_settings: AgentSettings
 ):
     """
     Checks out a new git branch for a task.
@@ -157,10 +198,6 @@ async def checkout_branch_for_task(
     """
     if not task_id or not task_name:
         raise ValueError("task_id and task_name are required to create a git branch.")
-
-    repo = Repo(get_codespace())
-    repo.git.reset("--hard")
-    repo.git.fetch("--prune")
 
     base_branch_name = _build_base_branch_name(task_id, task_name, role)
     existing_branches = _collect_branch_names(repo)
