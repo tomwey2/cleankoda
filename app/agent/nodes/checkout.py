@@ -31,11 +31,12 @@ def create_checkout_node(agent_settings: AgentSettings):
         task: Optional[BoardTask] = state["task"] if state["task"] else None
 
         if task:
+            git_branch = state.get("git_branch", "")
             await checkout_task_branch(
                 task.id,
                 task.name,
                 "coder",
-                state["git_branch"],
+                git_branch,
                 agent_settings,
             )
         else:

@@ -10,7 +10,7 @@ import logging
 from typing import Any
 
 from langchain.chat_models import BaseChatModel
-from langchain_core.messages import SystemMessage
+from langchain_core.messages import BaseMessage, SystemMessage
 
 from app.agent.services.logging import log_agent_response
 from app.agent.services.message_processing import (
@@ -42,14 +42,16 @@ def create_analyst_node(llm: BaseChatModel, tools, agent_stack):
     async def analyst_node(state: AgentState):
         # Filter messages to keep only recent relevant context (original task + last 20 messages)
         # Analyst may need more context for code analysis
-        filtered_messages = filter_messages_for_llm(state["messages"], max_messages=20)
-        current_messages = [SystemMessage(content=sys_msg)] + filtered_messages
+        filtered_messages: list[BaseMessage] = filter_messages_for_llm(
+            state["messages"], max_messages=20
+        )
+        current_messages: list[BaseMessage] = [SystemMessage(content=sys_msg)] + filtered_messages
 
         # We allow the analyst more freedom ("auto") since they often need to chat
         # to think. But in the end they should use finish_task.
         chain = llm.bind_tools(tools, tool_choice="auto")
 
-        response = await chain.ainvoke(current_messages)
+        response: BaseMessage = await chain.ainvoke(current_messages)
         response = sanitize_response(response)
 
         has_content = bool(response.content)

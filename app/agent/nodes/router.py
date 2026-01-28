@@ -9,7 +9,7 @@ specialist agent (e.g., Coder, Bugfixer, Analyst) should handle it next.
 import logging
 from typing import Dict, Literal
 
-from langchain_core.messages import SystemMessage
+from langchain_core.messages import BaseMessage, SystemMessage
 from pydantic import BaseModel, Field
 
 from app.agent.services.message_processing import filter_messages_for_llm
@@ -116,11 +116,15 @@ def create_router_node(llm):
 
     async def router_node(state: AgentState) -> Dict[str, str]:
         # Router only needs the original task to make routing decision
-        filtered_messages = filter_messages_for_llm(state["messages"], max_messages=3)
-        base_messages = [SystemMessage(content=ROUTER_SYSTEM)] + filtered_messages
-        current_messages = list(base_messages)
+        filtered_messages: list[BaseMessage] = filter_messages_for_llm(
+            state["messages"], max_messages=3
+        )
+        base_messages: list[BaseMessage] = (
+            [SystemMessage(content=ROUTER_SYSTEM)] + filtered_messages
+        )
+        current_messages: list[BaseMessage] = list(base_messages)
 
-        response = await structured_llm.ainvoke(current_messages)
+        response: RouterDecision = await structured_llm.ainvoke(current_messages)
         logger.info("Task type: %s", response.type)
         logger.info("Task skill level: %s", response.skill_level)
 

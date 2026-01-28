@@ -13,7 +13,7 @@ from app.agent.nodes.task_update_node import (
     _build_agent_comments,
     _check_for_task_creation,
     create_task_update_node,
-    get_agent_result,
+    _get_agent_result,
 )
 from app.core.models import AgentSettings, TaskSystem
 
@@ -129,7 +129,7 @@ def test_get_agent_result_with_finish_task():
         ),
     ]
     
-    result = get_agent_result(messages)
+    result = _get_agent_result(messages)
     assert result == "Task completed successfully"
 
 
@@ -137,7 +137,7 @@ def test_get_agent_result_no_finish_task():
     """Test extracting agent result when no finish_task is present."""
     messages = [HumanMessage(content="Do something")]
     
-    result = get_agent_result(messages)
+    result = _get_agent_result(messages)
     assert result == AGENT_DEFAULT_COMMENT
 
 

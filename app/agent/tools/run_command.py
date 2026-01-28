@@ -42,7 +42,7 @@ def run_command(command: str) -> str:
 
     container_name = os.environ.get("WORKBENCH_CONTAINER_NAME", get_workbench())
     workbench_workdir = os.environ.get("WORKBENCH_CODESPACE", get_codespace())
-    try:        
+    try:
         container = DOCKER_CLIENT.containers.get(container_name)
 
         if container.status != "running":

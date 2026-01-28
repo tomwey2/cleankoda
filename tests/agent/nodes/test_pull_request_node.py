@@ -4,6 +4,7 @@ from unittest.mock import Mock
 
 import pytest
 
+from app.agent.models.node_results import GitOperationResult
 from app.agent.nodes import pull_request as pr_module
 
 
@@ -19,10 +20,22 @@ def base_state():
 def _setup_success_path(monkeypatch):
     """Set default happy-path patches for git operations."""
 
-    monkeypatch.setattr(pr_module, "_execute_git_status", lambda: (True, ""))
-    monkeypatch.setattr(pr_module, "_execute_git_add", lambda: True)
-    monkeypatch.setattr(pr_module, "_execute_git_commit", lambda message: True)
-    monkeypatch.setattr(pr_module, "_execute_git_push", lambda: (True, "pushed"))
+    monkeypatch.setattr(
+        pr_module, "check_git_status",
+        lambda: GitOperationResult(success=True, message="Changes detected")
+    )
+    monkeypatch.setattr(
+        pr_module, "git_add_all",
+        lambda: GitOperationResult(success=True, message="All changes staged")
+    )
+    monkeypatch.setattr(
+        pr_module, "git_commit",
+        lambda message: GitOperationResult(success=True, message="Committed")
+    )
+    monkeypatch.setattr(
+        pr_module, "git_push",
+        lambda: GitOperationResult(success=True, message="pushed")
+    )
     monkeypatch.setattr(pr_module, "_build_pr_inputs", lambda state: ("Title", "Body"))
 
 
@@ -50,7 +63,10 @@ def test_create_or_update_pr_success(monkeypatch, base_state):
 def test_create_or_update_pr_no_changes(monkeypatch, base_state):
     """Ensure failure path appends descriptive summary when no changes exist."""
 
-    monkeypatch.setattr(pr_module, "_execute_git_status", lambda: (False, ""))
+    monkeypatch.setattr(
+        pr_module, "check_git_status",
+        lambda: GitOperationResult(success=False, message="No changes detected")
+    )
 
     success, summaries = pr_module._create_or_update_pr(base_state.copy())  # pylint: disable=protected-access
 
@@ -62,14 +78,17 @@ def test_create_or_update_pr_push_failure(monkeypatch, base_state):
     """Git push failure should append summary describing the error."""
 
     _setup_success_path(monkeypatch)
-    monkeypatch.setattr(pr_module, "_execute_git_push", lambda: (False, "remote rejected"))
+    monkeypatch.setattr(
+        pr_module, "git_push",
+        lambda: GitOperationResult(success=False, message="remote rejected")
+    )
 
     success, summaries = pr_module._create_or_update_pr(base_state.copy())  # pylint: disable=protected-access
 
     assert success is False
     assert (
         summaries[-1]
-        == "**[Pr]** Pull request failed: git push failed (remote rejected)"
+        == "**[Pr]** Pull request failed: remote rejected"
     )
 
 

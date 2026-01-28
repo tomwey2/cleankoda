@@ -8,8 +8,9 @@ errors, and implementing fixes for identified issues.
 import logging
 from typing import Any
 
-from langchain_core.messages import AIMessage, BaseMessage, HumanMessage, SystemMessage
+from langchain_core.messages import BaseMessage, SystemMessage
 
+from app.agent.services.agent_retry import create_fallback_message, invoke_with_retry
 from app.agent.services.logging import log_agent_response
 from app.agent.services.message_processing import filter_messages_for_llm
 from app.agent.services.prompts import load_system_prompt
@@ -35,69 +36,34 @@ def create_bugfixer_node(llm, tools, agent_stack):
     sys_msg = load_system_prompt(agent_stack, "bugfixer")
 
     async def bugfixer_node(state: AgentState):
-        # Filter messages to keep only recent relevant context (original task + last 15 messages)
-        # pylint: disable=duplicate-code
-        filtered_messages = filter_messages_for_llm(state["messages"], max_messages=15)
-        current_messages: list[BaseMessage | SystemMessage] = [
-            SystemMessage(content=sys_msg)
-        ]
-        current_messages += filtered_messages
-
-        current_tool_choice = "auto"
-
-        for attempt in range(3):
-            try:
-                chain = llm.bind_tools(tools, tool_choice=current_tool_choice)
-                response = await chain.ainvoke(current_messages)
-
-                has_content = bool(response.content)
-                has_tool_calls = bool(getattr(response, "tool_calls", []))
-
-                if has_content or has_tool_calls:
-                    log_agent_response(
-                        "bugfixer",
-                        response,
-                        attempt=attempt + 1,
-                    )
-                    recorded, agent_summary = record_finish_task_summary(
-                        state,
-                        "bugfixer",
-                        response,
-                    )
-                    result = {"messages": [response]}
-                    if recorded:
-                        result["agent_summary"] = agent_summary
-                    return result
-
-                logger.warning("Attempt %d: Empty response. Escalating...", attempt + 1)
-                current_tool_choice = "any"
-                current_messages.append(AIMessage(content="Thinking..."))
-                current_messages.append(
-                    HumanMessage(content="ERROR: Empty response. Use a tool!")
-                )
-
-            except Exception as e:  # pylint: disable=broad-exception-caught
-                logger.error("Error in LLM call (Attempt %d): %s", attempt + 1, e)
-
-        # Fallback
-        fallback_message = AIMessage(
-            content="Stuck.",
-            tool_calls=[
-                {
-                    "name": "finish_task",
-                    "args": {"summary": "Agent stuck."},
-                    "id": "call_emergency",
-                    "type": "tool_call",
-                }
-            ],
+        filtered_messages: list[BaseMessage] = filter_messages_for_llm(
+            state["messages"], max_messages=15
         )
-        recorded, agent_summary = record_finish_task_summary(
-            state,
-            "bugfixer",
-            fallback_message,
+        current_messages: list[BaseMessage] = [SystemMessage(content=sys_msg)] + filtered_messages
+
+        escalation_messages = (
+            "Thinking...",
+            "ERROR: Empty response. Use a tool!"
         )
+
+        # pylint: disable=duplicate-code  # Shared retry pattern with coder by design
+        try:
+            response: BaseMessage = await invoke_with_retry(
+                llm,
+                tools,
+                current_messages,
+                max_attempts=3,
+                escalation_messages=escalation_messages,
+            )
+            log_agent_response("bugfixer", response)
+        except RuntimeError:
+            logger.error("Agent stuck after retries. Using fallback.")
+            response = create_fallback_message("Agent stuck.")
+        # pylint: enable=duplicate-code
+
+        recorded, agent_summary = record_finish_task_summary(state, "bugfixer", response)
         result: dict[str, Any] = {
-            "messages": [fallback_message],
+            "messages": [response],
             "current_node": "bugfixer",
         }
         if recorded:

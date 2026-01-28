@@ -81,7 +81,7 @@ def create_task_update_node(agent_settings: AgentSettings):
     return task_update
 
 
-def get_agent_result(messages):
+def _get_agent_result(messages):
     """
     Searches backward in the history for the 'finish_task' Tool-Call.
     The summary or result of the tool call is returned.

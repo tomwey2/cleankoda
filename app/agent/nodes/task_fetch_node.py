@@ -10,7 +10,7 @@ import logging
 from langchain_core.messages import SystemMessage
 
 from app.agent.integrations.board_factory import create_board_provider
-from app.agent.integrations.board_provider import BoardTask
+from app.agent.models.node_results import TaskResolutionResult, PRReviewInfo
 from app.agent.services.tasks_services import (
     fetch_review_comments,
     fetch_task_from_state,
@@ -54,32 +54,32 @@ def create_task_fetch_node(agent_settings: AgentSettings):
                 logger.warning("No review state configured in task system")
                 return {"task": None}
 
-            task, comments, pr_review_message, git_branch = await _resolve_task(
+            resolution: TaskResolutionResult = await _resolve_task(
                 board_provider,
                 active_task_system.state_in_progress,
                 active_task_system.state_todo,
                 active_task_system.state_in_review,
             )
 
-            if not task:
+            if not resolution.task:
                 logger.info("There is no current task to work on.")
                 return {"task": None}
 
-            logger.info("Processing task ID: %s - %s", task.id, task.name)
+            logger.info("Processing task ID: %s - %s", resolution.task.id, resolution.task.name)
 
             system_content = _build_system_message_content(
-                task.name,
-                task.description,
-                comments,
-                pr_review_message,
+                resolution.task.name,
+                resolution.task.description,
+                resolution.comments,
+                resolution.pr_review_message,
             )
             result = {
-                "task": task,
+                "task": resolution.task,
                 "messages": [SystemMessage(content=system_content)],
-                "task_comments": comments,
+                "task_comments": resolution.comments,
                 "current_node": "task_fetch",
-                "git_branch": git_branch,
             }
+            result["git_branch"] = resolution.git_branch or ""
             return result
 
         except Exception as e:  # pylint: disable=broad-exception-caught
@@ -94,12 +94,12 @@ async def _resolve_task(
     in_progress_state: str,
     todo_state: str,
     review_state: str,
-) -> tuple[BoardTask | None, list, str, str | None]:
+) -> TaskResolutionResult:
     """
     Resolve which task to work on: either continue in-progress task or fetch new from todo.
 
     Returns:
-        Tuple of (task, comments, pr_review_message)
+        TaskResolutionResult with task, comments, PR review message, and git branch
     """
     task_in_progress = await fetch_task_from_state(board_provider, in_progress_state)
 
@@ -116,9 +116,14 @@ async def _resolve_task(
             in_progress_state,
             review_state,
         )
-        _, pr_review_message = _fetch_pr_review_info(task_in_progress.id)
+        pr_info: PRReviewInfo = _fetch_pr_review_info(task_in_progress.id)
         branch_name = get_branch_for_task(task_in_progress.id)
-        return task_in_progress, comments, pr_review_message, branch_name
+        return TaskResolutionResult(
+            task=task_in_progress,
+            comments=comments,
+            pr_review_message=pr_info.formatted_message,
+            git_branch=branch_name,
+        )
 
     logger.info("fetch new task from todo")
     task = await fetch_task_from_state(board_provider, todo_state)
@@ -130,10 +135,15 @@ async def _resolve_task(
         logger.info("Moved task to %s", task.state_name)
         delete_plan()
 
-    return task, [], "", None
+    return TaskResolutionResult(
+        task=task,
+        comments=[],
+        pr_review_message="",
+        git_branch=None,
+    )
 
 
-def _fetch_pr_review_info(task_id: str) -> tuple[bool, str]:
+def _fetch_pr_review_info(task_id: str) -> PRReviewInfo:
     """
     Fetch PR review info if a PR exists for the task.
 
@@ -141,9 +151,7 @@ def _fetch_pr_review_info(task_id: str) -> tuple[bool, str]:
         task_id: The task ID to check
 
     Returns:
-        Tuple of (is_approved, formatted_review_message)
-        - is_approved: True if PR is approved or no PR exists
-        - formatted_review_message: Formatted message for SystemMessage, empty if approved
+        PRReviewInfo with approval status and formatted message
     """
     pr_number, pr_url = get_pr_info_for_task(task_id)
 
@@ -157,7 +165,7 @@ def _fetch_pr_review_info(task_id: str) -> tuple[bool, str]:
 
     if not pr_number:
         logger.info("No PR found for task %s", task_id)
-        return True, ""
+        return PRReviewInfo(is_approved=True, formatted_message="")
 
     is_approved, rejection_reviews, code_comments = get_latest_pr_review_status(
         pr_number
@@ -165,7 +173,12 @@ def _fetch_pr_review_info(task_id: str) -> tuple[bool, str]:
 
     if is_approved:
         logger.info("PR #%d for task %s is approved", pr_number, task_id)
-        return True, ""
+        return PRReviewInfo(
+            is_approved=True,
+            formatted_message="",
+            pr_number=pr_number,
+            pr_url=pr_url,
+        )
 
     logger.info(
         "PR #%d for task %s has %d rejections and %d code comments",
@@ -175,8 +188,13 @@ def _fetch_pr_review_info(task_id: str) -> tuple[bool, str]:
         len(code_comments),
     )
 
-    return False, format_pr_review_message(
-        pr_url or "", rejection_reviews, code_comments
+    return PRReviewInfo(
+        is_approved=False,
+        formatted_message=format_pr_review_message(
+            pr_url or "", rejection_reviews, code_comments
+        ),
+        pr_number=pr_number,
+        pr_url=pr_url,
     )
 
 

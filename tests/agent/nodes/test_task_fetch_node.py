@@ -256,19 +256,6 @@ async def test_task_fetch_node_no_comments_from_todo(
     """Test that comments are NOT included when task is picked from To Do (not from review)."""
     from app.agent.integrations.board_provider import BoardStateMove
 
-    # Task is in "To Do" state (not returned from review)
-    mock_board_provider.get_tasks_from_state = AsyncMock(
-        return_value=[
-            BoardTask(
-                id="card1",
-                name="Test Task",
-                description="Test Description",
-                state_id="list1",
-                state_name="To Do",
-            )
-        ]
-    )
-
     # Even if there are state moves and comments, they should not be included
     mock_moves = [
         BoardStateMove(
@@ -299,6 +286,33 @@ async def test_task_fetch_node_no_comments_from_todo(
     ), patch(
         "app.agent.nodes.task_fetch_node.get_branch_for_task",
         return_value=None,
+    ), patch(
+        "app.agent.nodes.task_fetch_node.fetch_task_from_state",
+        new=AsyncMock(
+            side_effect=[
+                None,  # First call: no in-progress task
+                BoardTask(
+                    id="card1",
+                    name="Test Task",
+                    description="Test Description",
+                    state_id="list1",
+                    state_name="To Do",
+                ),  # Second call: todo task
+            ]
+        ),
+    ), patch(
+        "app.agent.nodes.task_fetch_node.move_task_to_state",
+        new=AsyncMock(
+            return_value=BoardTask(
+                id="card1",
+                name="Test Task",
+                description="Test Description",
+                state_id="list2",
+                state_name="In Progress",
+            )
+        ),
+    ), patch(
+        "app.agent.nodes.task_fetch_node.delete_plan"
     ), patch(
         "app.agent.nodes.task_fetch_node.remove_task_from_db",
         return_value=True,
