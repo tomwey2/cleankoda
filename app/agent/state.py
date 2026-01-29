@@ -55,6 +55,7 @@ class AgentState(TypedDict):
     messages: Annotated[list[BaseMessage], add_messages]
     next_step: str
     task: Optional[BoardTask]
+    task_role: Optional[str]  # The role that will handle the task (coder, bugfixer, analyst)
     task_skill_level: Optional[str]
     agent_stack: str  # Backend or Frontend
     retry_count: int  # Attempts: how often switched between coder and tester

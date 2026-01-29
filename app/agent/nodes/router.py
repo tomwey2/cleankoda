@@ -145,10 +145,13 @@ def create_router_node(llm):
             elif state["plan_state"] == PlanState.APPROVED:
                 next_step = "coder"
 
+        task_role = next_step if next_step != "reject" else None
+
         return {
             "next_step": next_step,
             "task_type": task_type,
             "task_skill_level": response.skill_level,
+            "task_role": task_role,
             "current_node": "router",
         }
 

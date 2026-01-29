@@ -125,3 +125,54 @@ def test_create_or_update_pr_missing_url(monkeypatch, base_state):
 
     assert success is False
     assert summaries[-1] == "**[Pr]** Pull request missing URL despite success"
+
+
+def test_generate_commit_message_uses_task_role_prefix():
+    """Commit message should align with router-provided role."""
+
+    state = {
+        "agent_summary": ["**[Coder]** Implement feature X"],
+        "task_role": "coder",
+    }
+
+    message = pr_module._generate_commit_message(state)  # pylint: disable=protected-access
+
+    assert message == "feat: Implement feature X"
+
+
+def test_generate_commit_message_falls_back_when_summary_missing():
+    """Fallback commit message should be used when summaries absent or empty."""
+
+    state = {"agent_summary": []}
+
+    message = pr_module._generate_commit_message(state)  # pylint: disable=protected-access
+
+    assert message == "fix: automated test-driven changes"
+
+
+def test_generate_commit_message_trims_summary_prefix_and_length():
+    """Role prefix is removed while preserving content and enforcing max length."""
+
+    long_summary = "**[Bugfixer]** " + "x" * 100
+    state = {"agent_summary": [long_summary], "task_role": "bugfixer"}
+
+    message = pr_module._generate_commit_message(state)  # pylint: disable=protected-access
+
+    assert message.startswith("fix: ")
+    assert len(message) <= 75  # prefix plus ellipsis trimming
+
+
+def test_generate_commit_message_ignores_tester_summaries():
+    """Tester entries should be skipped when composing commit messages."""
+
+    state = {
+        "agent_summary": [
+            "**[Tester]** Confirmed all tests pass",
+            "**[Bugfixer]** Fixed broken import",
+        ],
+        "task_role": "bugfixer",
+    }
+
+    message = pr_module._generate_commit_message(state)  # pylint: disable=protected-access
+
+    assert message == "fix: Fixed broken import"
