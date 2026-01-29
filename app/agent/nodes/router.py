@@ -127,6 +127,7 @@ def create_router_node(llm):
         response: RouterDecision = await structured_llm.ainvoke(current_messages)
         logger.info("Task type: %s", response.type)
         logger.info("Task skill level: %s", response.skill_level)
+        logger.info("Router reasoning: %s", response.reasoning)
 
         task_type = TaskType.UNKNOWN
         if response.type in [t.value for t in TaskType]:

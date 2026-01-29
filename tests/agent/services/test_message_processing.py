@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from itertools import count
 
-from langchain_core.messages import AIMessage, HumanMessage, SystemMessage
+from langchain_core.messages import AIMessage, HumanMessage, SystemMessage, ToolMessage
 
 from app.agent.services.message_processing import (
     filter_messages_for_llm,
@@ -24,6 +24,10 @@ def _tool_call(name: str, args: dict | None = None) -> dict:
 
 def _ai(content: str, *, tool_calls: list[dict] | None = None) -> AIMessage:
     return AIMessage(content=content, tool_calls=tool_calls or [])
+
+
+def _tool_message(content: str, *, tool_call_id: str) -> ToolMessage:
+    return ToolMessage(content=content, tool_call_id=tool_call_id)
 
 
 def test_filter_messages_preserves_task_and_recent_history():
@@ -50,6 +54,16 @@ def test_filter_messages_drops_trailing_ai_without_tools():
     assert all(
         not (isinstance(msg, AIMessage) and not msg.tool_calls) for msg in filtered[-1:]
     )
+
+
+def test_filter_messages_drops_orphan_tool_messages():
+    orphan_call = _tool_call("run_command")
+    messages = [HumanMessage(content="Task"), _tool_message("output", tool_call_id=orphan_call["id"])]
+
+    filtered = filter_messages_for_llm(messages, max_messages=2)
+
+    assert len(filtered) == 1
+    assert isinstance(filtered[0], HumanMessage)
 
 
 def test_sanitize_response_removes_invalid_tool_calls():

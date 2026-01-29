@@ -7,7 +7,7 @@ preparing them for processing by the agent.
 
 import logging
 
-from langchain_core.messages import SystemMessage
+from langchain_core.messages import HumanMessage
 
 from app.agent.integrations.board_factory import create_board_provider
 from app.agent.models.node_results import TaskResolutionResult, PRReviewInfo
@@ -67,7 +67,7 @@ def create_task_fetch_node(agent_settings: AgentSettings):
 
             logger.info("Processing task ID: %s - %s", resolution.task.id, resolution.task.name)
 
-            system_content = _build_system_message_content(
+            human_msg_content = _build_human_message_content(
                 resolution.task.name,
                 resolution.task.description,
                 resolution.comments,
@@ -75,7 +75,7 @@ def create_task_fetch_node(agent_settings: AgentSettings):
             )
             result = {
                 "task": resolution.task,
-                "messages": [SystemMessage(content=system_content)],
+                "messages": [HumanMessage(content=human_msg_content)],
                 "task_comments": resolution.comments,
                 "current_node": "task_fetch",
             }
@@ -198,14 +198,14 @@ def _fetch_pr_review_info(task_id: str) -> PRReviewInfo:
     )
 
 
-def _build_system_message_content(
+def _build_human_message_content(
     task_name: str,
     task_description: str,
     comments: list,
     pr_review_message: str = "",
 ) -> str:
     """
-    Build the system message content including task details and optional review comments.
+    Build the human message content including task details and optional review comments.
 
     Args:
         task_name: Name of the task
@@ -214,12 +214,12 @@ def _build_system_message_content(
         pr_review_message: Formatted PR review feedback (may be empty)
 
     Returns:
-        Formatted system message content string
+        Formatted human message content string
     """
-    system_content = f"Task: {task_name}\n\nDescription:\n{task_description}"
+    human_msg_content = f"Task: {task_name}\n\nDescription:\n{task_description}"
 
     if comments:
-        system_content += (
+        human_msg_content += (
             "\n\n--- The Pull Request was rejected with "
             + "the following review comments: ---\n"
             + "NOTE: The task description shows the current implementation. "
@@ -229,12 +229,12 @@ def _build_system_message_content(
             author = comment.author
             text = comment.text
             date = comment.date.isoformat()
-            system_content += f"\n[{date}] {author}:\n{text}\n"
+            human_msg_content += f"\n[{date}] {author}:\n{text}\n"
 
-        logger.info("Board review message content: %s", system_content)
+        logger.info("Board review message content: %s", human_msg_content)
 
     if pr_review_message:
-        system_content += pr_review_message
+        human_msg_content += pr_review_message
         logger.info("PR review message appended: %s", pr_review_message)
 
-    return system_content
+    return human_msg_content

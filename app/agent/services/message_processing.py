@@ -6,7 +6,13 @@ import logging
 import re
 from typing import List
 
-from langchain_core.messages import AIMessage, BaseMessage, HumanMessage, SystemMessage
+from langchain_core.messages import (
+    AIMessage,
+    BaseMessage,
+    HumanMessage,
+    SystemMessage,
+    ToolMessage,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -57,6 +63,23 @@ def _trim_trailing_invalid_ai_messages(messages: list[BaseMessage]) -> list[Base
             break
         trimmed = trimmed[:-1]
     return trimmed
+
+
+def _remove_orphaned_tool_messages(messages: list[BaseMessage]) -> list[BaseMessage]:
+    """Drop tool messages that are not immediately preceded by an AIMessages."""
+    cleaned: list[BaseMessage] = []
+    last_included: BaseMessage | None = None
+    for msg in messages:
+        if isinstance(msg, ToolMessage):
+            if not isinstance(last_included, AIMessage | SystemMessage):
+                logger.info(
+                    "Dropping tool message without preceding assistant call: %s",
+                    getattr(msg, "tool_call_id", "<unknown>"),
+                )
+                continue
+        cleaned.append(msg)
+        last_included = msg
+    return cleaned
 
 
 def _log_token_savings(
@@ -128,6 +151,7 @@ def filter_messages_for_llm(
 
     # Prepend all system messages at the beginning
     filtered_messages = system_messages + filtered_messages
+    filtered_messages = _remove_orphaned_tool_messages(filtered_messages)
 
     # Log token savings from filtering
     filtered_count = len(filtered_messages)

@@ -8,7 +8,7 @@ running tests, and reporting the results.
 import logging
 from typing import Any, Dict, Literal, Optional
 
-from langchain_core.messages import SystemMessage
+from langchain_core.messages import HumanMessage, SystemMessage
 from pydantic import BaseModel, Field
 
 from app.agent.services.logging import log_agent_response
@@ -75,8 +75,13 @@ def create_tester_node(llm, tools, agent_stack):
                 summary,
             )
 
+        human_response = HumanMessage(
+            content=response.content,
+            additional_kwargs=getattr(response, "additional_kwargs", {}),
+        )
+
         return {
-            "messages": [response],
+            "messages": [human_response],
             "agent_summary": summary_entries,
             "current_node": "tester",
         }
