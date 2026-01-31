@@ -138,16 +138,22 @@ def checkout_branch(repo_url: str, branch_name: str, work_dir: str) -> None:
             branch_name,
             repo_url,
         )
-        repo.remotes.origin.fetch(branch_name)
-        remote_ref = f"origin/{branch_name}"
-        if remote_ref in repo.refs:
-            repo.git.checkout("-b", branch_name, remote_ref)
-            logger.info("Checked out tracking branch '%s' from origin.", branch_name)
-            return
+        try:
+            repo.remotes.origin.fetch(branch_name)
+            remote_ref = f"origin/{branch_name}"
+            if remote_ref in repo.refs:
+                repo.git.checkout("-b", branch_name, remote_ref)
+                logger.info("Checked out tracking branch '%s' from origin.", branch_name)
+                return
+        except GitCommandError as fetch_exc:
+            logger.info(
+                "Remote branch '%s' not found on origin: %s. Will create new local branch.",
+                branch_name,
+                fetch_exc,
+            )
 
         logger.info(
-            "Remote branch '%s' not found. Creating new local branch '%s' from current HEAD.",
-            remote_ref,
+            "Creating new local branch '%s' from current HEAD.",
             branch_name,
         )
         repo.git.checkout("-b", branch_name)

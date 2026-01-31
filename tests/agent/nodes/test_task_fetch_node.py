@@ -7,7 +7,7 @@ from types import SimpleNamespace
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
-from langchain_core.messages import SystemMessage
+from langchain_core.messages import HumanMessage
 
 
 
@@ -124,7 +124,7 @@ async def test_task_fetch_node_success(agent_settings, mock_board_provider):
         assert result["task"].name == "Test Task"
         assert result["task"].state_id == "list2"  # Moved to in-progress state
         assert len(result["messages"]) == 1
-        assert isinstance(result["messages"][0], SystemMessage)
+        assert isinstance(result["messages"][0], HumanMessage)
         assert "Test Task" in result["messages"][0].content
         assert "Test Description" in result["messages"][0].content
         remove_task_mock.assert_not_called()

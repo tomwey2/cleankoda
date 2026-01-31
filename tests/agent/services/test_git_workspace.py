@@ -35,6 +35,18 @@ def test_checkout_branch_switches_to_existing_branch(tmp_path):
     assert refreshed.active_branch.name == "feature/test"
 
 
+def test_checkout_branch_creates_new_branch_when_remote_not_found(tmp_path):
+    remote_dir = _setup_remote_repo(tmp_path)
+    work_dir = tmp_path / "work"
+    Repo.clone_from(remote_dir.as_posix(), work_dir)
+
+    checkout_branch(remote_dir.as_posix(), "agent/nonexistent-branch", work_dir.as_posix())
+
+    refreshed = Repo(work_dir)
+    assert refreshed.active_branch.name == "agent/nonexistent-branch"
+    assert "agent/nonexistent-branch" in [head.name for head in refreshed.heads]
+
+
 def _setup_remote_repo(tmp_path) -> Path:
     remote_dir = tmp_path / "remote.git"
     Repo.init(remote_dir, bare=True)
