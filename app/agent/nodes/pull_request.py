@@ -47,7 +47,7 @@ def _create_or_update_pr(state: AgentState):
         return False, summary_entries
 
     # Execute git operations
-    git_error = _execute_git_operations()
+    git_error = _execute_git_operations(state)
     if git_error:
         summary_entries = _append_summary(summary_entries, state, "PR", git_error)
         return False, summary_entries
@@ -82,14 +82,15 @@ def _append_summary(
     return summary_entries
 
 
-def _execute_git_operations() -> str | None:
+def _execute_git_operations(state: AgentState) -> str | None:
     """Execute git add, commit, and push. Returns error message or None."""
     add_result = git_add_all()
     if not add_result.success:
         logger.error("Git add failed: %s", add_result.message)
         return f"Pull request failed: {add_result.message}"
 
-    commit_result = git_commit("fix: automated test-driven changes")
+    commit_message = _generate_commit_message(state)
+    commit_result = git_commit(commit_message)
     if not commit_result.success:
         logger.error("Git commit failed: %s", commit_result.message)
         return f"Pull request failed: {commit_result.message}"
@@ -100,6 +101,55 @@ def _execute_git_operations() -> str | None:
         return f"Pull request failed: {push_result.message}"
 
     return None
+
+def _generate_commit_message(state: AgentState) -> str:
+    """Generate a concise commit message from the latest agent summary."""
+    summaries = state.get("agent_summary") or []
+    summary_text = ""
+    summary_role: str | None = None
+
+    for entry in reversed(summaries):
+        role, text = _parse_summary_entry(entry)
+        if (role or "").lower() == "tester":
+            continue
+        cleaned_text = text.strip()
+        if cleaned_text:
+            summary_text = cleaned_text
+            summary_role = role
+            break
+
+    if not summary_text:
+        return "fix: automated test-driven changes"
+
+    prefix_map = {
+        "coder": "feat",
+        "bugfixer": "fix",
+        "analyst": "chore",
+    }
+    role = (summary_role or state.get("task_role") or "").strip().lower()
+    prefix = prefix_map.get(role, "chore")
+
+    summary_text = f"{prefix}: {summary_text}"
+    if len(summary_text) > 75:
+        summary_text = summary_text[:72].rstrip() + "..."
+
+    return summary_text
+
+
+def _parse_summary_entry(entry: str) -> tuple[str | None, str]:
+    """Return (role, summary_text) from a formatted summary entry."""
+    if not entry:
+        return None, ""
+
+    trimmed = entry.strip()
+    if trimmed.startswith("**["):
+        closing = trimmed.find("]**")
+        if closing != -1:
+            role = trimmed[3:closing].strip() or None
+            summary_text = trimmed[closing + 3 :].strip()
+            return (role.lower() if role else None), summary_text
+
+    return None, trimmed
 
 
 def _handle_pr_creation(state: AgentState) -> tuple[bool, str]:

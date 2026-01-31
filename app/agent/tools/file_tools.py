@@ -42,7 +42,9 @@ def read_file(filepath: str):
             content = f.read()
             if not content:
                 return "(File is empty)"
-            return content
+            lines = content.splitlines()
+            numbered_lines = [f"{i+1:4d} | {line}" for i, line in enumerate(lines)]
+            return "\n".join(numbered_lines)
     except Exception as e:  # pylint: disable=broad-exception-caught
         return f"ERROR reading file: {str(e)}"
 

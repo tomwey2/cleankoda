@@ -616,6 +616,8 @@ def format_pr_review_message(
                 line_desc = f"{start}-{end}"
             elif start:
                 line_desc = f"{start}"
+            elif end:
+                line_desc = f"{end}"
             else:
                 line_desc = "?"
             return f"{comment.path}:{line_desc}"
@@ -626,6 +628,8 @@ def format_pr_review_message(
             return f"Lines {start}-{end}"
         if start:
             return f"Line {start}"
+        if end:
+            return f"Line {end}"
         return "General"
 
     if rejection_reviews:

@@ -42,7 +42,10 @@ def log_agent_response(
             logger.info("Tool Call: %s", name)
             args = tool_call.get("args", {}) or {}
             for key, value in args.items():
-                logger.info(" └─ %s: %s", key, safe_truncate(value, length=arg_limit))
+                display_value = value if name == "thinking" else safe_truncate(
+                    value, length=arg_limit
+                )
+                logger.info(" └─ %s: %s", key, display_value)
 
     if getattr(response, "content", None):
         logger.info("Content: %s", safe_truncate(response.content, content_limit))
