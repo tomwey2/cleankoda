@@ -33,6 +33,7 @@ from app.agent.tools.file_tools import (
 from app.agent.tools.finish_task import finish_task
 from app.agent.tools.run_command import run_command
 from app.agent.tools.thinking import thinking
+from app.core.plan_services import delete_plan
 
 
 def route_after_tools_tester(state: AgentState):
@@ -196,15 +197,21 @@ def create_workflow(runtime: AgentRuntimeContext) -> StateGraph:
     workflow.add_edge("checkout", "router")
 
     # 2. Router -> Specialists: Coder | Bugfixer | Analyst
+    def _route_from_router(state: AgentState) -> str:
+        next_step = state.get("next_step", "coder")
+        if next_step == "analyst":
+            delete_plan()
+        return next_step
+
     workflow.add_conditional_edges(
         "router",
-        lambda state: state.get("next_step", "coder"),
+        _route_from_router,
         {
             "reject": "task_update",
             "coder": "coder",
             "bugfixer": "bugfixer",
             "analyst": "analyst",
-        },
+        }
     )
 
     # 3. Coder -> Tools | Correction

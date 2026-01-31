@@ -30,7 +30,6 @@ from app.agent.services.tasks_services import (
 )
 from app.agent.state import AgentState
 from app.core.models import AgentSettings, Task
-from app.core.plan_services import delete_plan
 from app.core.task_repository import get_pr_info_for_task, remove_task_from_db
 
 logger = logging.getLogger(__name__)
@@ -194,7 +193,7 @@ async def _assign_new_task(
 
     task = await move_task_to_state(board_provider, task, in_progress_state)
     logger.info("Moved task to %s", task.state_name)
-    delete_plan()
+    # delete plan.md
     return TaskResolutionResult(
         task=task,
         comments=[],

@@ -112,8 +112,8 @@ async def test_task_fetch_node_success(agent_settings, mock_board_provider):
             )
         ),
     ), patch(
-        "app.agent.nodes.task_fetch_node.delete_plan"
-    ), patch(
+    #    "app.agent.nodes.task_fetch_node.delete_plan"
+    #), patch(
         "app.agent.nodes.task_fetch_node.remove_task_from_db",
         return_value=True,
     ) as remove_task_mock:
@@ -312,8 +312,8 @@ async def test_task_fetch_node_removes_stale_task(agent_settings, mock_board_pro
         "app.agent.nodes.task_fetch_node.move_task_to_state",
         new=move_task_to_state_mock,
     ), patch(
-        "app.agent.nodes.task_fetch_node.delete_plan"
-    ), patch(
+    #    "app.agent.nodes.task_fetch_node.delete_plan"
+    #), patch(
         "app.agent.nodes.task_fetch_node.remove_task_from_db",
         return_value=True,
     ) as remove_task_mock:
@@ -369,8 +369,8 @@ async def test_task_fetch_node_handles_missing_db_task(agent_settings, mock_boar
         "app.agent.nodes.task_fetch_node.move_task_to_state",
         new=move_task_to_state_mock,
     ), patch(
-        "app.agent.nodes.task_fetch_node.delete_plan"
-    ), patch(
+    #    "app.agent.nodes.task_fetch_node.delete_plan"
+    #), patch(
         "app.agent.nodes.task_fetch_node.remove_task_from_db",
         return_value=True,
     ) as remove_task_mock:
@@ -443,8 +443,8 @@ async def test_task_fetch_node_no_comments_from_todo(
                 state_name="In Progress",
             )
         ),
-    ), patch(
-        "app.agent.nodes.task_fetch_node.delete_plan"
+    # ), patch(
+    #    "app.agent.nodes.task_fetch_node.delete_plan"
     ), patch(
         "app.agent.nodes.task_fetch_node.remove_task_from_db",
         return_value=True,
