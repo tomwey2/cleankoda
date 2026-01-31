@@ -140,7 +140,7 @@ async def _resume_existing_task(
 
     task: Optional[BoardTask] = await board_provider.get_task(db_task.task_id)
     if not task:
-        logger.info("Task %s (%s) not found on board", db_task.task_id, db_task.name)
+        logger.info("Task %s (%s) not found on board", db_task.task_id, db_task.task_name)
         remove_task_from_db(db_task.task_id)
         return None
 

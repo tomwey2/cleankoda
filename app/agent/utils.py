@@ -20,6 +20,7 @@ __all__ = [
 
 
 DEFAULT_WORKSPACE: Final[str] = "/coding-agent-workspace"
+CODE_DIR_NAME: Final[str] = "code"
 
 
 def get_workspace() -> str:
@@ -34,7 +35,7 @@ def get_workbench() -> str:
 
 def get_codespace() -> str:
     """Return the path to the code repository."""
-    return f"{get_workspace()}/code"
+    return f"{get_workspace()}/{CODE_DIR_NAME}"
 
 
 def save_state_to_workspace(state: dict, filename: str = "agent_state.json") -> str:

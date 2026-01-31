@@ -10,7 +10,7 @@ from typing import Dict, List, Optional
 
 import requests
 
-from app.agent.utils import get_codespace, get_current_git_branch
+from app.agent.utils import CODE_DIR_NAME, get_codespace, get_current_git_branch
 
 logger = logging.getLogger(__name__)
 
@@ -52,6 +52,14 @@ class PRReview:
 
 
 @dataclass(frozen=True)
+class LineRange:
+    """Represents a line range in a file."""
+
+    start: Optional[int]
+    end: Optional[int]
+
+
+@dataclass(frozen=True)
 class PRReviewComment:
     """Represents a line-level code review comment on a PR."""
 
@@ -59,9 +67,9 @@ class PRReviewComment:
     reviewer: str
     body: str
     path: Optional[str]
-    start_line: Optional[int]
-    end_line: Optional[int]
+    line_range: LineRange
     created_at: str
+    is_resolved: bool = False
 
 
 def get_latest_open_pr_for_branch(branch_name: str) -> Optional[PullRequest]:
@@ -410,15 +418,17 @@ def fetch_pr_review_comments(
     owner: Optional[str] = None,
     repo: Optional[str] = None,
     token: Optional[str] = None,
+    only_unresolved: bool = True,
 ) -> List[PRReviewComment]:
     """
-    Fetch line-level code review comments for a pull request.
+    Fetch line-level code review comments for a pull request using GraphQL API.
 
     Args:
         pr_number: The PR number to fetch comments for
         owner: Repository owner (optional, derived from git if not provided)
         repo: Repository name (optional, derived from git if not provided)
         token: GitHub token (optional, uses GITHUB_TOKEN env var if not provided)
+        only_unresolved: If True, only return unresolved comments (default: True)
 
     Returns:
         List of PRReviewComment objects
@@ -428,51 +438,23 @@ def fetch_pr_review_comments(
         logger.warning("GITHUB_TOKEN not set, cannot fetch PR review comments")
         return []
 
-    try:
-        if not owner or not repo:
-            owner, repo = get_github_repo_info()
-        if not owner or not repo:
-            logger.warning("Could not determine GitHub owner/repo")
-            return []
-
-        headers = {
-            "Authorization": f"token {token}",
-            "Accept": "application/vnd.github.v3+json",
-        }
-
-        url = f"https://api.github.com/repos/{owner}/{repo}/pulls/{pr_number}/comments"
-        response = requests.get(url, headers=headers, timeout=10)
-
-        if response.status_code == 200:
-            comments_data = response.json()
-            logger.info("Raw review comments response: %s", json.dumps(comments_data, indent=2))
-
-            comments = [
-                PRReviewComment(
-                    id=str(c["id"]),
-                    reviewer=c.get("user", {}).get("login", "unknown"),
-                    body=c.get("body", "") or "",
-                    path=c.get("path"),
-                    # We should also handle the case where the comment is
-                    # on a deleted file or a deleted part of the file
-                    start_line=c.get("start_line") or c.get("original_start_line"),
-                    end_line=c.get("line") or c.get("original_line"),
-                    created_at=c.get("created_at", ""),
-                )
-                for c in comments_data
-            ]
-            logger.info(
-                "Fetched %d review comments for PR #%d", len(comments), pr_number
-            )
-            return comments
-
-        logger.warning(
-            "PR review comments fetch failed with status %d: %s",
-            response.status_code,
-            response.text,
-        )
+    if not owner or not repo:
+        owner, repo = get_github_repo_info()
+    if not owner or not repo:
+        logger.warning("Could not determine GitHub owner/repo")
         return []
 
+    try:
+        comments = _fetch_pr_comments_via_graphql(
+            owner, repo, pr_number, token, only_unresolved
+        )
+        logger.info(
+            "Fetched %d %sreview comments for PR #%d",
+            len(comments),
+            "unresolved " if only_unresolved else "",
+            pr_number,
+        )
+        return comments
     except Exception as e:  # pylint: disable=broad-exception-caught
         logger.error("Error fetching PR review comments for #%d: %s", pr_number, e)
         return []
@@ -626,21 +608,24 @@ def format_pr_review_message(
         return formatted
 
     def _format_location(comment: PRReviewComment) -> str:
+        start = comment.line_range.start
+        end = comment.line_range.end
+
         if comment.path:
-            if comment.start_line and comment.end_line and comment.start_line != comment.end_line:
-                line_desc = f"{comment.start_line}-{comment.end_line}"
-            elif comment.start_line:
-                line_desc = f"{comment.start_line}"
+            if start and end and start != end:
+                line_desc = f"{start}-{end}"
+            elif start:
+                line_desc = f"{start}"
             else:
                 line_desc = "?"
             return f"{comment.path}:{line_desc}"
 
-        if comment.start_line and comment.end_line:
-            if comment.start_line == comment.end_line:
-                return f"Line {comment.start_line}"
-            return f"Lines {comment.start_line}-{comment.end_line}"
-        if comment.start_line:
-            return f"Line {comment.start_line}"
+        if start and end:
+            if start == end:
+                return f"Line {start}"
+            return f"Lines {start}-{end}"
+        if start:
+            return f"Line {start}"
         return "General"
 
     if rejection_reviews:
@@ -674,3 +659,108 @@ def format_pr_review_message(
 
     lines.append("=" * 60)
     return "\n".join(lines)
+
+
+def _parse_review_comment(comment: dict, is_resolved: bool) -> PRReviewComment:
+    """Parse a single review comment from GraphQL response."""
+    return PRReviewComment(
+        id=comment.get("id", ""),
+        reviewer=comment.get("author", {}).get("login", "unknown"),
+        body=comment.get("body", "") or "",
+        path=f"{CODE_DIR_NAME}/{comment['path']}" if comment.get("path") else None,
+        line_range=LineRange(
+            start=comment.get("startLine"),
+            end=comment.get("line"),
+        ),
+        created_at=comment.get("createdAt", ""),
+        is_resolved=is_resolved,
+    )
+
+
+def _get_pr_review_comments_graphql_query() -> str:
+    """Return the GraphQL query for fetching PR review comments."""
+    return """
+    query($owner: String!, $repo: String!, $prNumber: Int!) {
+      repository(owner: $owner, name: $repo) {
+        pullRequest(number: $prNumber) {
+          reviewThreads(first: 100) {
+            nodes {
+              isResolved
+              comments(first: 100) {
+                nodes {
+                  id
+                  body
+                  path
+                  line
+                  startLine
+                  createdAt
+                  author {
+                    login
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+    """
+
+
+def _extract_comments_from_threads(
+    review_threads: List[dict], only_unresolved: bool
+) -> List[PRReviewComment]:
+    """Extract comments from review threads, optionally filtering by resolution status."""
+    comments = []
+    for thread in review_threads:
+        is_resolved = thread.get("isResolved", False)
+        if only_unresolved and is_resolved:
+            continue
+
+        thread_comments = thread.get("comments", {}).get("nodes", [])
+        for comment in thread_comments:
+            comments.append(_parse_review_comment(comment, is_resolved))
+    return comments
+
+
+def _fetch_pr_comments_via_graphql(
+    owner: str, repo: str, pr_number: int, token: str, only_unresolved: bool
+) -> List[PRReviewComment]:
+    """Execute GraphQL query and parse response for PR review comments."""
+    headers = {
+        "Authorization": f"Bearer {token}",
+        "Content-Type": "application/json",
+    }
+
+    response = requests.post(
+        "https://api.github.com/graphql",
+        headers=headers,
+        json={
+            "query": _get_pr_review_comments_graphql_query(),
+            "variables": {"owner": owner, "repo": repo, "prNumber": pr_number},
+        },
+        timeout=10,
+    )
+
+    if response.status_code != 200:
+        logger.warning(
+            "PR review comments fetch failed with status %d: %s",
+            response.status_code,
+            response.text,
+        )
+        return []
+
+    data = response.json()
+    logger.info("GraphQL response: %s", json.dumps(data, indent=2))
+
+    if "errors" in data:
+        logger.error("GraphQL errors: %s", data["errors"])
+        return []
+
+    pr_data = data.get("data", {}).get("repository", {}).get("pullRequest")
+    if not pr_data:
+        logger.warning("No pull request data found for PR #%d", pr_number)
+        return []
+
+    review_threads = pr_data.get("reviewThreads", {}).get("nodes", [])
+    return _extract_comments_from_threads(review_threads, only_unresolved)

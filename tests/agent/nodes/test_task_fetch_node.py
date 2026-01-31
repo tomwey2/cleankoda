@@ -9,6 +9,8 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
 from langchain_core.messages import SystemMessage
 
+
+
 from app.agent.integrations.board_provider import BoardComment, BoardTask
 from app.agent.nodes.task_fetch_node import (
     create_task_fetch_node,
@@ -18,7 +20,7 @@ from app.agent.services.tasks_services import (
     filter_comments_between_timestamps,
     get_latest_move_to_in_progress,
 )
-from app.core.models import AgentSettings, TaskSystem
+from app.core.models import AgentSettings, Task, TaskSystem
 
 
 @pytest.fixture
@@ -326,7 +328,10 @@ async def test_task_fetch_node_removes_stale_task(agent_settings, mock_board_pro
 async def test_task_fetch_node_handles_missing_db_task(agent_settings, mock_board_provider):
     """Missing db task on board should be removed before assigning a new one."""
 
-    db_task = SimpleNamespace(task_id="card-missing")
+    db_task = Task(
+        task_id="card-missing",
+        task_name="Missing Task",
+    )
     mock_board_provider.get_task = AsyncMock(return_value=None)
 
     fetch_task_from_state_mock = AsyncMock(
