@@ -67,7 +67,7 @@ async def _handle_existing_task(
     return True, [], ""
 
 
-async def _process_task(
+async def _process_task(  # pylint: disable=R0913
     task: BoardTask,
     is_todo_task: bool,
     board_provider,
