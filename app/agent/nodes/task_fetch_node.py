@@ -7,6 +7,7 @@ preparing them for processing by the agent.
 
 import logging
 
+from typing import Optional
 from langchain_core.messages import SystemMessage
 
 from app.agent.integrations.board_factory import create_board_provider
@@ -19,7 +20,7 @@ from app.agent.services.tasks_services import (
 )
 
 
-from app.core.task_repository import get_pr_info_for_task
+from app.core.task_repository import get_pr_info_for_task, remove_task_from_db
 from app.agent.services.pull_request import (
     format_pr_review_message,
     get_latest_open_pr_for_branch,
@@ -27,13 +28,82 @@ from app.agent.services.pull_request import (
 )
 
 from app.agent.state import AgentState
-from app.core.models import AgentSettings
+from app.core.models import AgentSettings, Task
 from app.core.plan_services import delete_plan
 
 logger = logging.getLogger(__name__)
 
 
-def create_task_fetch_node(agent_settings: AgentSettings):
+async def _handle_existing_task(
+    task: BoardTask,
+    board_provider,
+    active_task_system,
+    db_task: Optional[Task]
+) -> tuple[bool, list, str]:
+    """
+    Handle an existing task from the database.
+
+    Returns:
+        Tuple of (is_todo_task, comments, pr_review_message)
+    """
+    if task.state_name == active_task_system.state_in_review:
+        logger.info("task is in review, wait for user action")
+        return False, [], ""
+
+    if task.state_name == active_task_system.state_in_progress:
+        logger.info("task is in progress and add comments")
+        comments = await fetch_review_comments(
+            board_provider,
+            task.id,
+            active_task_system.state_in_progress,
+            active_task_system.state_in_review,
+        )
+        _, pr_review_message = _fetch_pr_review_info(task.id)
+        return False, comments, pr_review_message
+
+    logger.info("task from db is in todo and not in progress, removing from db")
+    if db_task:
+        remove_task_from_db(db_task.task_id)
+    return True, [], ""
+
+
+async def _process_task(
+    task: BoardTask,
+    is_todo_task: bool,
+    board_provider,
+    active_task_system,
+    *,
+    comments: list,
+    pr_review_message: str
+) -> dict:
+    """
+    Process the task and prepare the return value.
+
+    Returns:
+        Dictionary with task, messages, task_comments, and current_node
+    """
+    logger.info("Processing task ID: %s - %s", task.id, task.name)
+    if is_todo_task:
+        task = await move_task_to_state(
+            board_provider, task, active_task_system.state_in_progress
+        )
+        delete_plan()
+
+    system_content = _build_system_message_content(
+        task.name,
+        task.description,
+        comments,
+        pr_review_message)
+
+    return {
+        "task": task,
+        "messages": [SystemMessage(content=system_content)],
+        "task_comments": comments,
+        "current_node": "task_fetch",
+    }
+
+
+def create_task_fetch_node(agent_settings: AgentSettings, db_task: Task):
     """Creates a task fetch node for the agent graph."""
 
     async def task_fetch(state: AgentState) -> dict:  # pylint: disable=unused-argument
@@ -46,43 +116,47 @@ def create_task_fetch_node(agent_settings: AgentSettings):
             board_provider = create_board_provider(agent_settings)
 
             active_task_system = agent_settings.get_active_task_system()
-            if not active_task_system:
-                logger.warning("No active task system configured")
+            if not active_task_system or not active_task_system.state_in_review:
+                logger.warning("No active task system or review state configured")
                 return {"task": None}
 
-            if not active_task_system.state_in_review:
-                logger.warning("No review state configured in task system")
-                return {"task": None}
+            task: Optional[BoardTask] = None
+            logger.info("db_task: %s", db_task)
+            if db_task and db_task.task_id:
+                task = await board_provider.get_task(db_task.task_id)
 
-            task, comments, pr_review_message = await _resolve_task(
-                board_provider,
-                active_task_system.state_in_progress,
-                active_task_system.state_todo,
-                active_task_system.state_in_review,
-            )
+            comments = []
+            pr_review_message = ""
+            is_todo_task: bool = True
+
+            if task:
+                is_todo_task, comments, pr_review_message = await _handle_existing_task(
+                    task, board_provider, active_task_system, db_task
+                )
+                if task.state_name == active_task_system.state_in_review:
+                    return {"task": None}
+            else:
+                logger.info("task from db not found - removing")
+                if db_task:
+                    remove_task_from_db(db_task.task_id)
+
+            if is_todo_task:
+                logger.info("fetch new task from todo")
+                task = await fetch_task_from_state(
+                    board_provider, active_task_system.state_todo
+                )
 
             if not task:
                 logger.info("There is no current task to work on.")
                 return {"task": None}
 
-            logger.info("Processing task ID: %s - %s", task.id, task.name)
-
-            system_content = _build_system_message_content(
-                task.name,
-                task.description,
-                comments,
-                pr_review_message,
+            return await _process_task(
+                task, is_todo_task, board_provider, active_task_system,
+                comments=comments, pr_review_message=pr_review_message
             )
-            return {
-                "task": task,
-                "messages": [SystemMessage(content=system_content)],
-                "task_comments": comments,
-                "current_node": "task_fetch",
-            }
-
         except Exception as e:  # pylint: disable=broad-exception-caught
             logger.error("Error fetching tasks: %s", e)
-            return {"task_id": None}
+            return {"task": None}
 
     return task_fetch
 

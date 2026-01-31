@@ -89,16 +89,13 @@ async def test_task_fetch_node_success(agent_settings, mock_board_provider):
     ), patch(
         "app.agent.nodes.task_fetch_node.fetch_task_from_state",
         new=AsyncMock(
-            side_effect=[
-                None,  # First call: no in-progress task
-                BoardTask(
-                    id="card1",
-                    name="Test Task",
-                    description="Test Description",
-                    state_id="list1",
-                    state_name="To Do",
-                ),  # Second call: todo task
-            ]
+            return_value=BoardTask(
+                id="card1",
+                name="Test Task",
+                description="Test Description",
+                state_id="list1",
+                state_name="To Do",
+            )
         ),
     ), patch(
         "app.agent.nodes.task_fetch_node.move_task_to_state",
@@ -113,8 +110,10 @@ async def test_task_fetch_node_success(agent_settings, mock_board_provider):
         ),
     ), patch(
         "app.agent.nodes.task_fetch_node.delete_plan"
+    ), patch(
+        "app.agent.nodes.task_fetch_node.remove_task_from_db"
     ):
-        task_fetch = create_task_fetch_node(agent_settings)
+        task_fetch = create_task_fetch_node(agent_settings, None)
         result = await task_fetch({})
 
         assert result["task"].id == "card1"
@@ -149,8 +148,10 @@ async def test_task_fetch_node_no_review_list(agent_settings, mock_board_provide
     ), patch(
         "app.agent.nodes.task_fetch_node.get_branch_for_task",
         return_value=None,
+    ), patch(
+        "app.agent.nodes.task_fetch_node.remove_task_from_db"
     ):
-        task_fetch = create_task_fetch_node(temp_settings)
+        task_fetch = create_task_fetch_node(temp_settings, None)
         result = await task_fetch({})
 
         assert result["task"] is None
@@ -170,8 +171,13 @@ async def test_task_fetch_node_no_cards(agent_settings, mock_board_provider):
     ), patch(
         "app.agent.nodes.task_fetch_node.get_branch_for_task",
         return_value=None,
+    ), patch(
+        "app.agent.nodes.task_fetch_node.remove_task_from_db"
+    ), patch(
+        "app.agent.nodes.task_fetch_node.fetch_task_from_state",
+        new=AsyncMock(return_value=None),
     ):
-        task_fetch = create_task_fetch_node(agent_settings)
+        task_fetch = create_task_fetch_node(agent_settings, None)
         result = await task_fetch({})
 
         assert result["task"] is None
@@ -180,37 +186,25 @@ async def test_task_fetch_node_no_cards(agent_settings, mock_board_provider):
 @pytest.mark.asyncio
 async def test_task_fetch_node_with_comments(agent_settings, mock_board_provider):
     """Test task fetch with comments when task is already in In Progress (returned from review)."""
-    from app.agent.integrations.board_provider import BoardStateMove
+    from app.core.models import Task
 
-    # Task is already in "In Progress" state (returned from review)
-    mock_board_provider.get_tasks_from_state = AsyncMock(
-        return_value=[
-            BoardTask(
-                id="card1",
-                name="Test Task",
-                description="Test Description",
-                state_id="list2",
-                state_name="In Progress",
-            )
-        ]
+    # Create a mock db_task to simulate an existing task
+    mock_db_task = Task(
+        task_id="card1",
+        task_name="Test Task",
+        branch_name="feature/test",
     )
 
-    # Set up state moves: task was moved to "In Review" (review), then back to "In Progress"
-    mock_moves = [
-        BoardStateMove(
-            id="move1",
-            date=datetime(2024, 1, 1, 11, 0, 0, tzinfo=timezone.utc),
-            state_before="In Progress",
-            state_after="In Review",
-        ),
-        BoardStateMove(
-            id="move2",
-            date=datetime(2024, 1, 1, 14, 0, 0, tzinfo=timezone.utc),
-            state_before="In Review",
-            state_after="In Progress",
-        ),
-    ]
-    mock_board_provider.get_state_moves = AsyncMock(return_value=mock_moves)
+    # Mock board provider to return task in "In Progress" state
+    mock_board_provider.get_task = AsyncMock(
+        return_value=BoardTask(
+            id="card1",
+            name="Test Task",
+            description="Test Description",
+            state_id="list2",
+            state_name="In Progress",
+        )
+    )
 
     # Comment within the review period
     mock_comments = [
@@ -221,7 +215,6 @@ async def test_task_fetch_node_with_comments(agent_settings, mock_board_provider
             date=datetime(2024, 1, 1, 12, 0, 0, tzinfo=timezone.utc),
         )
     ]
-    mock_board_provider.get_comments = AsyncMock(return_value=mock_comments)
 
     with patch(
         "app.agent.nodes.task_fetch_node.create_board_provider",
@@ -232,9 +225,15 @@ async def test_task_fetch_node_with_comments(agent_settings, mock_board_provider
     ), patch(
         "app.agent.nodes.task_fetch_node.get_branch_for_task",
         return_value=None,
+    ), patch(
+        "app.agent.nodes.task_fetch_node.remove_task_from_db"
+    ), patch(
+        "app.agent.nodes.task_fetch_node.fetch_review_comments",
+        new=AsyncMock(return_value=mock_comments),
     ):
         task_fetch = create_task_fetch_node(
-            agent_settings
+            agent_settings,
+            mock_db_task
         )
         result = await task_fetch({})
 
@@ -294,8 +293,34 @@ async def test_task_fetch_node_no_comments_from_todo(
     ), patch(
         "app.agent.nodes.task_fetch_node.get_branch_for_task",
         return_value=None,
+    ), patch(
+        "app.agent.nodes.task_fetch_node.remove_task_from_db"
+    ), patch(
+        "app.agent.nodes.task_fetch_node.fetch_task_from_state",
+        new=AsyncMock(
+            return_value=BoardTask(
+                id="card1",
+                name="Test Task",
+                description="Test Description",
+                state_id="list1",
+                state_name="To Do",
+            )
+        ),
+    ), patch(
+        "app.agent.nodes.task_fetch_node.move_task_to_state",
+        new=AsyncMock(
+            return_value=BoardTask(
+                id="card1",
+                name="Test Task",
+                description="Test Description",
+                state_id="list2",
+                state_name="In Progress",
+            )
+        ),
+    ), patch(
+        "app.agent.nodes.task_fetch_node.delete_plan"
     ):
-        task_fetch = create_task_fetch_node(agent_settings)
+        task_fetch = create_task_fetch_node(agent_settings, None)
         result = await task_fetch({})
 
         # Comments should NOT be included since task was picked from To Do
