@@ -18,12 +18,6 @@ from app.core.task_repository import get_branch_for_task
 
 logger = logging.getLogger(__name__)
 
-ROLE_PREFIXES = {
-    "coder": "feature",
-    "bugfixer": "bugfix",
-}
-
-
 def create_checkout_node(agent_settings: AgentSettings):
     """Create a checkout node"""
 
@@ -35,7 +29,6 @@ def create_checkout_node(agent_settings: AgentSettings):
             await checkout_task_branch(
                 task.id,
                 task.name,
-                "coder",
                 git_branch,
                 agent_settings,
             )
@@ -48,7 +41,7 @@ def create_checkout_node(agent_settings: AgentSettings):
 
 
 async def checkout_task_branch(
-    task_id: str, task_name: str, role: str, git_branch: str, agent_settings: AgentSettings
+    task_id: str, task_name: str, git_branch: str, agent_settings: AgentSettings
 ):
     """
     Checks out the existing git branch for a task from the database.
@@ -59,7 +52,7 @@ async def checkout_task_branch(
 
     if not git_branch:
         logger.info("No git branch found for task %s", task_id)
-        await checkout_branch_for_task(repo, task_id, task_name, role, agent_settings)
+        await checkout_branch_for_task(repo, task_id, task_name, agent_settings)
     else:
         logger.info(
             "Checking out existing git branch: %s for task %s - %s",
@@ -108,13 +101,12 @@ def _slugify(value: str | None) -> str:
     return value.strip("-")
 
 
-def _build_base_branch_name(task_id: str, task_name: str, role: str) -> str:
+def _build_base_branch_name(task_id: str, task_name: str) -> str:
     slug = _slugify(task_name)
     sanitized_task_id = re.sub(r"[^a-z0-9]", "", task_id.lower())
     short_id = sanitized_task_id[:8] if sanitized_task_id else "task"
     branch_suffix = slug[:48] if slug else "update"
-    role_prefix = ROLE_PREFIXES.get(role, "task")
-    return f"agent/{role_prefix}/{short_id}-{branch_suffix}"
+    return f"agent/{short_id}-{branch_suffix}"
 
 
 def _collect_branch_names(repo: Repo) -> set[str]:
@@ -190,17 +182,16 @@ def _resolve_unique_branch_name(base_name: str, existing_names: set[str]) -> str
 
 
 async def checkout_branch_for_task(
-    repo: Repo, task_id: str, task_name: str, role: str, agent_settings: AgentSettings
+    repo: Repo, task_id: str, task_name: str, agent_settings: AgentSettings
 ):
     """
     Checks out a new git branch for a task.
     The branch name is derived from the task name and guaranteed to be unique.
-    Includes role-specific prefixes for clarity.
     """
     if not task_id or not task_name:
         raise ValueError("task_id and task_name are required to create a git branch.")
 
-    base_branch_name = _build_base_branch_name(task_id, task_name, role)
+    base_branch_name = _build_base_branch_name(task_id, task_name)
     existing_branches = _collect_branch_names(repo)
     branch_name = _resolve_unique_branch_name(base_branch_name, existing_branches)
 

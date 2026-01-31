@@ -3,6 +3,7 @@ Tests for the task fetch node.
 """
 
 from datetime import datetime, timezone
+from types import SimpleNamespace
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
@@ -89,16 +90,13 @@ async def test_task_fetch_node_success(agent_settings, mock_board_provider):
     ), patch(
         "app.agent.nodes.task_fetch_node.fetch_task_from_state",
         new=AsyncMock(
-            side_effect=[
-                None,  # First call: no in-progress task
-                BoardTask(
-                    id="card1",
-                    name="Test Task",
-                    description="Test Description",
-                    state_id="list1",
-                    state_name="To Do",
-                ),  # Second call: todo task
-            ]
+            return_value=BoardTask(
+                id="card1",
+                name="Test Task",
+                description="Test Description",
+                state_id="list1",
+                state_name="To Do",
+            )
         ),
     ), patch(
         "app.agent.nodes.task_fetch_node.move_task_to_state",
@@ -117,7 +115,7 @@ async def test_task_fetch_node_success(agent_settings, mock_board_provider):
         "app.agent.nodes.task_fetch_node.remove_task_from_db",
         return_value=True,
     ) as remove_task_mock:
-        task_fetch = create_task_fetch_node(agent_settings)
+        task_fetch = create_task_fetch_node(agent_settings, None)
         result = await task_fetch({})
 
         assert result["task"].id == "card1"
@@ -127,7 +125,7 @@ async def test_task_fetch_node_success(agent_settings, mock_board_provider):
         assert isinstance(result["messages"][0], SystemMessage)
         assert "Test Task" in result["messages"][0].content
         assert "Test Description" in result["messages"][0].content
-        remove_task_mock.assert_called_once_with("card1")
+        remove_task_mock.assert_not_called()
 
 
 @pytest.mark.asyncio
@@ -154,7 +152,7 @@ async def test_task_fetch_node_no_review_list(agent_settings, mock_board_provide
         "app.agent.nodes.task_fetch_node.get_branch_for_task",
         return_value=None,
     ):
-        task_fetch = create_task_fetch_node(temp_settings)
+        task_fetch = create_task_fetch_node(temp_settings, None)
         result = await task_fetch({})
 
         assert result["task"] is None
@@ -175,7 +173,7 @@ async def test_task_fetch_node_no_cards(agent_settings, mock_board_provider):
         "app.agent.nodes.task_fetch_node.get_branch_for_task",
         return_value=None,
     ):
-        task_fetch = create_task_fetch_node(agent_settings)
+        task_fetch = create_task_fetch_node(agent_settings, None)
         result = await task_fetch({})
 
         assert result["task"] is None
@@ -183,40 +181,18 @@ async def test_task_fetch_node_no_cards(agent_settings, mock_board_provider):
 
 @pytest.mark.asyncio
 async def test_task_fetch_node_with_comments(agent_settings, mock_board_provider):
-    """Test task fetch with comments when task is already in In Progress (returned from review)."""
-    from app.agent.integrations.board_provider import BoardStateMove
+    """Task resumes when db_task exists and is already in progress."""
 
-    # Task is already in "In Progress" state (returned from review)
-    mock_board_provider.get_tasks_from_state = AsyncMock(
-        return_value=[
-            BoardTask(
-                id="card1",
-                name="Test Task",
-                description="Test Description",
-                state_id="list2",
-                state_name="In Progress",
-            )
-        ]
+    db_task = SimpleNamespace(task_id="card1")
+    mock_board_provider.get_task = AsyncMock(
+        return_value=BoardTask(
+            id="card1",
+            name="Test Task",
+            description="Test Description",
+            state_id="list2",
+            state_name="In Progress",
+        )
     )
-
-    # Set up state moves: task was moved to "In Review" (review), then back to "In Progress"
-    mock_moves = [
-        BoardStateMove(
-            id="move1",
-            date=datetime(2024, 1, 1, 11, 0, 0, tzinfo=timezone.utc),
-            state_before="In Progress",
-            state_after="In Review",
-        ),
-        BoardStateMove(
-            id="move2",
-            date=datetime(2024, 1, 1, 14, 0, 0, tzinfo=timezone.utc),
-            state_before="In Review",
-            state_after="In Progress",
-        ),
-    ]
-    mock_board_provider.get_state_moves = AsyncMock(return_value=mock_moves)
-
-    # Comment within the review period
     mock_comments = [
         BoardComment(
             id="comment1",
@@ -225,7 +201,6 @@ async def test_task_fetch_node_with_comments(agent_settings, mock_board_provider
             date=datetime(2024, 1, 1, 12, 0, 0, tzinfo=timezone.utc),
         )
     ]
-    mock_board_provider.get_comments = AsyncMock(return_value=mock_comments)
 
     with patch(
         "app.agent.nodes.task_fetch_node.create_board_provider",
@@ -236,17 +211,169 @@ async def test_task_fetch_node_with_comments(agent_settings, mock_board_provider
     ), patch(
         "app.agent.nodes.task_fetch_node.get_branch_for_task",
         return_value="feature/existing-branch",
+    ), patch(
+        "app.agent.nodes.task_fetch_node.fetch_review_comments",
+        new=AsyncMock(return_value=mock_comments),
     ):
-        task_fetch = create_task_fetch_node(
-            agent_settings
-        )
+        task_fetch = create_task_fetch_node(agent_settings, db_task)
         result = await task_fetch({})
 
-        # Comments should be included since task was already in In Progress (returned from review)
-        assert result["task_comments"] is not None
-        assert len(result["task_comments"]) == 1
-        assert result["task_comments"][0].text == "Please fix the bug"
+        assert result["task"].id == "card1"
+        assert result["task_comments"] == mock_comments
         assert result["git_branch"] == "feature/existing-branch"
+
+
+@pytest.mark.asyncio
+async def test_task_fetch_node_waits_when_task_in_review(agent_settings, mock_board_provider):
+    """No new task should be assigned if current task is in review state."""
+
+    db_task = SimpleNamespace(task_id="card1")
+    mock_board_provider.get_task = AsyncMock(
+        return_value=BoardTask(
+            id="card1",
+            name="Review Task",
+            description="Needs review",
+            state_id="list3",
+            state_name="In Review",
+        )
+    )
+
+    fetch_task_from_state_mock = AsyncMock(return_value=None)
+
+    with patch(
+        "app.agent.nodes.task_fetch_node.create_board_provider",
+        return_value=mock_board_provider,
+    ), patch(
+        "app.agent.nodes.task_fetch_node.get_pr_info_for_task",
+        return_value=(None, None),
+    ), patch(
+        "app.agent.nodes.task_fetch_node.get_branch_for_task",
+        return_value=None,
+    ), patch(
+        "app.agent.nodes.task_fetch_node.fetch_task_from_state",
+        new=fetch_task_from_state_mock,
+    ):
+        task_fetch = create_task_fetch_node(agent_settings, db_task)
+        result = await task_fetch({})
+
+        assert result["task"] is None
+        fetch_task_from_state_mock.assert_not_awaited()
+
+
+@pytest.mark.asyncio
+async def test_task_fetch_node_removes_stale_task(agent_settings, mock_board_provider):
+    """Stale db task should be removed and replaced with new todo task."""
+
+    db_task = SimpleNamespace(task_id="card1")
+    mock_board_provider.get_task = AsyncMock(
+        return_value=BoardTask(
+            id="card1",
+            name="Old Task",
+            description="Old",
+            state_id="list4",
+            state_name="Done",
+        )
+    )
+
+    fetch_task_from_state_mock = AsyncMock(
+        return_value=BoardTask(
+            id="card2",
+            name="New Task",
+            description="New Description",
+            state_id="list1",
+            state_name="To Do",
+        )
+    )
+    move_task_to_state_mock = AsyncMock(
+        return_value=BoardTask(
+            id="card2",
+            name="New Task",
+            description="New Description",
+            state_id="list2",
+            state_name="In Progress",
+        )
+    )
+
+    with patch(
+        "app.agent.nodes.task_fetch_node.create_board_provider",
+        return_value=mock_board_provider,
+    ), patch(
+        "app.agent.nodes.task_fetch_node.get_pr_info_for_task",
+        return_value=(None, None),
+    ), patch(
+        "app.agent.nodes.task_fetch_node.get_branch_for_task",
+        return_value=None,
+    ), patch(
+        "app.agent.nodes.task_fetch_node.fetch_task_from_state",
+        new=fetch_task_from_state_mock,
+    ), patch(
+        "app.agent.nodes.task_fetch_node.move_task_to_state",
+        new=move_task_to_state_mock,
+    ), patch(
+        "app.agent.nodes.task_fetch_node.delete_plan"
+    ), patch(
+        "app.agent.nodes.task_fetch_node.remove_task_from_db",
+        return_value=True,
+    ) as remove_task_mock:
+        task_fetch = create_task_fetch_node(agent_settings, db_task)
+        result = await task_fetch({})
+
+        assert result["task"].id == "card2"
+        remove_task_mock.assert_called_once_with("card1")
+
+
+@pytest.mark.asyncio
+async def test_task_fetch_node_handles_missing_db_task(agent_settings, mock_board_provider):
+    """Missing db task on board should be removed before assigning a new one."""
+
+    db_task = SimpleNamespace(task_id="card-missing")
+    mock_board_provider.get_task = AsyncMock(return_value=None)
+
+    fetch_task_from_state_mock = AsyncMock(
+        return_value=BoardTask(
+            id="card2",
+            name="Replacement Task",
+            description="Replacement",
+            state_id="list1",
+            state_name="To Do",
+        )
+    )
+    move_task_to_state_mock = AsyncMock(
+        return_value=BoardTask(
+            id="card2",
+            name="Replacement Task",
+            description="Replacement",
+            state_id="list2",
+            state_name="In Progress",
+        )
+    )
+
+    with patch(
+        "app.agent.nodes.task_fetch_node.create_board_provider",
+        return_value=mock_board_provider,
+    ), patch(
+        "app.agent.nodes.task_fetch_node.get_pr_info_for_task",
+        return_value=(None, None),
+    ), patch(
+        "app.agent.nodes.task_fetch_node.get_branch_for_task",
+        return_value=None,
+    ), patch(
+        "app.agent.nodes.task_fetch_node.fetch_task_from_state",
+        new=fetch_task_from_state_mock,
+    ), patch(
+        "app.agent.nodes.task_fetch_node.move_task_to_state",
+        new=move_task_to_state_mock,
+    ), patch(
+        "app.agent.nodes.task_fetch_node.delete_plan"
+    ), patch(
+        "app.agent.nodes.task_fetch_node.remove_task_from_db",
+        return_value=True,
+    ) as remove_task_mock:
+        task_fetch = create_task_fetch_node(agent_settings, db_task)
+        result = await task_fetch({})
+
+        assert result["task"].id == "card2"
+        remove_task_mock.assert_called_once_with("card-missing")
 
 
 @pytest.mark.asyncio
@@ -317,13 +444,13 @@ async def test_task_fetch_node_no_comments_from_todo(
         "app.agent.nodes.task_fetch_node.remove_task_from_db",
         return_value=True,
     ) as remove_task_mock:
-        task_fetch = create_task_fetch_node(agent_settings)
+        task_fetch = create_task_fetch_node(agent_settings, None)
         result = await task_fetch({})
 
         # Comments should NOT be included since task was picked from To Do
         assert result["task_comments"] is not None
-        assert len(result["task_comments"]) == 0
-        remove_task_mock.assert_called_once_with("card1")
+        assert len(result["task_comments"] or []) == 0
+        remove_task_mock.assert_not_called()
 
 
 @pytest.mark.asyncio
