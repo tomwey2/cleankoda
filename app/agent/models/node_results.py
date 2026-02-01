@@ -13,7 +13,7 @@ if TYPE_CHECKING:
 
 
 @dataclass
-class TaskResolutionResult:
+class TaskResolveResult:
     """Result of resolving which task to work on."""
 
     task: "BoardTask | None"

@@ -16,7 +16,7 @@ from app.agent.integrations.board_factory import (
 
 from app.agent.integrations.board_provider import BoardTask
 
-from app.agent.models.node_results import PRReviewInfo, TaskResolutionResult
+from app.agent.models.node_results import PRReviewInfo, TaskResolveResult
 from app.agent.services.pull_request import (
     format_pr_review_message,
     get_latest_open_pr_for_branch,
@@ -56,7 +56,7 @@ def create_task_fetch_node(agent_settings: AgentSettings, db_task: Optional[Task
                 logger.warning("No review state configured in task system")
                 return {"task": None}
 
-            resolution: TaskResolutionResult = await _resolve_task(
+            task_result: TaskResolveResult = await _resolve_task(
                 board_provider,
                 active_task_system.state_in_progress,
                 active_task_system.state_todo,
@@ -64,33 +64,33 @@ def create_task_fetch_node(agent_settings: AgentSettings, db_task: Optional[Task
                 db_task,
             )
 
-            if not resolution.task:
+            if not task_result.task:
                 logger.info("There is no current task to work on.")
                 return {
                     "task": None,
                     "messages": [],
-                    "task_comments": resolution.comments,
-                    "git_branch": resolution.git_branch or "",
+                    "task_comments": task_result.comments,
+                    "git_branch": task_result.git_branch or "",
                     "current_node": "task_fetch",
                 }
 
             logger.info(
-                "Processing task ID: %s - %s", resolution.task.id, resolution.task.name
+                "Processing task ID: %s - %s", task_result.task.id, task_result.task.name
             )
 
             message_content = _build_message_content(
-                resolution.task.name,
-                resolution.task.description,
-                resolution.comments,
-                resolution.pr_review_message,
+                task_result.task.name,
+                task_result.task.description,
+                task_result.comments,
+                task_result.pr_review_message,
             )
             result = {
-                "task": resolution.task,
+                "task": task_result.task,
                 "messages": [HumanMessage(content=message_content)],
-                "task_comments": resolution.comments,
+                "task_comments": task_result.comments,
                 "current_node": "task_fetch",
             }
-            result["git_branch"] = resolution.git_branch or ""
+            result["git_branch"] = task_result.git_branch or ""
             return result
 
         except Exception as e:  # pylint: disable=broad-exception-caught
@@ -106,12 +106,12 @@ async def _resolve_task(
     todo_state: str,
     review_state: str,
     db_task: Optional[Task],
-) -> TaskResolutionResult:
+) -> TaskResolveResult:
     """
     Resolve which task to work on: either continue in-progress task or fetch new from todo.
 
     Returns:
-        TaskResolutionResult with task, comments, PR review message, and git branch
+        TaskResolveResult with task, comments, PR review message, and git branch
     """
 
     logger.info("db_task: %s", db_task)
@@ -132,7 +132,7 @@ async def _resume_existing_task(
     in_progress_state: str,
     review_state: str,
     db_task: Optional[Task],
-) -> TaskResolutionResult | None:
+) -> TaskResolveResult | None:
 
     if not db_task or not db_task.task_id:
         return None
@@ -173,7 +173,7 @@ async def _resume_existing_task(
     pr_info: PRReviewInfo = _fetch_pr_review_info(task.id)
 
     branch_name = get_branch_for_task(task.id)
-    return TaskResolutionResult(
+    return TaskResolveResult(
         task=task,
         comments=comments,
         pr_review_message=pr_info.formatted_message,
@@ -185,7 +185,7 @@ async def _assign_new_task(
     board_provider,
     in_progress_state: str,
     todo_state: str,
-) -> TaskResolutionResult:
+) -> TaskResolveResult:
     logger.info("fetch new task from todo")
     task = await fetch_task_from_state(board_provider, todo_state)
     if not task:
@@ -194,7 +194,7 @@ async def _assign_new_task(
     task = await move_task_to_state(board_provider, task, in_progress_state)
     logger.info("Moved task to %s", task.state_name)
     # delete plan.md
-    return TaskResolutionResult(
+    return TaskResolveResult(
         task=task,
         comments=[],
         pr_review_message="",
@@ -202,8 +202,8 @@ async def _assign_new_task(
     )
 
 
-def _empty_resolution() -> TaskResolutionResult:
-    return TaskResolutionResult(
+def _empty_resolution() -> TaskResolveResult:
+    return TaskResolveResult(
         task=None,
         comments=[],
         pr_review_message="",
