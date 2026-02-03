@@ -49,9 +49,10 @@ def _trim_trailing_invalid_ai(messages: list[BaseMessage]) -> list[BaseMessage]:
     return result
 
 
+# pylint: disable=too-many-locals
 def filter_messages_for_llm(
     messages: list[BaseMessage], max_messages: int = 10
-) -> list[BaseMessage]: # pylint: disable=too-many-locals
+) -> list[BaseMessage]:
     """Filter messages to keep task context and recent history while maintaining valid stack.
 
     This function performs filtering that preserves message stack validity:
@@ -98,28 +99,6 @@ def filter_messages_for_llm(
 
     # Messages after first human (that we can potentially filter)
     messages_after_human = non_system_messages[first_human_idx + 1:]
-
-    if not messages_after_human:
-        # Only first human exists
-        filtered_messages = system_messages + [first_human]
-
-        # Log and return
-        filtered_count = len(filtered_messages)
-        filtered_tokens = _estimate_tokens(filtered_messages)
-        saved_tokens = original_tokens - filtered_tokens
-        saved_percentage = (
-            (saved_tokens / original_tokens * 100) if original_tokens > 0 else 0
-        )
-        logger.info(
-            "Message filter: %d → %d messages (~%d → ~%d tokens, saved ~%d tokens / %.1f%%)",
-            original_count,
-            filtered_count,
-            original_tokens,
-            filtered_tokens,
-            saved_tokens,
-            saved_percentage,
-        )
-        return filtered_messages
 
     # Calculate window: keep last (max_messages - 1) messages after first human
     remaining_slots = max_messages - 1
