@@ -7,7 +7,7 @@ This document describes the message stack structure used by the AI coding agent.
 ## Message Types
 
 | Type | Role | Purpose |
-|------|------|---------|
+| ---- | ---- | ------- |
 | **SystemMessage** | `system` | Role instructions, injected fresh per node |
 | **HumanMessage** | `user` | User requests, corrections, feedback |
 | **AIMessage** | `assistant` | AI responses, tool calls, acknowledgments |
@@ -19,13 +19,14 @@ This document describes the message stack structure used by the AI coding agent.
 
 Each node that calls the LLM constructs messages as:
 
-```
+```text
 [SystemMessage(role-specific)]  ← Fresh for each node invocation
     ↓
 [Filtered conversation history]  ← Preserved context from state
 ```
 
 The `filter_messages_for_llm()` function ensures:
+
 - **System messages** from history are preserved at start
 - **First HumanMessage** (first non-System message) is the task context anchor
 - **Recent messages** are limited to `max_messages` count
@@ -35,7 +36,8 @@ The `filter_messages_for_llm()` function ensures:
 ### Conversation Flow
 
 #### Successful Tool Call
-```
+
+```text
 [System: "You are coder..."]
 [Human: "Implement feature X"]
 [AI: tool_calls=[write_file]]
@@ -44,7 +46,8 @@ The `filter_messages_for_llm()` function ensures:
 ```
 
 #### Retry on Invalid Response
-```
+
+```text
 [System: "You are coder..."]
 [Human: "Implement feature X"]
 [AI: ""]  ← Invalid: no tool_calls (not added to state)
@@ -115,7 +118,7 @@ return {
 
 **Example with `max_messages=4`:**
 
-```
+```text
 Input:  [System] + [Task] + [AI1] + [Human1] + [AI2] + [Human2] + [AI3] + [Human3]
 Output: [System] + [Task] + [AI3] + [Human3]
               ↑      ↑        ↑        ↑

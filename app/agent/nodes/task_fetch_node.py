@@ -90,7 +90,9 @@ def create_task_fetch_node(agent_settings: AgentSettings, db_task: Task):
     return task_fetch
 
 
-async def _cleanup_new_task(task: BoardTask, board_provider, active_task_system) -> BoardTask:
+async def _cleanup_new_task(
+    task: BoardTask, board_provider, active_task_system
+) -> BoardTask:
     """
     Process the task and prepare the return value.
     """
@@ -115,12 +117,12 @@ async def _resolve_task(
 
     if task_id:
         logger.info("Fetching tasks from board: %s", task_id)
-        
+
         try:
             task = await board_provider.get_task(task_id)
         except Exception:
             task = None
-        
+
         if task:
             # check if task in review or in progress
             if task.state_name == active_task_system.state_in_review:
