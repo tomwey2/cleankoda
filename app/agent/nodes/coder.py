@@ -50,10 +50,9 @@ def create_coder_node(llm, tools, agent_stack):
                 chain = llm.bind_tools(tools, tool_choice=current_tool_choice)
                 response = await chain.ainvoke(current_messages)
 
-                has_content = bool(response.content)
                 has_tool_calls = bool(getattr(response, "tool_calls", []))
 
-                if has_content or has_tool_calls:
+                if has_tool_calls:
                     log_agent_response(
                         "coder",
                         response,
@@ -70,19 +69,15 @@ def create_coder_node(llm, tools, agent_stack):
                     return result
 
                 logger.warning(
-                    "Attempt %d: Empty response. Escalating strategy...", attempt + 1
+                    "Attempt %d: No tool calls. Escalating strategy...", attempt + 1
                 )
                 current_tool_choice = "any"
-                current_messages.append(
-                    AIMessage(
-                        content="I have analyzed the files and planned the changes. "
-                        + "I am ready to write the code."
-                    )
-                )
+                # Add the invalid response so AI sees its mistake
+                current_messages.append(response)
                 current_messages.append(
                     HumanMessage(
-                        content="Good. STOP THINKING. Call 'write_to_file' "
-                        + "NOW with the complete content."
+                        content="ERROR: Invalid response. You MUST call a tool. "
+                        + "Use 'write_to_file' with the complete content NOW."
                     )
                 )
 

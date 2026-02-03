@@ -143,7 +143,6 @@ def create_router_node(llm):
 
         return {
             "next_step": next_step,
-            "task_type": task_type,
             "task_skill_level": response.skill_level,
             "current_node": "router",
         }

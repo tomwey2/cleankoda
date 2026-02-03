@@ -8,7 +8,7 @@ preparing them for processing by the agent.
 import logging
 from typing import Optional
 
-from langchain_core.messages import SystemMessage
+from langchain_core.messages import HumanMessage
 
 from app.agent.integrations.board_factory import create_board_provider
 from app.agent.integrations.board_provider import BoardTask
@@ -60,7 +60,7 @@ def create_task_fetch_node(agent_settings: AgentSettings, db_task: Task):
             pr_review_message = ""
             if task_is_new:
                 # if the task is new and has the state "todo" then clean up the workspace
-                await _cleanup_new_task(task, board_provider, active_task_system)
+                task = await _cleanup_new_task(task, board_provider, active_task_system)
             else:
                 # otherwise fetch revie comments from board and pr, in order
                 # to give further user information
@@ -78,7 +78,7 @@ def create_task_fetch_node(agent_settings: AgentSettings, db_task: Task):
 
             return {
                 "task": task,
-                "messages": [SystemMessage(content=system_content)],  # NICHT HIER!
+                "messages": [HumanMessage(content=system_content)],
                 "task_comments": comments,
                 "current_node": "task_fetch",
             }
@@ -90,7 +90,7 @@ def create_task_fetch_node(agent_settings: AgentSettings, db_task: Task):
     return task_fetch
 
 
-async def _cleanup_new_task(task: BoardTask, board_provider, active_task_system):
+async def _cleanup_new_task(task: BoardTask, board_provider, active_task_system) -> BoardTask:
     """
     Process the task and prepare the return value.
     """
@@ -99,6 +99,7 @@ async def _cleanup_new_task(task: BoardTask, board_provider, active_task_system)
         board_provider, task, active_task_system.state_in_progress
     )
     delete_plan()
+    return task
 
 
 async def _resolve_task(
