@@ -115,7 +115,12 @@ async def _resolve_task(
 
     if task_id:
         logger.info("Fetching tasks from board: %s", task_id)
-        task = await board_provider.get_task(task_id)
+        
+        try:
+            task = await board_provider.get_task(task_id)
+        except Exception:
+            task = None
+        
         if task:
             # check if task in review or in progress
             if task.state_name == active_task_system.state_in_review:
