@@ -81,9 +81,10 @@ async def _execute_agent_cycle(runtime: AgentRuntimeContext) -> None:
             "messages": [],
             "next_step": "",
             "task": None,
+            "task_comments": [],
+            "task_skill_level": None,
             "agent_stack": runtime.agent_stack,
             "agent_skill_level": runtime.agent_settings.agent_skill_level,
-            "task_skill_level": None,
             "plan_state": None,
             "current_node": None,
         }
@@ -97,10 +98,7 @@ async def _execute_agent_cycle(runtime: AgentRuntimeContext) -> None:
         async for current_state in app_graph.astream(
             inputs, config=thread_config, stream_mode="values"
         ):
-            if (
-                current_state["current_node"]
-                and current_state["current_node"] != "task_fetch"
-            ):
+            if current_state["current_node"] and current_state["current_node"] != "task_fetch":
                 save_state_to_workspace(current_state)
 
         logger.info("Finish graph cycle.")

@@ -6,9 +6,6 @@ preparing them for processing by the agent.
 """
 
 import logging
-from typing import Optional
-
-from langchain_core.messages import HumanMessage
 
 from app.agent.integrations.board_factory import create_board_provider
 from app.agent.integrations.board_provider import BoardTask
@@ -48,9 +45,7 @@ def create_task_fetch_node(agent_settings: AgentSettings, db_task: Task):
                 raise RuntimeError("active_task_system is not set.")
 
             task_id: str | None = db_task.task_id if db_task else None
-            task, task_is_new = await _resolve_task(
-                task_id, board_provider, active_task_system
-            )
+            task, task_is_new = await _resolve_task(task_id, board_provider, active_task_system)
 
             if not task:
                 logger.info("There is no current task to work on.")
@@ -72,14 +67,10 @@ def create_task_fetch_node(agent_settings: AgentSettings, db_task: Task):
                 )
                 pr_review_message = _fetch_pr_review_info(task.id)
 
-            system_content = _build_system_message_content(
-                task.name, task.description, comments, pr_review_message
-            )
-
             return {
                 "task": task,
-                "messages": [HumanMessage(content=system_content)],
                 "task_comments": comments,
+                "pr_review_message": pr_review_message,
                 "current_node": "task_fetch",
             }
 
@@ -90,23 +81,19 @@ def create_task_fetch_node(agent_settings: AgentSettings, db_task: Task):
     return task_fetch
 
 
-async def _cleanup_new_task(
-    task: BoardTask, board_provider, active_task_system
-) -> BoardTask:
+async def _cleanup_new_task(task: BoardTask, board_provider, active_task_system) -> BoardTask:
     """
     Process the task and prepare the return value.
     """
     logger.info("Processing task ID: %s - %s", task.id, task.name)
-    task = await move_task_to_state(
-        board_provider, task, active_task_system.state_in_progress
-    )
+    task = await move_task_to_state(board_provider, task, active_task_system.state_in_progress)
     delete_plan()
     return task
 
 
 async def _resolve_task(
     task_id: str | None, board_provider, active_task_system
-) -> tuple[Optional[BoardTask], bool]:
+) -> tuple[BoardTask | None, bool]:
     """
     Get the last task (with task_id) or create a new task.
     See specification in task_management.md.
@@ -120,7 +107,7 @@ async def _resolve_task(
 
         try:
             task = await board_provider.get_task(task_id)
-        except Exception: # pylint: disable=broad-exception-caught
+        except Exception:  # pylint: disable=broad-exception-caught
             task = None
 
         if task:
@@ -172,9 +159,7 @@ def _fetch_pr_review_info(task_id: str) -> str:
         logger.info("No PR found for task %s", task_id)
         return ""
 
-    is_approved, rejection_reviews, code_comments = get_latest_pr_review_status(
-        pr_number
-    )
+    is_approved, rejection_reviews, code_comments = get_latest_pr_review_status(pr_number)
 
     if is_approved:
         logger.info("PR #%d for task %s is approved", pr_number, task_id)
@@ -189,45 +174,3 @@ def _fetch_pr_review_info(task_id: str) -> str:
     )
 
     return format_pr_review_message(pr_url or "", rejection_reviews, code_comments)
-
-
-def _build_system_message_content(
-    task_name: str,
-    task_description: str,
-    comments: list,
-    pr_review_message: str = "",
-) -> str:
-    """
-    Build the system message content including task details and optional review comments.
-
-    Args:
-        task_name: Name of the task
-        task_description: Description of the task
-        comments: List of board review comments (may be empty)
-        pr_review_message: Formatted PR review feedback (may be empty)
-
-    Returns:
-        Formatted system message content string
-    """
-    system_content = f"Task: {task_name}\n\nDescription:\n{task_description}"
-
-    if comments:
-        system_content += (
-            "\n\n--- The Pull Request was rejected with "
-            + "the following review comments: ---\n"
-            + "NOTE: The task description shows the current implementation. "
-            + "The comments below indicate ADDITIONAL work that needs to be done.\n"
-        )
-        for comment in reversed(comments):
-            author = comment.author
-            text = comment.text
-            date = comment.date.isoformat()
-            system_content += f"\n[{date}] {author}:\n{text}\n"
-
-        logger.info("Board review message content: %s", system_content)
-
-    if pr_review_message:
-        system_content += pr_review_message
-        logger.info("PR review message appended: %s", pr_review_message)
-
-    return system_content

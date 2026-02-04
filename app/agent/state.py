@@ -9,12 +9,12 @@ task details, and internal counters.
 
 from datetime import datetime
 from enum import StrEnum
-from typing import Annotated, Optional, TypedDict
+from typing import Annotated, TypedDict
 
 from langchain_core.messages import BaseMessage
 from langgraph.graph.message import add_messages
 
-from app.agent.integrations.board_provider import BoardTask
+from app.agent.integrations.board_provider import BoardTask, BoardComment
 
 
 class PlanState(StrEnum):
@@ -54,15 +54,18 @@ class AgentState(TypedDict):
 
     messages: Annotated[list[BaseMessage], add_messages]
     next_step: str
-    task: Optional[BoardTask]
-    task_skill_level: Optional[str]
+    task: BoardTask | None
+    task_comments: list[BoardComment]
+    pr_review_message: str | None
+    task_type: TaskType | None
+    task_skill_level: str | None
     agent_stack: str  # Backend or Frontend
     retry_count: int  # Attempts: how often switched between coder and tester
-    test_result: Optional[str]
-    error_log: Optional[str]  # Optional: Stores the last error explicitly
-    git_branch: Optional[str]
-    agent_skill_level: Optional[str]
-    agent_summary: Optional[list[str]]
-    plan_state: Optional[PlanState]
-    current_node: Optional[str]
-    last_update: Optional[datetime]
+    test_result: str | None
+    error_log: str | None  # Optional: Stores the last error explicitly
+    git_branch: str | None
+    agent_skill_level: str | None
+    agent_summary: list[str] | None
+    plan_state: PlanState | None
+    current_node: str | None
+    last_update: datetime | None

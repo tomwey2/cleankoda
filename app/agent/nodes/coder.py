@@ -12,7 +12,7 @@ from langchain_core.messages import AIMessage, BaseMessage, HumanMessage, System
 
 from app.agent.services.logging import log_agent_response
 from app.agent.services.message_processing import filter_messages_for_llm
-from app.agent.services.prompts import load_system_prompt
+from app.agent.services.prompts import load_prompt, load_system_prompt
 from app.agent.services.summaries import record_finish_task_summary
 from app.agent.state import AgentState
 
@@ -31,16 +31,19 @@ def create_coder_node(llm, tools, agent_stack):
     Returns:
         A function that represents the coder node.
     """
-    sys_msg = load_system_prompt(agent_stack, "coder")
+    system_message = load_system_prompt(agent_stack, "coder")
 
     async def coder_node(state: AgentState):
         # Filter messages to keep only recent relevant context (original task + last 15 messages)
         # pylint: disable=duplicate-code
+        human_message = load_prompt("prompt_coder.md", state)
         filtered_messages = filter_messages_for_llm(state["messages"], max_messages=25)
-        current_messages: list[BaseMessage | SystemMessage] = [
-            SystemMessage(content=sys_msg)
+        current_messages: list[BaseMessage | SystemMessage | HumanMessage] = [
+            SystemMessage(content=system_message),
+            HumanMessage(content=human_message),
         ]
 
+        logger.info("Human messages:\n%s", human_message)
         current_messages += filtered_messages
 
         current_tool_choice = "auto"
@@ -68,9 +71,7 @@ def create_coder_node(llm, tools, agent_stack):
                         result["agent_summary"] = agent_summary
                     return result
 
-                logger.warning(
-                    "Attempt %d: No tool calls. Escalating strategy...", attempt + 1
-                )
+                logger.warning("Attempt %d: No tool calls. Escalating strategy...", attempt + 1)
                 current_tool_choice = "any"
                 current_messages.append(
                     HumanMessage(
@@ -95,9 +96,7 @@ def create_coder_node(llm, tools, agent_stack):
                 }
             ],
         )
-        recorded, agent_summary = record_finish_task_summary(
-            state, "coder", fallback_message
-        )
+        recorded, agent_summary = record_finish_task_summary(state, "coder", fallback_message)
         result: dict[str, Any] = {"messages": [fallback_message]}
         if recorded:
             result["agent_summary"] = agent_summary
