@@ -13,7 +13,7 @@ from pathlib import Path
 
 
 @dataclass(frozen=True)
-class EnvironmentSettings:
+class EnvironmentSettings:  # pylint: disable=too-many-instance-attributes
     """Accumulates all environment variables used in the application.
 
     This dataclass centralizes environment variable access, making the code
