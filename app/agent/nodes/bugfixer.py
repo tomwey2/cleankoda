@@ -50,10 +50,9 @@ def create_bugfixer_node(llm, tools, agent_stack):
                 chain = llm.bind_tools(tools, tool_choice=current_tool_choice)
                 response = await chain.ainvoke(current_messages)
 
-                has_content = bool(response.content)
                 has_tool_calls = bool(getattr(response, "tool_calls", []))
 
-                if has_content or has_tool_calls:
+                if has_tool_calls:
                     log_agent_response(
                         "bugfixer",
                         response,
@@ -69,11 +68,10 @@ def create_bugfixer_node(llm, tools, agent_stack):
                         result["agent_summary"] = agent_summary
                     return result
 
-                logger.warning("Attempt %d: Empty response. Escalating...", attempt + 1)
+                logger.warning("Attempt %d: No tool calls. Escalating...", attempt + 1)
                 current_tool_choice = "any"
-                current_messages.append(AIMessage(content="Thinking..."))
                 current_messages.append(
-                    HumanMessage(content="ERROR: Empty response. Use a tool!")
+                    HumanMessage(content="ERROR: Invalid response. You MUST call a tool!")
                 )
 
             except Exception as e:  # pylint: disable=broad-exception-caught

@@ -6,7 +6,7 @@ from datetime import datetime, timezone
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
-from langchain_core.messages import SystemMessage
+from langchain_core.messages import HumanMessage
 
 from app.agent.integrations.board_provider import BoardComment, BoardTask
 from app.agent.nodes.task_fetch_node import (
@@ -120,14 +120,14 @@ async def test_task_fetch_node_success(agent_settings, mock_board_provider):
         assert result["task"].name == "Test Task"
         assert result["task"].state_id == "list2"  # Moved to in-progress state
         assert len(result["messages"]) == 1
-        assert isinstance(result["messages"][0], SystemMessage)
+        assert isinstance(result["messages"][0], HumanMessage)
         assert "Test Task" in result["messages"][0].content
         assert "Test Description" in result["messages"][0].content
 
 
 @pytest.mark.asyncio
 async def test_task_fetch_node_no_review_list(agent_settings, mock_board_provider):
-    """Test task fetch when no review list is configured."""
+    """Test task fetch when no review list is configured - should still fetch from To Do."""
     temp_settings = AgentSettings(task_system_type="TRELLO")
     task_system = TaskSystem(
         task_system_type="TRELLO",
@@ -149,12 +149,39 @@ async def test_task_fetch_node_no_review_list(agent_settings, mock_board_provide
         "app.agent.nodes.task_fetch_node.get_branch_for_task",
         return_value=None,
     ), patch(
+        "app.agent.nodes.task_fetch_node.fetch_task_from_state",
+        new=AsyncMock(
+            return_value=BoardTask(
+                id="card1",
+                name="Test Task",
+                description="Test Description",
+                state_id="list1",
+                state_name="To Do",
+            )
+        ),
+    ), patch(
+        "app.agent.nodes.task_fetch_node.move_task_to_state",
+        new=AsyncMock(
+            return_value=BoardTask(
+                id="card1",
+                name="Test Task",
+                description="Test Description",
+                state_id="list2",
+                state_name="In Progress",
+            )
+        ),
+    ), patch(
+        "app.agent.nodes.task_fetch_node.delete_plan"
+    ), patch(
         "app.agent.nodes.task_fetch_node.remove_task_from_db"
     ):
         task_fetch = create_task_fetch_node(temp_settings, None)
         result = await task_fetch({})
 
-        assert result["task"] is None
+        # Should still fetch task from To Do even without review list
+        assert result["task"] is not None
+        assert result["task"].id == "card1"
+        assert result["task"].state_id == "list2"  # Moved to in-progress
 
 
 @pytest.mark.asyncio

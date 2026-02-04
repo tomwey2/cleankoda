@@ -5,7 +5,7 @@ from __future__ import annotations
 import logging
 import re
 
-from langchain_core.messages import AIMessage, BaseMessage, HumanMessage, SystemMessage
+from langchain_core.messages import AIMessage, BaseMessage, HumanMessage, SystemMessage, ToolMessage
 
 logger = logging.getLogger(__name__)
 
@@ -26,49 +26,113 @@ def _estimate_tokens(messages: list[BaseMessage]) -> int:
     return total_chars // 4
 
 
-def _find_first_human_message(messages: list[BaseMessage]) -> int | None:
-    """Find index of first HumanMessage (original task)."""
-    for idx, msg in enumerate(messages):
-        if isinstance(msg, HumanMessage):
-            return idx
-    return None
+def _collect_tool_call_ids(ai_msg: AIMessage) -> set[str]:
+    """Extract all tool call IDs from an AIMessage."""
+    if not ai_msg.tool_calls:
+        return set()
+    return {tc.get("id") for tc in ai_msg.tool_calls if tc.get("id")}
 
 
-def _find_safe_start_boundary(
-    messages: list[BaseMessage], recent_start_idx: int
-) -> int:
-    """Find a safe starting point by scanning forward from the cutoff."""
-    adjusted_start_idx = recent_start_idx
-
-    for idx in range(recent_start_idx, len(messages)):
-        msg = messages[idx]
-        if isinstance(msg, (HumanMessage, AIMessage)):
-            adjusted_start_idx = idx
+def _trim_trailing_invalid_ai(messages: list[BaseMessage]) -> list[BaseMessage]:
+    """Remove trailing AIMessages that have no content and no tool_calls.
+    
+    An AIMessage is invalid as the last message if it has no content AND no tool_calls.
+    """
+    result = list(messages)
+    while result and isinstance(result[-1], AIMessage):
+        ai_msg = result[-1]
+        has_content = bool(getattr(ai_msg, "content", None))
+        has_tool_calls = bool(getattr(ai_msg, "tool_calls", None))
+        if has_content or has_tool_calls:
             break
+        result = result[:-1]
+    return result
 
-    return adjusted_start_idx
 
-
-def _trim_trailing_invalid_ai_messages(
-    messages: list[BaseMessage],
+# pylint: disable=too-many-locals
+def filter_messages_for_llm(
+    messages: list[BaseMessage], max_messages: int = 10
 ) -> list[BaseMessage]:
-    """Remove trailing AIMessages without tool_calls."""
-    trimmed = list(messages)
-    while trimmed and isinstance(trimmed[-1], AIMessage):
-        ai_msg = trimmed[-1]
-        if getattr(ai_msg, "tool_calls", None):
+    """Filter messages to keep task context and recent history while maintaining valid stack.
+
+    This function performs filtering that preserves message stack validity:
+    1. System messages always kept at the start
+    2. First HumanMessage (after system messages) is the task context
+    3. Most recent messages up to max_messages (excluding first human)
+    4. Tool call/response pairs are preserved (if AIMessage with tool_calls is kept,
+       all corresponding ToolMessages are also kept)
+    5. Trailing empty AIMessages are removed
+    
+    If no HumanMessage is found, logs a warning and returns the entire stack.
+    """
+    if not messages:
+        return []
+
+    # Track original message count and token estimate for logging
+    original_count = len(messages)
+    original_tokens = _estimate_tokens(messages)
+
+    # Separate system messages (always kept at the beginning)
+    system_messages = [msg for msg in messages if isinstance(msg, SystemMessage)]
+    non_system_messages = [
+        msg for msg in messages if not isinstance(msg, SystemMessage)
+    ]
+
+    if not non_system_messages:
+        return system_messages
+
+    # Find the first HumanMessage (the task context)
+    first_human_idx = -1
+    for i, msg in enumerate(non_system_messages):
+        if isinstance(msg, HumanMessage):
+            first_human_idx = i
             break
-        trimmed = trimmed[:-1]
-    return trimmed
 
+    # If no HumanMessage found, log warning and return entire stack
+    if first_human_idx == -1:
+        logger.warning(
+            "No HumanMessage found in message stack. Returning entire stack without filtering."
+        )
+        return messages
 
-def _log_token_savings(
-    original_count: int,
-    original_tokens: int,
-    filtered_count: int,
-    filtered_tokens: int,
-) -> None:
-    """Log token savings statistics."""
+    first_human = non_system_messages[first_human_idx]
+
+    # Messages after first human (that we can potentially filter)
+    messages_after_human = non_system_messages[first_human_idx + 1:]
+
+    # Calculate window: keep last (max_messages - 1) messages after first human
+    remaining_slots = max_messages - 1
+    window_start = max(0, len(messages_after_human) - remaining_slots)
+    window_messages = messages_after_human[window_start:]
+
+    # Check if window starts mid-tool-sequence and extend backwards if needed
+    # If first message in window is a ToolMessage, we may have cut the AIMessage
+    extended_start = window_start
+    if window_messages and isinstance(window_messages[0], ToolMessage):
+        # Find the AIMessage that made this tool call
+        target_tool_id = window_messages[0].tool_call_id
+        for i in range(window_start - 1, -1, -1):
+            msg = messages_after_human[i]
+            if isinstance(msg, AIMessage) and msg.tool_calls:
+                tool_ids = _collect_tool_call_ids(msg)
+                if target_tool_id in tool_ids:
+                    # Found the AIMessage, extend window to include it
+                    extended_start = i
+                    break
+
+    # Rebuild window with extension
+    if extended_start < window_start:
+        window_messages = messages_after_human[extended_start:]
+
+    # Combine: system + first human + window
+    filtered_messages = system_messages + [first_human] + window_messages
+
+    # Remove trailing empty AIMessages
+    filtered_messages = _trim_trailing_invalid_ai(filtered_messages)
+
+    # Log token savings from filtering
+    filtered_count = len(filtered_messages)
+    filtered_tokens = _estimate_tokens(filtered_messages)
     saved_tokens = original_tokens - filtered_tokens
     saved_percentage = (
         (saved_tokens / original_tokens * 100) if original_tokens > 0 else 0
@@ -84,64 +148,6 @@ def _log_token_savings(
         saved_percentage,
     )
 
-
-def filter_messages_for_llm(
-    messages: list[BaseMessage], max_messages: int = 10
-) -> list[BaseMessage]:
-    """Filter messages to keep only the most recent and relevant context."""
-    if not messages:
-        return []
-
-    # Track original message count and token estimate for logging
-    original_count = len(messages)
-    original_tokens = _estimate_tokens(messages)
-
-    # Extract and preserve all system messages
-    # System messages contain critical instructions and must always be included
-    system_messages = [msg for msg in messages if isinstance(msg, SystemMessage)]
-    non_system_messages = [
-        msg for msg in messages if not isinstance(msg, SystemMessage)
-    ]
-
-    # Find the first human message (original task) to preserve context
-    first_human_idx = _find_first_human_message(non_system_messages)
-    # Calculate starting index for recent messages window
-    recent_start_idx = max(0, len(non_system_messages) - max_messages)
-    # Adjust start boundary to ensure we begin at a valid message type
-    adjusted_start_idx = _find_safe_start_boundary(
-        non_system_messages, recent_start_idx
-    )
-
-    # Extract recent messages from the adjusted starting point
-    recent_messages = non_system_messages[adjusted_start_idx:]
-    # Remove trailing AI messages without tool calls (incomplete responses)
-    recent_messages = _trim_trailing_invalid_ai_messages(recent_messages)
-
-    # Fallback: if no recent messages remain, find the last human message or use the last message
-    filtered_messages: list[BaseMessage] = []
-    if not recent_messages and non_system_messages:
-        for msg in reversed(non_system_messages):
-            if isinstance(msg, HumanMessage):
-                filtered_messages = [msg]
-                break
-        else:
-            filtered_messages = [non_system_messages[-1]] if non_system_messages else []
-    # If the first human message (original task) was cut off, prepend it to maintain context
-    elif first_human_idx is not None and first_human_idx < adjusted_start_idx:
-        first_task = [non_system_messages[first_human_idx]]
-        filtered_messages = first_task + recent_messages
-    # Otherwise, use only the recent messages
-    else:
-        filtered_messages = recent_messages
-
-    # Prepend all system messages at the beginning
-    filtered_messages = system_messages + filtered_messages
-
-    # Log token savings from filtering
-    filtered_count = len(filtered_messages)
-    filtered_tokens = _estimate_tokens(filtered_messages)
-    _log_token_savings(original_count, original_tokens, filtered_count, filtered_tokens)
-
     return filtered_messages
 
 
@@ -150,14 +156,15 @@ def sanitize_response(response: AIMessage) -> AIMessage:
     if not isinstance(response, AIMessage) or not response.tool_calls:
         return response
 
-    response.tool_calls = []
     name_pattern = re.compile(r"^[a-zA-Z0-9_-]+$")
+    valid_tool_calls = []
 
     for tool_call in response.tool_calls:
         name = tool_call.get("name", "")
         if name_pattern.match(name) and len(name) < 64:
-            response.tool_calls.append(tool_call)
+            valid_tool_calls.append(tool_call)
         else:
             logger.warning("SANITIZER: Removed invalid tool call with name: '%s'", name)
 
+    response.tool_calls = valid_tool_calls
     return response

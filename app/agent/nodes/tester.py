@@ -3,12 +3,12 @@ Defines the Tester agent node for the agent graph.
 
 The Tester is a specialist agent responsible for verifying code changes,
 running tests, and reporting the results.
-"""
+"""  # pylint: disable=duplicate-code
 
 import logging
 from typing import Any, Dict, Literal, Optional
 
-from langchain_core.messages import SystemMessage
+from langchain_core.messages import AIMessage, BaseMessage, HumanMessage, SystemMessage
 from pydantic import BaseModel, Field
 
 from app.agent.services.logging import log_agent_response
@@ -49,34 +49,84 @@ def create_tester_node(llm, tools, agent_stack):
         A function that represents the tester node.
     """
     sys_msg = load_system_prompt(agent_stack, "tester")
-    llm_with_tools = llm.bind_tools(tools + [report_test_result])
 
     async def tester_node(state: AgentState):
         # Filter messages to keep only recent relevant context (original task + last 15 messages)
         filtered_messages = filter_messages_for_llm(state["messages"], max_messages=15)
-        current_messages = [SystemMessage(content=sys_msg)] + filtered_messages
+        current_messages: list[BaseMessage | SystemMessage] = [
+            SystemMessage(content=sys_msg)
+        ]
+        current_messages += filtered_messages
 
-        response = await llm_with_tools.ainvoke(current_messages)
+        current_tool_choice = "auto"
 
-        has_content = bool(response.content)
-        has_tool_calls = bool(getattr(response, "tool_calls", []))
+        for attempt in range(3):
+            try:
+                chain = llm.bind_tools(
+                    tools + [report_test_result], tool_choice=current_tool_choice
+                )
+                response = await chain.ainvoke(current_messages)
 
-        if has_content or has_tool_calls:
-            log_agent_response("tester", response)
+                has_tool_calls = bool(getattr(response, "tool_calls", []))
+
+                if has_tool_calls:
+                    log_agent_response("tester", response, attempt=attempt + 1)
+
+                    summary_entries = list(state.get("agent_summary") or [])
+                    report_args = _get_report_result_args(response)
+
+                    if report_args and tests_passed(report_args):
+                        summary = report_args.get("summary", "")
+                        summary_entries = append_agent_summary(
+                            summary_entries,
+                            "tester",
+                            summary,
+                        )
+
+                    return {
+                        "messages": [response],
+                        "agent_summary": summary_entries,
+                        "current_node": "tester",
+                    }
+
+                logger.warning(
+                    "Attempt %d: No tool calls. Escalating strategy...", attempt + 1
+                )
+                current_tool_choice = "any"
+                # Add the invalid response so AI sees its mistake
+                current_messages.append(response)
+                current_messages.append(
+                    HumanMessage(
+                        content="ERROR: Invalid response. You MUST call a tool. "
+                        + "Use 'report_test_result' with the test results NOW."
+                    )
+                )
+
+            except Exception as e:  # pylint: disable=broad-exception-caught
+                logger.error("Error in LLM call (Attempt %d): %s", attempt + 1, e)
+
+        # Fallback
+        logger.error("Agent stuck after 3 attempts. Hard exit.")
+
+        fallback_message = AIMessage(
+            content="Testing stuck.",
+            tool_calls=[
+                {
+                    "name": "report_test_result",
+                    "args": {
+                        "result": "fail",
+                        "summary": "Testing could not complete due to invalid responses.",
+                    },
+                    "id": "call_emergency",
+                    "type": "tool_call",
+                }
+            ],
+        )
 
         summary_entries = list(state.get("agent_summary") or [])
-        report_args = _get_report_result_args(response)
-
-        if report_args and tests_passed(report_args):
-            summary = report_args.get("summary", "")
-            summary_entries = append_agent_summary(
-                summary_entries,
-                "tester",
-                summary,
-            )
 
         return {
-            "messages": [response],
+            "messages": [fallback_message],
             "agent_summary": summary_entries,
             "current_node": "tester",
         }

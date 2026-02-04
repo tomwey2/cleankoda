@@ -50,12 +50,15 @@ def route_after_tools_tester(state: AgentState):
     # Look at the message BEFORE the tool output (the tester's AIMessage)
     last_ai_msg = messages[-2]
 
-    if isinstance(last_ai_msg, AIMessage) and last_ai_msg.tool_calls:
-        # Iterate through ALL tool calls in case the agent made multiple
-        for tool_call in last_ai_msg.tool_calls:
-            if tool_call["name"] == "report_test_result":
-                args = tool_call["args"]
-                result = args.get("result")
+    if isinstance(last_ai_msg, AIMessage):
+        # Only check valid parsed tool_calls that were actually executed
+        tool_calls = last_ai_msg.tool_calls or []
+
+        for tool_call in tool_calls:
+            name = tool_call.get("name", "")
+            if name == "report_test_result":
+                args = tool_call.get("args", {})
+                result = args.get("result") if isinstance(args, dict) else None
 
                 if result == "pass":
                     return "pass"  # Success -> End
@@ -76,11 +79,15 @@ def check_agent_exit(state: AgentState) -> str:
     """
     last_msg = state["messages"][-1]
 
-    if not isinstance(last_msg, AIMessage) or not last_msg.tool_calls:
+    if not isinstance(last_msg, AIMessage):
         return "no tool"
 
-    # We execute ALL tools, including finish_task
-    return "tools"
+    # Only valid parsed tool calls can be executed by ToolNode
+    if last_msg.tool_calls:
+        return "tools"
+
+    # No valid tool calls (includes invalid_tool_cases) -> needs correction
+    return "no tool"
 
 
 def route_after_tools_coder(state: AgentState) -> str:

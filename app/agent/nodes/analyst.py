@@ -4,13 +4,13 @@ Defines the Analyst agent node for the agent graph.
 The Analyst is a specialist agent responsible for analyzing code, answering
 questions about the codebase, and providing explanations without making
 any modifications.
-"""
+"""  # pylint: disable=duplicate-code
 
 import logging
 from typing import Any
 
 from langchain.chat_models import BaseChatModel
-from langchain_core.messages import SystemMessage
+from langchain_core.messages import AIMessage, BaseMessage, HumanMessage, SystemMessage
 
 from app.agent.services.logging import log_agent_response
 from app.agent.services.message_processing import (
@@ -43,23 +43,63 @@ def create_analyst_node(llm: BaseChatModel, tools, agent_stack):
         # Filter messages to keep only recent relevant context (original task + last 20 messages)
         # Analyst may need more context for code analysis
         filtered_messages = filter_messages_for_llm(state["messages"], max_messages=20)
-        current_messages = [SystemMessage(content=sys_msg)] + filtered_messages
+        current_messages: list[BaseMessage | SystemMessage] = [
+            SystemMessage(content=sys_msg)
+        ]
+        current_messages += filtered_messages
 
-        # We allow the analyst more freedom ("auto") since they often need to chat
-        # to think. But in the end they should use finish_task.
-        chain = llm.bind_tools(tools, tool_choice="auto")
+        current_tool_choice = "auto"
 
-        response = await chain.ainvoke(current_messages)
-        response = sanitize_response(response)
+        for attempt in range(3):
+            try:
+                chain = llm.bind_tools(tools, tool_choice=current_tool_choice)
+                response = await chain.ainvoke(current_messages)
+                response = sanitize_response(response)
 
-        has_content = bool(response.content)
-        has_tool_calls = bool(getattr(response, "tool_calls", []))
+                has_tool_calls = bool(getattr(response, "tool_calls", []))
 
-        if has_content or has_tool_calls:
-            log_agent_response("analyst", response)
+                if has_tool_calls:
+                    log_agent_response("analyst", response, attempt=attempt + 1)
+                    recorded, agent_summary = record_finish_task_summary(
+                        state, "analyst", response
+                    )
+                    result: dict[str, Any] = {"messages": [response], "current_node": "analyst"}
+                    if recorded:
+                        result["agent_summary"] = agent_summary
+                    return result
 
-        recorded, agent_summary = record_finish_task_summary(state, "analyst", response)
-        result: dict[str, Any] = {"messages": [response], "current_node": "analyst"}
+                logger.warning(
+                    "Attempt %d: No tool calls. Escalating strategy...", attempt + 1
+                )
+                current_tool_choice = "any"
+                current_messages.append(
+                    HumanMessage(
+                        content="ERROR: Invalid response. You MUST call a tool. "
+                        + "Use 'finish_task' to complete your analysis."
+                    )
+                )
+
+            except Exception as e:  # pylint: disable=broad-exception-caught
+                logger.error("Error in LLM call (Attempt %d): %s", attempt + 1, e)
+
+        # Fallback
+        logger.error("Agent stuck after 3 attempts. Hard exit.")
+
+        fallback_message = AIMessage(
+            content="Analysis stuck.",
+            tool_calls=[
+                {
+                    "name": "finish_task",
+                    "args": {"summary": "Analysis could not complete due to invalid responses."},
+                    "id": "call_emergency",
+                    "type": "tool_call",
+                }
+            ],
+        )
+        recorded, agent_summary = record_finish_task_summary(
+            state, "analyst", fallback_message
+        )
+        result = {"messages": [fallback_message], "current_node": "analyst"}
         if recorded:
             result["agent_summary"] = agent_summary
         return result

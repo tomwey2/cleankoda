@@ -64,11 +64,18 @@ def record_finish_task_summary(
 
 def has_finish_task_call(message: BaseMessage) -> bool:
     """Check whether the given message includes a finish_task tool call."""
-    if not isinstance(message, AIMessage) or not getattr(message, "tool_calls", None):
+    if not isinstance(message, AIMessage):
+        return False
+
+    # Only check valid parsed tool_calls (invalid_tool_calls can't be executed)
+    tool_calls = message.tool_calls or []
+
+    if not tool_calls:
         return False
 
     return any(
-        tool_call.get("name") == "finish_task" for tool_call in message.tool_calls
+        tool_call.get("name") == "finish_task"
+        for tool_call in tool_calls
     )
 
 
