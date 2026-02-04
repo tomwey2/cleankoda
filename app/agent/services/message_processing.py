@@ -39,6 +39,7 @@ def _trim_trailing_invalid_ai(messages: list[BaseMessage]) -> list[BaseMessage]:
     An AIMessage is invalid as the last message if it has no content AND no tool_calls.
     """
     result = list(messages)
+    removed = 0
     while result and isinstance(result[-1], AIMessage):
         ai_msg = result[-1]
         has_content = bool(getattr(ai_msg, "content", None))
@@ -46,10 +47,14 @@ def _trim_trailing_invalid_ai(messages: list[BaseMessage]) -> list[BaseMessage]:
         if has_content or has_tool_calls:
             break
         result = result[:-1]
+        removed += 1
+
+    if removed:
+        logger.warning("Trimmed %d trailing empty AI messages", removed)
     return result
 
 
-def _build_window(messages: list[BaseMessage], max_messages: int) -> list[BaseMessage]:
+def _build_message_window(messages: list[BaseMessage], max_messages: int) -> list[BaseMessage]:
     """Capture the most recent messages while preserving tool-call context."""
     if max_messages <= 0 or not messages:
         return []
@@ -103,7 +108,7 @@ def filter_messages_for_llm(
         return [first_system_message] if first_system_message else []
 
     # Apply sliding window across remaining messages
-    window_messages = _build_window(remaining_messages, max_messages)
+    window_messages = _build_message_window(remaining_messages, max_messages)
 
     # Combine: system + window
     filtered_messages = (
