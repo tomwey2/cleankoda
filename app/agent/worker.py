@@ -15,6 +15,7 @@ from flask import Flask
 from langchain_core.runnables import RunnableConfig
 from langgraph.graph import StateGraph
 
+from app.core.constants import TECH_STACKS
 from app.agent.graph import create_workflow
 from app.agent.integrations.mcp.adapter import McpServerClient
 from app.agent.runtime import RuntimeSetting, prepare_runtime
@@ -77,11 +78,15 @@ async def _execute_agent_cycle(runtime: RuntimeSetting) -> None:
             "messages": [],
             "next_step": "",
             "task": None,
+            "task_comments": [],
+            "task_skill_level": None,
             "agent_stack": runtime.agent_stack,
             "agent_skill_level": runtime.agent_settings.agent_skill_level,
-            "task_skill_level": None,
             "plan_state": None,
             "current_node": None,
+            "prompt": None,
+            "system_prompt": None,
+            "tech_stack": TECH_STACKS[runtime.agent_stack],
         }
         # Config for threa level persistence
         thread_config: RunnableConfig = {
@@ -93,10 +98,7 @@ async def _execute_agent_cycle(runtime: RuntimeSetting) -> None:
         async for current_state in app_graph.astream(
             inputs, config=thread_config, stream_mode="values"
         ):
-            if (
-                current_state["current_node"]
-                and current_state["current_node"] != "task_fetch"
-            ):
+            if current_state["current_node"] and current_state["current_node"] != "task_fetch":
                 save_state_to_workspace(current_state)
 
         logger.info("Finish graph cycle.")

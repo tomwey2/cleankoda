@@ -51,6 +51,9 @@ class BoardComment:
     author: str
     date: datetime
 
+    def __str__(self):
+        return f"{self.author}: {self.text} ({self.date.isoformat()})"
+
 
 @dataclass
 class BoardStateMove:
@@ -188,9 +191,7 @@ class BoardProvider(ABC):
         """
 
     @abstractmethod
-    async def create_task(
-        self, name: str, description: str, state_name: str
-    ) -> BoardTask:
+    async def create_task(self, name: str, description: str, state_name: str) -> BoardTask:
         """
         Create a new task in the specified state.
 

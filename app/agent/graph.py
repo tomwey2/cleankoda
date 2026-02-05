@@ -131,9 +131,7 @@ def create_workflow(runtime: RuntimeSetting) -> StateGraph:
     """Creates and configures the main LangGraph workflow."""
     # --- Tool Sets ---
     active_task_system = runtime.agent_settings.get_active_task_system()
-    impl_task_target_state = (
-        active_task_system.state_backlog if active_task_system else None
-    )
+    impl_task_target_state = active_task_system.state_backlog if active_task_system else None
     analyst_tools = [
         list_files,
         read_file,
@@ -157,9 +155,7 @@ def create_workflow(runtime: RuntimeSetting) -> StateGraph:
     # --- Graph Nodes ---
     workflow = StateGraph(AgentState)
 
-    workflow.add_node(
-        "task_fetch", create_task_fetch_node(runtime.agent_settings)
-    )
+    workflow.add_node("task_fetch", create_task_fetch_node(runtime.agent_settings))
     workflow.add_node("checkout", create_checkout_node(runtime.agent_settings))
     workflow.add_node("router", create_router_node(runtime.llm_small))
 
@@ -168,16 +164,16 @@ def create_workflow(runtime: RuntimeSetting) -> StateGraph:
     )
     workflow.add_node(
         "bugfixer",
-        create_bugfixer_node(runtime.llm_large, coder_tools, runtime.agent_stack),
+        create_bugfixer_node(runtime.llm_large, coder_tools),
     )
     workflow.add_node(
         "analyst",
-        create_analyst_node(runtime.llm_large, analyst_tools, runtime.agent_stack),
+        create_analyst_node(runtime.llm_large, analyst_tools),
     )
 
     workflow.add_node(
         "tester",
-        create_tester_node(runtime.llm_large, tester_tools, runtime.agent_stack),
+        create_tester_node(runtime.llm_large, tester_tools),
     )
 
     # Tool Nodes

@@ -13,7 +13,7 @@ from pydantic import BaseModel, Field
 
 from app.agent.services.logging import log_agent_response
 from app.agent.services.message_processing import filter_messages_for_llm
-from app.agent.services.prompts import load_system_prompt
+from app.agent.services.prompts import load_prompt
 from app.agent.services.summaries import append_agent_summary
 from app.agent.state import AgentState
 from app.agent.tools.report_test_result import report_test_result
@@ -36,28 +36,29 @@ class TesterResult(BaseModel):
     )
 
 
-def create_tester_node(llm, tools, agent_stack):
+def create_tester_node(llm, tools):
     """
     Factory function that creates the Tester agent node.
 
     Args:
         llm: The language model to be used by the tester.
         tools: A list of tools available to the tester.
-        agent_stack: The technology stack to load the correct system prompt.
 
     Returns:
         A function that represents the tester node.
     """
-    sys_msg = load_system_prompt(agent_stack, "tester")
 
-    async def tester_node(state: AgentState):
+    async def tester_node(state: AgentState):  # pylint: disable=too-many-locals
+        system_message = load_prompt("systemprompt_tester.md", state)
+        human_message = load_prompt("prompt_testing.md", state)
         # Filter messages to keep only recent relevant context (original task + last 15 messages)
         filtered_messages = filter_messages_for_llm(state["messages"], max_messages=15)
-        current_messages: list[BaseMessage | SystemMessage] = [
-            SystemMessage(content=sys_msg)
+        current_messages: list[BaseMessage | SystemMessage | HumanMessage] = [
+            SystemMessage(content=system_message),
+            HumanMessage(content=human_message),
         ]
-        current_messages += filtered_messages
 
+        current_messages += filtered_messages
         current_tool_choice = "auto"
 
         for attempt in range(3):
@@ -83,16 +84,17 @@ def create_tester_node(llm, tools, agent_stack):
                             summary,
                         )
 
-                    return {
+                    result = {
                         "messages": [response],
-                        "agent_summary": summary_entries,
                         "current_node": "tester",
+                        "prompt": human_message,
+                        "system_prompt": system_message,
                     }
+                    if summary_entries:
+                        result["agent_summary"] = summary_entries
+                    return result
 
-                logger.warning(
-                    "Attempt %d: No tool calls. Escalating strategy...", attempt + 1
-                )
-                current_tool_choice = "any"
+                logger.warning("Attempt %d: No tool calls. Escalating strategy...", attempt + 1)
                 # Add the invalid response so AI sees its mistake
                 current_messages.append(response)
                 current_messages.append(
