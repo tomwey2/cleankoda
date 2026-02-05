@@ -7,7 +7,6 @@ any modifications.
 """  # pylint: disable=duplicate-code
 
 import logging
-from typing import Any
 
 from langchain.chat_models import BaseChatModel
 from langchain_core.messages import AIMessage, BaseMessage, HumanMessage, SystemMessage
@@ -24,15 +23,13 @@ from app.agent.state import AgentState
 logger = logging.getLogger(__name__)
 
 
-def create_analyst_node(llm: BaseChatModel, tools, agent_stack):
+def create_analyst_node(llm: BaseChatModel, tools):
     """
     Factory function that creates the Analyst agent node.
 
     Args:
         llm: The language model to be used by the analyst.
         tools: A list of tools available to the analyst.
-        agent_stack: The technology stack (e.g., 'backend', 'frontend')
-                     to load the correct system prompt.
 
     Returns:
         A function that represents the analyst node.
@@ -41,8 +38,8 @@ def create_analyst_node(llm: BaseChatModel, tools, agent_stack):
     async def analyst_node(state: AgentState):
         # Filter messages to keep only recent relevant context (original task + last 20 messages)
         # Analyst may need more context for code analysis
-        system_message = load_prompt(f"systemprompt_{agent_stack}_analyst.md", state)
-        human_message = load_prompt("prompt_analyst.md", state)
+        system_message = load_prompt("systemprompt_analyst.md", state)
+        human_message = load_prompt("prompt_analyzing.md", state)
         filtered_messages = filter_messages_for_llm(state["messages"], max_messages=20)
         current_messages: list[BaseMessage | SystemMessage | HumanMessage] = [
             SystemMessage(content=system_message),

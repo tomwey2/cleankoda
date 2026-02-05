@@ -25,6 +25,7 @@ def load_system_prompt(stack: str, role: str) -> str:
 
 
 def load_prompt(template: str, data: dict) -> str:
+    """Load a prompt template and render it with the given data."""
     # 1. configure Jinja
     ninja_env = Environment(
         loader=FileSystemLoader("./prompts"),

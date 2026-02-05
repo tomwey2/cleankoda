@@ -36,20 +36,19 @@ class TesterResult(BaseModel):
     )
 
 
-def create_tester_node(llm, tools, agent_stack):
+def create_tester_node(llm, tools):
     """
     Factory function that creates the Tester agent node.
 
     Args:
         llm: The language model to be used by the tester.
         tools: A list of tools available to the tester.
-        agent_stack: The technology stack to load the correct system prompt.
 
     Returns:
         A function that represents the tester node.
     """
 
-    async def tester_node(state: AgentState):
+    async def tester_node(state: AgentState):  # pylint: disable=too-many-locals
         system_message = load_prompt("systemprompt_tester.md", state)
         human_message = load_prompt("prompt_testing.md", state)
         # Filter messages to keep only recent relevant context (original task + last 15 messages)
@@ -96,7 +95,6 @@ def create_tester_node(llm, tools, agent_stack):
                     return result
 
                 logger.warning("Attempt %d: No tool calls. Escalating strategy...", attempt + 1)
-                current_tool_choice = "any"
                 # Add the invalid response so AI sees its mistake
                 current_messages.append(response)
                 current_messages.append(

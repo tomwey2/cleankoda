@@ -19,15 +19,13 @@ from app.agent.state import AgentState
 logger = logging.getLogger(__name__)
 
 
-def create_bugfixer_node(llm, tools, agent_stack):
+def create_bugfixer_node(llm, tools):
     """
     Factory function that creates the Bugfixer agent node.
 
     Args:
         llm: The language model to be used by the bugfixer.
         tools: A list of tools available to the bugfixer.
-        agent_stack: The technology stack (e.g., 'backend', 'frontend')
-                     to load the correct system prompt.
 
     Returns:
         A function that represents the bugfixer node.
