@@ -74,6 +74,7 @@ def create_task_fetch_node(agent_settings: AgentSettings):
                 "task": task,
                 "task_comments": comments,
                 "pr_review_message": pr_review_message,
+                "plan_state": db_task.plan_state if db_task else None,
                 "current_node": "task_fetch",
             }
 
