@@ -17,14 +17,16 @@ from app.agent.services.pull_request import (
 from app.agent.services.tasks_services import (
     fetch_review_comments,
     fetch_task_from_state,
-    get_branch_for_task,
     move_task_to_state,
-    save_task_in_db,
 )
 from app.agent.state import AgentState
 from app.core.models import AgentSettings, Task
 from app.core.plan_services import delete_plan
-from app.core.task_repository import get_pr_info_for_task, remove_task_from_db
+from app.core.task_repository import (
+    create_db_task,
+    read_db_task,
+    delete_db_task,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -32,7 +34,7 @@ logger = logging.getLogger(__name__)
 def create_task_fetch_node(agent_settings: AgentSettings):
     """Creates a task fetch node for the agent graph."""
     board_provider = create_board_provider(agent_settings)
-    db_task: Task | None = _get_db_task()
+    db_task: Task | None = read_db_task()
 
     async def task_fetch(state: AgentState) -> dict:  # pylint: disable=unused-argument
         """
@@ -129,8 +131,8 @@ async def _resolve_task(
     # update local db: remove the old task and insert the new task
     if task:
         if task_id:
-            remove_task_from_db(task_id)
-        save_task_in_db(task.id, task.name)
+            delete_db_task(task_id)
+        create_db_task(task.id, task.name)
     return task, True
 
 
@@ -146,10 +148,12 @@ def _fetch_pr_review_info(task_id: str) -> str:
         - is_approved: True if PR is approved or no PR exists
         - formatted_review_message: Formatted message for SystemMessage, empty if approved
     """
-    pr_number, pr_url = get_pr_info_for_task(task_id)
+    db_task = read_db_task(task_id=task_id)
+    pr_number = db_task.pr_number
+    pr_url = db_task.pr_url
 
     if not pr_number:
-        branch_name = get_branch_for_task(task_id)
+        branch_name = db_task.branch_name
         if branch_name:
             pr = get_latest_open_pr_for_branch(branch_name)
             if pr:
@@ -217,13 +221,3 @@ def _build_system_message_content(
         logger.info("PR review message appended: %s", pr_review_message)
 
     return system_content
-
-
-def _get_db_task() -> Task | None:
-    """Load the saved task from the database."""
-    task = Task.query.first()
-    if not task:
-        logger.info("Agent has no current task.")
-        return None
-    logger.info("Current task found: %s-%s", task.task_id, task.task_name)
-    return task
