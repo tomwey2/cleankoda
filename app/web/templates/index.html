@@ -1,5 +1,6 @@
 {% extends "base.html" %} {% block content %}
-<div class="container-fluid">
+<div id="dashboard-content" class="container-fluid" hx-get="{{ url_for('web.dashboard') }}" hx-trigger="every 1s"
+    hx-select="#dashboard-content" hx-target="#dashboard-content" hx-swap="outerHTML">
     <div class="row" style="min-height: 90dvh">
         <!-- Left Column -->
         <div class="col-md-6 d-flex flex-column">
