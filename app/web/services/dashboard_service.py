@@ -9,7 +9,7 @@ import logging
 import os
 
 from app.core.config import get_env_settings
-from app.core.plan_services import get_plan
+from app.core.plan_utils import get_plan
 
 logger = logging.getLogger(__name__)
 

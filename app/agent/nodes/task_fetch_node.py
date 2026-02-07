@@ -21,7 +21,7 @@ from app.agent.services.tasks_services import (
 )
 from app.agent.state import AgentState
 from app.core.models import AgentSettings, Task
-from app.core.plan_services import delete_plan
+from app.core.plan_utils import delete_plan
 from app.core.db_task_utils import (
     create_db_task,
     read_db_task,
