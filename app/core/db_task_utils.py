@@ -81,6 +81,9 @@ def update_db_task(task_id: str, **kwargs: Any) -> Task | None:
             logging.warning("Attribute '%s' does not exist in Task model and will be ignored.", key)
 
     try:
+        logger.info(
+            "Updating task %d-%s in database with values: %s", task.id, task.task_id, kwargs
+        )
         db.session.commit()
         return task
     except Exception as e:

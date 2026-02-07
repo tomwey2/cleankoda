@@ -129,5 +129,5 @@ def _get_plan_info_in_db_task(exist_plan_before_llm_call: bool) -> tuple[str, Pl
 
 def _save_plan_state(plan_state: PlanState):
     db_task: Task | None = read_db_task()
-    if db_task:
-        update_db_task(db_task.task_id, plan_state=plan_state)
+    if plan_state and db_task:
+        update_db_task(db_task.task_id, plan_state=plan_state.value)

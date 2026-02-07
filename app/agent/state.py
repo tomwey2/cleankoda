@@ -24,6 +24,7 @@ class PlanState(StrEnum):
     CREATED = "created"
     UPDATED = "updated"
     APPROVED = "approved"
+    REJECTED = "rejected"
 
 
 class TaskType(StrEnum):

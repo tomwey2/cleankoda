@@ -137,8 +137,8 @@ def review_plan():
     data = request.json or {}
     new_state = data.get("plan_state")
 
-    if new_state not in ["Approved", "Rejected"]:
-        return jsonify({"error": "Invalid state. Must be 'Approved' or 'Rejected'."}), 400
+    if new_state not in ["approved", "rejected"]:
+        return jsonify({"error": "Invalid state. Must be 'approved' or 'rejected'."}), 400
 
     # Get current task (uses priority logic: ID, or first)
     task = read_db_task()

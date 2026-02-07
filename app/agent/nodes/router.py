@@ -15,6 +15,8 @@ from pydantic import BaseModel, Field
 from app.agent.services.message_processing import filter_messages_for_llm
 from app.agent.state import AgentState, PlanState, TaskType
 from app.agent.services.prompts import load_prompt
+from app.core.db_task_utils import read_db_task
+from app.core.models import Task
 
 logger = logging.getLogger(__name__)
 
@@ -80,13 +82,10 @@ def create_router_node(llm):
 
 
 def route_to_coder_or_analyst(state: AgentState, response: RouterDecision) -> str:
-    if state["agent_skill_level"] == "junior":
-        if response.task_skill_level == "junior":
-            return "analyst"
-        else:  # task_skill_level == "senior"
-            return "reject"
-    else:  # agent_skill_level == "senior"
-        if response.task_skill_level == "junior":
-            return "coder"
-        else:  # task_skill_level == "senior"
-            return "coder" if state["plan_state"] == PlanState.APPROVED else "analyst"
+    if state["agent_skill_level"] == "junior" and response.task_skill_level == "senior":
+        return "reject"
+
+    db_task: Task | None = read_db_task()
+    if db_task and db_task.plan_state == PlanState.APPROVED:
+        return "coder"
+    return "analyst"
