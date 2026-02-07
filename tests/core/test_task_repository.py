@@ -5,7 +5,7 @@ Tests for the task repository.
 import pytest
 
 from app.core.models import Task
-from app.core.task_repository import (
+from app.core.db_task_utils import (
     read_db_task,
     delete_db_task,
     create_db_task,

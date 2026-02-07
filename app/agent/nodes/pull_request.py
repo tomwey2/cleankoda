@@ -12,7 +12,7 @@ from app.agent.services.pull_request import create_or_update_pr
 from app.agent.state import AgentState
 from app.agent.utils import get_codespace, get_current_git_branch
 from app.core.config import get_env_settings
-from app.core.task_repository import update_db_task
+from app.core.db_task_utils import update_db_task
 
 logger = logging.getLogger(__name__)
 

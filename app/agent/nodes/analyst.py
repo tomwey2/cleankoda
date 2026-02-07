@@ -21,7 +21,7 @@ from app.agent.services.summaries import record_finish_task_summary
 from app.agent.state import AgentState, PlanState
 from app.core.models import Task
 from app.core.plan_services import exist_plan, get_plan
-from app.core.task_repository import update_db_task, read_db_task
+from app.core.db_task_utils import update_db_task, read_db_task
 
 logger = logging.getLogger(__name__)
 

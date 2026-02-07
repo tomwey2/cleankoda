@@ -10,7 +10,7 @@ from app.agent.integrations.board_provider import (  # pylint: disable=unused-im
     BoardTask,
 )
 from app.agent.services.pull_request import check_pr_exists_for_branch
-from app.core.task_repository import read_db_task
+from app.core.db_task_utils import read_db_task
 
 logger = logging.getLogger(__name__)
 

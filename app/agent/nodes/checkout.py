@@ -13,7 +13,7 @@ from app.agent.services.git_workspace import checkout_branch
 from app.agent.state import AgentState
 from app.agent.utils import get_codespace
 from app.core.models import AgentSettings
-from app.core.task_repository import read_db_task, update_db_task
+from app.core.db_task_utils import read_db_task, update_db_task
 
 logger = logging.getLogger(__name__)
 
