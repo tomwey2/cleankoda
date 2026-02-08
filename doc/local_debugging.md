@@ -32,7 +32,7 @@ docker compose up -d workbench-backend       # ensure the workbench stays up (ad
 
 > ⚠️ Do not leave both the containerized service and the local process running simultaneously—they will compete for the same ports (`5000` for webapp) and shared volumes.
 
-## 4. Running the Flask Dashboard Locally
+## 4. Running the Flask Dashboard or the LangGraph Agent Locally
 
 1. Export the same environment variables used in compose (the `.env` file is easiest):
 
@@ -42,30 +42,73 @@ docker compose up -d workbench-backend       # ensure the workbench stays up (ad
    set +a
    ```
 
-   Override paths if needed:
+   Override paths to use different path than the default paths in the compose file.
+   You need it, if your docker deamon runs as a different user than your local user.
 
    ```bash
    export WORKSPACE=/home/you/path/to/workspace
    export INSTANCE_DIR=/home/you/path/to/instance
    ```
 
-2. Install dependencies locally:
+   If you need to use another workbench container name, set the `WORKBENCH` environment variable
+   and the `AGENT_STACK` environment variable (only needed for the agent):
 
    ```bash
-   uv sync
+   export WORKBENCH=workbench-backend-local
+   export AGENT_STACK=backend
    ```
 
-3. Run the Flask dashboard:
+2. (Optional) If your docker deamon runs as a different user, you need to start the workbench container as a daemon with the same user as your local user:
 
-   ```bash
-   uv run run_web.py
-   ```
+    ```bash
+    export UID
+    export GID=$(id -g)
+    mkdir -p .docker-home .docker-home/.m2
+    docker run -d \
+    --name "$WORKBENCH" \
+    --user "$UID:$GID" \
+    -e HOME=/home/user-home \
+    -e MAVEN_CONFIG=/home/user-home/.m2 \
+    -w /coding-agent-workspace \
+    -v "${PWD}/.docker-home:/home/user-home" \
+    -v "${PWD}/workspace-local:/coding-agent-workspace" \
+    maven:3.9-eclipse-temurin-21\
+    tail -f /dev/null
+    ```  
 
-4. Navigate to [http://localhost:5000](http://localhost:5000).
+    You can leave the workbench container running in docker. It is not used by the agent if you run it from the docker compose file.
 
-#### Minimal VS Code `launch.json`
+    If you want to run an extra fronted workbench, you need to adjust the environment variables e.g.:
 
-Place the following file under `.vscode/launch.json` to reuse the same settings when launching either entry point from VS Code:
+    ```bash
+    export WORKBENCH=workbench-frontend-local
+    export AGENT_STACK=frontend
+    ```
+
+    ... and replace the used docker image.
+
+3. Install dependencies locally:
+
+    ```bash
+    uv sync
+    ```
+
+4. Run the Flask dashboard:
+
+    ```bash
+    uv run run_web.py
+    ```
+
+    or the LangGraph agent:
+
+    ```bash
+    uv run run_agent.py
+    ```
+
+## VS Code `launch.json`
+
+Place the following file under `.vscode/launch.json` to reuse the same settings when launching either entry point from VS Code.
+You may need to adjust `WORKBENCH`, `AGENT_STACK`, `WORKSPACE` or `INSTANCE_DIR` to match your local setup:
 
 ```json
 {
@@ -77,14 +120,13 @@ Place the following file under `.vscode/launch.json` to reuse the same settings 
             "request": "launch",
             "program": "${workspaceFolder}/run_agent.py",
             "console": "integratedTerminal",
-            "envFile": "${workspaceFolder}/.env",
+            "envFile": "${workspaceFolder}/.env",            
             "cwd": "${workspaceFolder}",
             "env": {
                 "WORKSPACE": "${workspaceFolder}/workspace",
                 "INSTANCE_DIR": "${workspaceFolder}/app/instance",
                 "ENABLE_MCP_SERVERS": "false",
-                "WORKBENCH": "workbench-backend-loc",
-                "WORKBENCH_CODESPACE": "/coding-agent-workspace"
+                "WORKBENCH": "workbench-backend",
             }
         },
         {
@@ -104,43 +146,3 @@ Place the following file under `.vscode/launch.json` to reuse the same settings 
     ]
 }
 ```
-
-### Debugging the Dashboard (VS Code)
-
-Use the `.vscode/launch.json` configuration named **"Flask Web"**. It mirrors the compose environment by setting `WORKSPACE`, `INSTANCE_DIR`, and `ENABLE_MCP_SERVERS`. Breakpoints inside `app/web/...` now trigger locally, while the workbench container handles build/test commands via shared volumes.
-
-## 5. Running the LangGraph Agent Locally
-
-1. Stop the `ai-coding-agent` container (see Section 3).
-2. Reuse the same environment setup as above, ensuring `WORKBENCH` matches the container name from `docker-compose.yaml` (e.g., `workbench-backend`).
-3. Launch the agent loop:
-
-   ```bash
-   uv run run_agent.py
-   ```
-   The agent will connect to the still-running workbench container (`docker ps` should show it) and share the `./workspace` volume, so file edits are synchronized automatically.
-
-### Debugging the Agent (VS Code)
-
-The `.vscode/launch.json` configuration named **"LangGraph Agent"** configures:
-- `WORKSPACE` pointing to the shared folder (e.g., `../workspace1`).
-- `INSTANCE_DIR` to reuse the same SQLite DB.
-- `ENABLE_MCP_SERVERS=false` if you do not want helper MCP processes while debugging.
-
-Set breakpoints anywhere in `app/agent/...`; VS Code attaches to the local Python process while Docker provides the workbench runtime.
-
-## 6. Switching Between Backend and Frontend Workbenches
-
-- Update `WORKBENCH` in your environment (or `.env`) to `workbench-frontend` to target the frontend container defined in `docker-compose.yaml`.
-- If `AGENT_STACK` is unset, the runtime derives the stack from the suffix of the container name (`-backend`/`-frontend`).
-- Remember to start the matching workbench container (`docker compose up -d workbench-frontend`).
-
-## 7. Returning to Full Docker Mode
-
-When local debugging is finished:
-
-```bash
-docker compose up -d webapp ai-coding-agent   # relaunch the services inside Docker
-```
-
-You can now stop the local Python processes. Because the volumes are identical, no file synchronization is required.
