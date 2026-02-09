@@ -43,6 +43,13 @@ class TaskStateType(StrEnum):
     IN_REVIEW = "in review"
 
 
+class AgentStack(StrEnum):
+    """Supported technology stacks for the agent runtime."""
+
+    BACKEND = "backend"
+    FRONTEND = "frontend"
+
+
 class AgentState(TypedDict):
     """
     Represents the state of the agent graph.
@@ -59,7 +66,7 @@ class AgentState(TypedDict):
     pr_review_message: str | None
     task_type: TaskType | None
     task_skill_level: str | None
-    agent_stack: str  # Backend or Frontend
+    agent_stack: AgentStack
     retry_count: int  # Attempts: how often switched between coder and tester
     test_result: str | None
     error_log: str | None  # Optional: Stores the last error explicitly
