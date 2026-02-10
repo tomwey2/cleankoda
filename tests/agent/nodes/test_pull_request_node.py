@@ -123,7 +123,11 @@ class TestGenerateCommitMessage:
 
         result = pr_module._generate_commit_message(state)  # pylint: disable=protected-access
 
-        assert result == "feat: Implement persistence layer\n\n- Document storage contract"
+        assert (
+            result
+            == "feat: Implement persistence layer\n\n"
+            "- Implement persistence layer\n- Document storage contract"
+        )
 
     def test_skips_tester_and_uses_first_non_tester(self):
         state = {
@@ -136,4 +140,21 @@ class TestGenerateCommitMessage:
 
         result = pr_module._generate_commit_message(state)  # pylint: disable=protected-access
 
-        assert result == "fix: Resolve race condition\n\n- Add regression test"
+        assert (
+            result
+            == "fix: Resolve race condition\n\n"
+            "- Resolve race condition\n- Add regression test"
+        )
+
+    def test_deduplicates_identical_coder_messages(self):
+        state = {
+            "agent_summary": [
+                "**[Coder]** Implement persistence layer",
+                "**[Coder]** Implement persistence layer",
+                "**[Coder]** Implement persistence layer",
+            ]
+        }
+
+        result = pr_module._generate_commit_message(state)  # pylint: disable=protected-access
+
+        assert result == "feat: Implement persistence layer\n\n- Implement persistence layer"
