@@ -24,7 +24,7 @@ def exist_plan() -> bool:
     Returns:
         True if plan.md exists, False otherwise.
     """
-    workspace_path = get_env_settings().workspace
+    workspace_path = get_workspace()
     plan_path = os.path.join(workspace_path, "plan.md")
     return os.path.exists(plan_path)
 

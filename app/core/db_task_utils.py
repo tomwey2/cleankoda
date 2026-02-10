@@ -15,6 +15,7 @@ logger = logging.getLogger(__name__)
 
 def read_db_task(id: int | None = None, task_id: str | None = None) -> Task | None:
     """Load the saved task from the database."""
+    logger.info("Reading task from database with id: %s, task_id: %s", id, task_id)
     task = None
     if id is not None:
         task = db.session.get(Task, id)
@@ -39,7 +40,7 @@ def read_db_task(id: int | None = None, task_id: str | None = None) -> Task | No
 
 def create_db_task(task_id: str, task_name: str) -> Task:
     """insert task into sqlalchemy database"""
-    logger.info("Creating task %s-%s in database", task_id, task_name)
+    logger.info("Creating task in database: %s (%s)", task_id, task_name)
     try:
         new_task = Task(task_id=task_id, task_name=task_name)
         db.session.add(new_task)
@@ -82,7 +83,7 @@ def update_db_task(task_id: str, **kwargs: Any) -> Task | None:
 
     try:
         logger.info(
-            "Updating task %d-%s in database with values: %s", task.id, task.task_id, kwargs
+            "Updating task %d (%s) in database with values: %s", task.id, task.task_id, kwargs
         )
         db.session.commit()
         return task
@@ -97,9 +98,10 @@ def delete_db_task(task_id: str) -> bool:
     Removes the task mapping from the database.
     Returns True if a record was deleted, False otherwise.
     """
-    task = db.session.get(Task, task_id)
+    task = read_db_task(task_id=task_id)
 
     if task:
+        logger.info("Deleting task from database: %s", task_id)
         db.session.delete(task)
         db.session.commit()
         return True
