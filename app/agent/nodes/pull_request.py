@@ -55,10 +55,10 @@ def _append_summary(
 
 def _create_or_update_pr(state: AgentState):
     summary_entries = list(state.get("agent_summary") or [])
-    
+
     has_changes = git_has_changes(get_codespace())
     logger.info("Git status check: %s changes found", "Some" if has_changes else "No")
-    
+
     failure_detected = False
     failure_reason = "Pull request skipped"
 
