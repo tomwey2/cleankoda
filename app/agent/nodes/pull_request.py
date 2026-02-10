@@ -17,6 +17,13 @@ from app.core.db_task_utils import update_db_task
 logger = logging.getLogger(__name__)
 
 
+ROLE_PREFIX_MAP = {
+    "coder": "feat",
+    "bugfixer": "fix",
+    "analyst": "chore",
+}
+
+
 def create_pull_request_node():
     """Create a pull request node"""
 
@@ -137,13 +144,8 @@ def _generate_commit_message(state: AgentState) -> str:
     if not summary_text:
         return "fix: automated test-driven changes"
 
-    prefix_map = {
-        "coder": "feat",
-        "bugfixer": "fix",
-        "analyst": "chore",
-    }
     role = (summary_role or state.get("task_role") or "").strip().lower()
-    prefix = prefix_map.get(role, "chore")
+    prefix = ROLE_PREFIX_MAP.get(role, "chore")
 
     first_line = f"{prefix}: {summary_text}"
     if len(first_line) > 75:
@@ -155,18 +157,30 @@ def _generate_commit_message(state: AgentState) -> str:
             for entry_role, text in parsed_entries
             if (entry_role or "").lower() == role
         ]
-        if len(role_entries) > 1:
-            filtered_entries: list[str] = []
-            previous_text: str | None = None
-            for current_text in role_entries:
-                if current_text and current_text != previous_text:
-                    filtered_entries.append(current_text)
-                previous_text = current_text
-            details = "\n".join(f"- {text}" for text in filtered_entries if text)
-            if details:
-                return f"{first_line}\n\n{details}"
+        details = _build_role_details(role_entries)
+        if details:
+            return f"{first_line}\n\n{details}"
 
     return first_line
+
+
+def _build_role_details(role_entries: list[str]) -> str | None:
+    """Return formatted detail bullet list for role entries."""
+    if len(role_entries) <= 1:
+        return None
+
+    filtered_entries: list[str] = []
+    previous_text: str | None = None
+    for current_text in role_entries:
+        if current_text and current_text != previous_text:
+            filtered_entries.append(current_text)
+        previous_text = current_text
+
+    if not filtered_entries:
+        return None
+
+    return "\n".join(f"- {text}" for text in filtered_entries)
+
 
 def _parse_summary_entry(entry: str) -> tuple[str | None, str]:
     """Return (role, summary_text) from a formatted summary entry."""
