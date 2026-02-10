@@ -85,16 +85,15 @@
                 });
         };
 
-        const btnApprove = document.getElementById('btn-approve');
-        const btnReject = document.getElementById('btn-reject');
-
-        if (btnApprove) {
-            btnApprove.addEventListener('click', () => reviewPlan('approved'));
-        }
-
-        if (btnReject) {
-            btnReject.addEventListener('click', () => reviewPlan('rejected'));
-        }
+        // Use event delegation for buttons that might be replaced by HTMX
+        document.body.addEventListener('click', function (event) {
+            if (event.target && event.target.id === 'btn-approve') {
+                reviewPlan('approved');
+            }
+            if (event.target && event.target.id === 'btn-reject') {
+                reviewPlan('rejected');
+            }
+        });
     });
 </script>
 {% endblock %}
