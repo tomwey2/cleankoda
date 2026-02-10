@@ -55,7 +55,10 @@ def _append_summary(
 
 def _create_or_update_pr(state: AgentState):
     summary_entries = list(state.get("agent_summary") or [])
-    has_changes = _check_has_changes()
+    
+    has_changes = git_has_changes(get_codespace())
+    logger.info("Git status check: %s changes found", "Some" if has_changes else "No")
+    
     failure_detected = False
     failure_reason = "Pull request skipped"
 
@@ -64,11 +67,11 @@ def _create_or_update_pr(state: AgentState):
         logger.info("No changes detected, skipping Git workflow")
         failure_detected = True
         failure_reason = "Pull request skipped: no changes detected"
-    elif not _stage_all():
+    elif not git_stage_all(work_dir=get_codespace()):
         logger.error("Git add failed, skipping remaining Git operations")
         failure_detected = True
         failure_reason = "Pull request failed: git add failed"
-    elif not _commit(commit_message):
+    elif not git_commit(work_dir=get_codespace(), message=commit_message):
         logger.error("Git commit failed, skipping remaining Git operations")
         failure_detected = True
         failure_reason = "Pull request failed: git commit failed"
@@ -77,7 +80,9 @@ def _create_or_update_pr(state: AgentState):
         summary_entries = _append_summary(summary_entries, state, "PR", failure_reason)
         return False, summary_entries
 
-    push_success, push_msg = _push()
+    push_success, push_msg = git_push(
+        work_dir=get_codespace(), token=get_env_settings().github_token
+    )
     if not push_success:
         logger.error("Git push failed: %s", push_msg)
         failure_reason = f"Pull request failed: git push failed ({push_msg})"
@@ -242,26 +247,3 @@ def _build_pr_inputs(state: AgentState) -> tuple[str, str]:
         pr_body += f"\n\n{pr_body_summary}"
 
     return pr_title, pr_body
-
-
-def _check_has_changes() -> bool:
-    """Check if there are uncommitted changes in the codespace."""
-    result = git_has_changes(get_codespace())
-    logger.info("Git status check: %s changes found", "Some" if result else "No")
-    return result
-
-
-def _stage_all() -> bool:
-    """Stage all changes in the codespace."""
-    return git_stage_all(get_codespace())
-
-
-def _commit(message: str) -> bool:
-    """Commit staged changes with the given message."""
-    return git_commit(get_codespace(), message)
-
-
-def _push() -> tuple[bool, str]:
-    """Push the current branch to origin."""
-    token = get_env_settings().github_token
-    return git_push(get_codespace(), token)
