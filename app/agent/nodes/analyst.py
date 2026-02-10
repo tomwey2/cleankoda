@@ -39,6 +39,7 @@ def create_analyst_node(llm: BaseChatModel, tools):
     """
 
     async def analyst_node(state: AgentState):
+        logger.info("--- ANALYST node ---")
         # Filter messages to keep only recent relevant context (original task + last 20 messages)
         # Analyst may need more context for code analysis
         system_message = load_prompt("systemprompt_analyst.md", state)

@@ -34,13 +34,13 @@ logger = logging.getLogger(__name__)
 def create_task_fetch_node(agent_settings: AgentSettings):
     """Creates a task fetch node for the agent graph."""
     board_provider = create_board_provider(agent_settings)
-    db_task: Task | None = read_db_task()
 
     async def task_fetch(state: AgentState) -> dict:  # pylint: disable=unused-argument
         """
         Fetches the first task from the board in a specified list.
         """
-        logger.info("Fetching tasks from board")
+        logger.info("--- TASK FETCH node ---")
+        db_task: Task | None = read_db_task()
 
         try:
             active_task_system = agent_settings.get_active_task_system()

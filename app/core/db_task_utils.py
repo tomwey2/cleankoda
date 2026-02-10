@@ -15,7 +15,7 @@ logger = logging.getLogger(__name__)
 
 def read_db_task(id: int | None = None, task_id: str | None = None) -> Task | None:
     """Load the saved task from the database."""
-    logger.info("Reading task from database with id: %s, task_id: %s", id, task_id)
+    logger.debug("Reading task from database with id: %s, task_id: %s", id, task_id)
     task = None
     if id is not None:
         task = db.session.get(Task, id)
@@ -34,13 +34,13 @@ def read_db_task(id: int | None = None, task_id: str | None = None) -> Task | No
     if task is None:
         logger.warning("No task found in database")
     else:
-        logger.info("Current task found: %s-%s", task.task_id, task.task_name)
+        logger.info("Current task found: %s (%s)", task.task_id, task.task_name)
     return task
 
 
 def create_db_task(task_id: str, task_name: str) -> Task:
     """insert task into sqlalchemy database"""
-    logger.info("Creating task in database: %s (%s)", task_id, task_name)
+    logger.debug("Creating task in database: %s (%s)", task_id, task_name)
     try:
         new_task = Task(task_id=task_id, task_name=task_name)
         db.session.add(new_task)
@@ -82,7 +82,7 @@ def update_db_task(task_id: str, **kwargs: Any) -> Task | None:
             logging.warning("Attribute '%s' does not exist in Task model and will be ignored.", key)
 
     try:
-        logger.info(
+        logger.debug(
             "Updating task %d (%s) in database with values: %s", task.id, task.task_id, kwargs
         )
         db.session.commit()
@@ -101,7 +101,7 @@ def delete_db_task(task_id: str) -> bool:
     task = read_db_task(task_id=task_id)
 
     if task:
-        logger.info("Deleting task from database: %s", task_id)
+        logger.debug("Deleting task from database: %s", task_id)
         db.session.delete(task)
         db.session.commit()
         return True

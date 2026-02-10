@@ -21,6 +21,7 @@ def create_pull_request_node():
     """Create a pull request node"""
 
     async def pull_request_node(state: AgentState) -> Dict[str, Any]:
+        logger.info("--- PULL REQUEST node ---")
         success, summary_entries = _create_or_update_pr(state)
         if success:
             logger.info("Pull request created/updated successfully")

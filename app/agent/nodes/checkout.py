@@ -27,6 +27,7 @@ def create_checkout_node(agent_settings: AgentSettings):
     """Create a checkout node"""
 
     async def checkout_node(state: AgentState) -> Dict[str, Any]:  # pylint: disable=unused-argument
+        logger.info("--- CHECKOUT node ---")
         task: Optional[BoardTask] = state["task"] if state["task"] else None
 
         if task:
