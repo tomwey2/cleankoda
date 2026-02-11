@@ -1,64 +1,53 @@
 {% extends "base.html" %} {% block content %}
-<div id="dashboard-content" class="container-fluid" hx-get="{{ url_for('web.dashboard') }}" hx-trigger="every 1s"
-    hx-select="#dashboard-content" hx-target="#dashboard-content" hx-swap="outerHTML">
-    <div class="row" style="min-height: 90dvh">
-        <!-- Left Column -->
-        <div class="col-md-6 d-flex flex-column">
-            <div class="d-flex flex-column h-100">
-                <!-- Status Card -->
-                <div class="card mb-4">
-                    <div class="card-header">Status</div>
-                    <div class="card-body">
-                        <p>
-                            <strong>Agent State:</strong>
-                            <span id="agent-state">{{ agent_state["current_node"] }}</span>
-                        </p>
-                        <p>
-                            <strong>Last Update:</strong>
-                            <span id="last-update">{{ agent_state["last_update"] }}</span>
-                        </p>
-                    </div>
+<div id="dashboard-content" hx-get="{{ url_for('web.dashboard') }}" hx-trigger="every 1s" hx-select="#dashboard-content"
+    hx-target="#dashboard-content" hx-swap="outerHTML" class="h-100 d-flex flex-column">
+
+    <!-- Scrollable Content Area -->
+    <div class="container container-sm flex-grow-1" style="max-width: 1000px;">
+
+        <!-- Task Card -->
+        <div class="card shadow-sm border-0 mb-4">
+            <div class="card-body">
+                <h5 class="card-title fw-bold mb-1">{{ task.name if task else 'No Active Task' }}</h5>
+                <p class="card-text text-muted mb-0">{{ task.description if task else 'Waiting for task...' }}</p>
+                {% if agent_state.task_skill_level %}
+                <div class="mt-2">
+                    <span class="badge bg-secondary">{{ agent_state.task_skill_level }}</span>
                 </div>
-                <!-- Task Card -->
-                <div class="card flex-grow-1 d-flex flex-column">
-                    <div class="card-header">Task</div>
-                    <div class="card-body flex-grow-1" style="overflow-y: auto">
-                        <p>
-                            <strong>Task Title:</strong>
-                            <span id="agent-state">{{ agent_state["task"]["name"] }}</span>
-                        </p>
-                        <p>
-                            <strong>Task Skill Level:</strong>
-                            <span id="agent-state">{{ agent_state["task_skill_level"] }}</span>
-                        </p>
-                        <p>
-                            <strong>Task Description:</strong>
-                        <pre style="white-space: pre-wrap">
-{{ agent_state["task"]["description"] }}</pre>
-                        </p>
-                    </div>
-                </div>
+                {% endif %}
             </div>
         </div>
 
-        <!-- Right Column -->
-        <div class="col-md-6 d-flex flex-column">
-            <div class="card h-100 d-flex flex-column">
-                <div class="card-header d-flex justify-content-between align-items-center">
-                    <span>Plan</span>
-                    <div>
-                        <button id="btn-approve" class="btn btn-success btn-sm">Approved</button>
-                        <button id="btn-reject" class="btn btn-danger btn-sm">Rejected</button>
-                    </div>
+        <!-- Plan Card -->
+        <div class="card shadow-sm border-0 mb-5">
+            <div class="card-header bg-transparent border-0 d-flex justify-content-between align-items-center py-3">
+                <h5 class="mb-0 fw-bold">Implementation Plan</h5>
+                <div class="d-flex gap-2">
+                    {% if plan_exists and db_plan_state != 'approved' %}
+                    <button id="btn-reject" class="btn btn-outline-danger">
+                        <i class="bi bi-x-circle me-1"></i>Reject
+                    </button>
+                    <button id="btn-approve" class="btn btn-success">
+                        <i class="bi bi-check-circle me-1"></i>Approve
+                    </button>
+                    {% else %}
+                    <button id="btn-reject" class="btn btn" disabled>
+                        <i class="bi bi-x-circle me-1"></i>Reject
+                    </button>
+                    <button id="btn-approve" class="btn btn" disabled>
+                        <i class="bi bi-check-circle me-1"></i>Approve
+                    </button>
+                    {% endif %}
                 </div>
-                <div class="card-body flex-grow-1" style="overflow-y: auto">
-                    <div class="plan-markdown">
-                        {{ plan_html | safe }}
-                    </div>
+            </div>
+            <div class="card-body">
+                <div class="plan-markdown font-monospace">
+                    {{ plan_html | safe }}
                 </div>
             </div>
         </div>
     </div>
+
 </div>
 
 <style>
@@ -116,10 +105,10 @@
 
         // Use event delegation for buttons that might be replaced by HTMX
         document.body.addEventListener('click', function (event) {
-            if (event.target && event.target.id === 'btn-approve') {
+            if (event.target && event.target.closest('#btn-approve')) {
                 reviewPlan('approved');
             }
-            if (event.target && event.target.id === 'btn-reject') {
+            if (event.target && event.target.closest('#btn-reject')) {
                 reviewPlan('rejected');
             }
         });

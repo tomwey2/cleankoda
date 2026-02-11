@@ -10,7 +10,8 @@ import markdown
 import os
 
 from app.agent.utils import get_workspace
-from app.core.plan_utils import get_plan
+from app.core.plan_utils import get_plan, exist_plan
+from app.core.db_task_utils import read_db_task
 
 logger = logging.getLogger(__name__)
 
@@ -22,10 +23,16 @@ def get_template_context() -> dict:
         Dictionary with all template variables.
     """
     plan_content = get_plan()
+    agent_state = get_agent_state()
+    db_task = read_db_task()
     return {
         "plan_content": plan_content,
         "plan_html": markdown.markdown(plan_content),
-        "agent_state": get_agent_state(),
+        "plan_exists": exist_plan(),
+        "agent_state": agent_state,
+        "agent_status": agent_state.get("current_node"),
+        "task": agent_state.get("task"),
+        "db_plan_state": db_task.plan_state if db_task else None,
     }
 
 
