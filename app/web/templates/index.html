@@ -52,13 +52,44 @@
                     </div>
                 </div>
                 <div class="card-body flex-grow-1" style="overflow-y: auto">
-                    <pre class="font-monospace" style="white-space: pre-wrap">
-{{ plan_content }}</pre>
+                    <div class="plan-markdown">
+                        {{ plan_html | safe }}
+                    </div>
                 </div>
             </div>
         </div>
     </div>
 </div>
+
+<style>
+    .plan-markdown h1 {
+        font-size: 1.5rem;
+    }
+
+    .plan-markdown h2 {
+        font-size: 1.3rem;
+    }
+
+    .plan-markdown h3 {
+        font-size: 1.1rem;
+    }
+
+    .plan-markdown h4 {
+        font-size: 1.0rem;
+    }
+
+    .plan-markdown code {
+        color: inherit;
+        background-color: rgba(255, 255, 255, 0.1);
+        padding: 0.2rem 0.4rem;
+        border-radius: 0.25rem;
+    }
+
+    .plan-markdown pre code {
+        background-color: transparent;
+        padding: 0;
+    }
+</style>
 
 <script>
     document.addEventListener('DOMContentLoaded', function () {

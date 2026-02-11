@@ -6,6 +6,7 @@ separating concerns from the route handlers.
 
 import json
 import logging
+import markdown
 import os
 
 from app.agent.utils import get_workspace
@@ -20,8 +21,10 @@ def get_template_context() -> dict:
     Returns:
         Dictionary with all template variables.
     """
+    plan_content = get_plan()
     return {
-        "plan_content": get_plan(),
+        "plan_content": plan_content,
+        "plan_html": markdown.markdown(plan_content),
         "agent_state": get_agent_state(),
     }
 
