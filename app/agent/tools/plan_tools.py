@@ -4,7 +4,7 @@ import logging
 
 from langchain_core.tools import tool
 
-from app.agent.utils import write_to_file_in_workspace
+from app.agent.tools.file_tools import write_to_file_in_workspace
 
 logger = logging.getLogger(__name__)
 
