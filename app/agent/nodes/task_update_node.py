@@ -13,7 +13,7 @@ from typing import Optional
 from langchain_core.messages import AIMessage, ToolMessage
 
 from app.core.taskboard.board_factory import create_board_provider
-from app.core.taskboard.board_provider import BoardTask
+from app.core.taskboard.board_provider import BoardProvider, BoardTask
 from app.agent.services.summaries import get_agent_summary_entries
 from app.agent.state import AgentState
 from app.core.localdb.models import AgentSettings
@@ -47,7 +47,7 @@ def create_task_update_node(agent_settings: AgentSettings):
 
         logger.info("Updating task %s", task)
 
-        board_provider = create_board_provider(agent_settings)
+        board_provider: BoardProvider = create_board_provider(agent_settings)
 
         try:
             final_comments = _build_agent_comments(state)
