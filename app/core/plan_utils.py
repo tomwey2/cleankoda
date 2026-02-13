@@ -1,15 +1,21 @@
 """Service function for the plan."""
 
 import logging
-import os
 
-from app.agent.utils import get_workspace
 from app.core.localdb.db_task_utils import read_db_task, update_db_task
 
 logger = logging.getLogger(__name__)
 
 
 def save_plan_to_db(content: str) -> bool:
+    """Save the implementation plan to the database.
+
+    Args:
+        content: Content of the implementation plan.
+
+    Returns:
+        True if the implementation plan was saved successfully, False otherwise.
+    """
     task = read_db_task()
     if not task:
         return False
