@@ -344,9 +344,6 @@ async def test_task_fetch_node_no_comments_from_todo(agent_settings, mock_board_
         patch(
             "app.agent.nodes.task_fetch_node.delete_db_task",
         ),
-        patch(
-            "app.agent.nodes.task_fetch_node.delete_plan",
-        ),
     ):
         task_fetch = create_task_fetch_node(agent_settings)
         result = await task_fetch({})
