@@ -26,8 +26,7 @@ from app.agent.services.pull_request import (
 )
 from app.core.localdb.db_task_utils import read_db_task, update_db_task
 from app.web.services import dashboard_service, settings_service
-from app.core.localdb.models import AgentSettings
-from app.core.taskboard.board_factory import create_board_provider
+from app.web.services.dashboard_service import move_task_to_in_progress
 
 logger = logging.getLogger(__name__)
 
@@ -41,9 +40,9 @@ def landing():
 
 
 @web_bp.route("/dashboard", methods=["GET"])
-def dashboard():
+async def dashboard():
     """Handles the main dashboard page."""
-    context = dashboard_service.get_template_context()
+    context = await dashboard_service.get_template_context()
     return render_template("dashboard.html", **context)
 
 
@@ -167,16 +166,3 @@ async def review_plan():
             )
 
     return jsonify({"error": "Failed to update task"}), 500
-
-
-async def move_task_to_in_progress(task_id: str) -> bool:
-    """Moves the task to the state in progress."""
-    logger.info("Moving task %s to in progress", task_id)
-    agent_settings: AgentSettings = settings_service.get_or_create_settings()
-    board_provider = create_board_provider(agent_settings)
-    active_task_system = agent_settings.get_active_task_system()
-    if not active_task_system:
-        logger.warning("No active task system configured")
-        return False
-    await board_provider.move_task_to_named_state(task_id, active_task_system.state_in_progress)
-    return True

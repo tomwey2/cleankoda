@@ -133,6 +133,8 @@ class Task(db.Model):
     task_id = db.Column(db.String(64), nullable=False, unique=True, index=True)
     # Task title from the external task system
     task_name = db.Column(db.String(500), nullable=False)
+    # Task description from the external task system
+    task_description = db.Column(db.Text, nullable=True)
     # Task type (e.g., "coding", "analyzing", "bugfixing")
     task_type = db.Column(db.String(20), nullable=True)
     # Task skill level ("junior", "senior")
