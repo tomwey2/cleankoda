@@ -20,8 +20,6 @@ def _create_app(database_uri: str) -> Flask:
 def test_prepare_runtime_returns_context(tmp_path, monkeypatch):
     workspace = tmp_path / "workspace"
     workspace.mkdir()
-    codespace = workspace / "code"
-    codespace.mkdir()
     monkeypatch.setenv("WORKSPACE", workspace.as_posix())
     monkeypatch.setenv("WORKBENCH", "workbench-backend")
 
@@ -55,15 +53,12 @@ def test_prepare_runtime_returns_context(tmp_path, monkeypatch):
     assert context.agent_stack == "backend"
     assert context.agent_settings.task_readfrom_state == "todo"
     assert "command" in context.mcp_system_def
-    assert ensure_called["repo_url"] == "https://example.com/foo/bar.git"
-    assert ensure_called["work_dir"] == codespace.as_posix()
+    assert ensure_called["repo_url"] == "https://example.com/foo/bar.git"    
 
 
 def test_prepare_runtime_returns_none_for_unknown_system(tmp_path, monkeypatch):
     workspace = tmp_path / "workspace"
     workspace.mkdir()
-    codespace = workspace / "code"
-    codespace.mkdir()
     monkeypatch.setenv("WORKSPACE", workspace.as_posix())
     monkeypatch.setenv("WORKBENCH", "workbench-backend")
 

@@ -17,7 +17,11 @@ from app.agent.services.message_processing import (
     sanitize_response,
 )
 from app.agent.services.prompts import load_prompt
-from app.agent.services.summaries import record_finish_task_summary
+from app.agent.services.summaries import (
+    append_agent_summary,
+    has_finish_task_call,
+    record_finish_task_summary,
+)
 from app.agent.state import AgentState, PlanState
 from app.core.localdb.models import Task
 from app.core.plan_utils import exist_plan, get_plan
@@ -25,6 +29,7 @@ from app.core.localdb.db_task_utils import update_db_task, read_db_task
 
 logger = logging.getLogger(__name__)
 
+DASHBOARD_URL = "http://localhost:5000/dashboard"
 
 def create_analyst_node(llm: BaseChatModel, tools):
     """
@@ -68,6 +73,15 @@ def create_analyst_node(llm: BaseChatModel, tools):
 
                     plan, plan_state = _get_plan_info_in_db_task(exist_plan_before_llm_call)
                     _save_plan_state(plan_state)
+
+                    if plan and has_finish_task_call(response):
+                        agent_summary = append_agent_summary(
+                            agent_summary,
+                            "Dashboard",
+                            f"Plan available at\n\n {DASHBOARD_URL}",
+                        )
+                        recorded = True
+
                     result = {
                         "plan": plan,
                         "plan_state": plan_state,
@@ -115,7 +129,9 @@ def create_analyst_node(llm: BaseChatModel, tools):
     return analyst_node
 
 
-def _get_plan_info_in_db_task(exist_plan_before_llm_call: bool) -> tuple[str, PlanState]:
+def _get_plan_info_in_db_task(
+    exist_plan_before_llm_call: bool,
+) -> tuple[str | None, PlanState | None]:
     """Get plan info after LLM call."""
     exist_plan_after_llm_call = exist_plan()
     plan = get_plan() if exist_plan_after_llm_call else None
