@@ -56,7 +56,7 @@ def test_prepare_runtime_returns_context(tmp_path, monkeypatch):
     assert context.agent_settings.task_readfrom_state == "todo"
     assert "command" in context.mcp_system_def
     assert ensure_called["repo_url"] == "https://example.com/foo/bar.git"
-    assert ensure_called["work_dir"] == codespace.as_posix()
+    assert ensure_called["work_dir"] == workspace.as_posix()
 
 
 def test_prepare_runtime_returns_none_for_unknown_system(tmp_path, monkeypatch):
