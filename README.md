@@ -1,4 +1,4 @@
-# Autonomous Coding Agents to scale reliable Software Engineering - CAIASE
+# CleanKoda - Autonomous Coding Agents to scale reliable Software Engineering
 
 ![Status][Status] 
 
@@ -15,7 +15,7 @@ It operates completely unsupervised to:
 Containerization using Docker makes it possible to run the AI Agent anywhere: in the cloud as managed Service (SaaS), in the company network (as Enterprise Edition), or even locally on your computer.
 
 ## The Lean Startup Vision
-The CAIASE (Autonomous **C**oding **A**gents to scale rel**ia**ble **S**oftware **E**ngineering) addresses the skills shortage in software development through the automation of software development with autonomous agents. Strategically, CAIASE focuses on the maintenance and scaling of existing systems (brownfield projects), in clear contrast to assistance-based competitors (Vibe Coding / Copilot), which focus on greenfield projects. The key unique selling proposition (USP) is the agent's autonomy as a "robot" that works independently, in accordance with processes, and around the clock. The key to acceptance is the "trust-first" strategy, in which the agent starts as a "tireless junior developer" who initially performs low-threshold, routine tasks and delivers only technically validated code.
+**CleanKoda** addresses the skills shortage in software development through the automation of software development with autonomous agents. Strategically, CleanKoda focuses on the maintenance and scaling of existing systems (brownfield projects), in clear contrast to assistance-based competitors (Vibe Coding / Copilot), which focus on greenfield projects. The key unique selling proposition (USP) is the agent's autonomy as a "robot" that works independently, in accordance with processes, and around the clock. The key to acceptance is the "trust-first" strategy, in which the agent starts as a "tireless junior developer" who initially performs low-threshold, routine tasks and delivers only technically validated code.
 
 The full strategy paper can be found here: [VISION and STRATEGY](VISION.md)
 
@@ -52,7 +52,7 @@ Key milestones for professionalization include:
 ---
 
 ## System Architecture
-The **CAIASE** is designed as a modular, dockerized system that automates the software development lifecycle. The architecture separates the "reasoning engine" (the AI Agent) from the "execution environment" (the Workbench) to ensure security and stability.
+The **CleanKoda** is designed as a modular, dockerized system that automates the software development lifecycle. The architecture separates the "reasoning engine" (the AI Agent) from the "execution environment" (the Workbench) to ensure security and stability.
 The system interacts with several external services to fulfill the end-to-end workflow:
 - Task Management System (e.g., Trello): Serves as the source of truth for incoming coding tasks. The agent fetches tasks from the backlog and updates their status upon completion.
 - LLM Provider (e.g., Mistral, OpenAI): The inference engine used by the agents to generate code, reason about bugs, and analyze requirements.

@@ -27,3 +27,4 @@ if __name__ == "__main__":
     # 5. Server Starten
     # debug=True ist okay lokal, aber use_reloader=False hilft gegen doppelte Logs
     app.run(debug=True, use_reloader=False, host="0.0.0.0", port=5000)
+    

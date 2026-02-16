@@ -12,7 +12,7 @@ logger = logging.getLogger(__name__)
 @tool
 def write_plan(content: str):
     """
-    Writes the implementation plan to a file.
+    Writes the implementation plan to a file in the instance directory.
     """
     if not save_plan_to_db(content):
         return "No task in database found. Can not store the plan."
