@@ -9,9 +9,9 @@
         <div class="card shadow-sm border-0 mb-4">
             <div class="card-body">
                 <h5 class="card-title fw-bold mb-1">Agent Status</h5>
-                {% if agent_state.current_node %}
+                {% if current_node %}
                 <div class="mt-2">
-                    <span class="badge bg-primary ms-2">{{ agent_state.current_node }}</span>
+                    <span class="badge bg-primary ms-2">{{ current_node }}</span>
                 </div>
                 {% endif %}
             </div>
@@ -20,11 +20,12 @@
         <!-- Task Card -->
         <div class="card shadow-sm border-0 mb-4">
             <div class="card-body">
-                <h5 class="card-title fw-bold mb-1">{{ task.name if task else 'No Active Task' }}</h5>
-                <p class="card-text text-muted mb-0">{{ task.description if task else 'Waiting for task...' }}</p>
-                {% if agent_state.task_skill_level %}
+                <h5 class="card-title fw-bold mb-1">{{ task_name if task_name else 'No Active Task' }}</h5>
+                <p class="card-text text-muted mb-0">{{ task_description if task_description else 'Waiting for task...'
+                    }}</p>
+                {% if task_skill_level %}
                 <div class="mt-2">
-                    <span class="badge bg-secondary">{{ agent_state.task_skill_level }}</span>
+                    <span class="badge bg-secondary">{{ task_skill_level }}</span>
                 </div>
                 {% endif %}
             </div>
@@ -54,7 +55,7 @@
             </div>
             <div class="card-body">
                 <div class="plan-markdown font-monospace">
-                    {{ plan_html | safe }}
+                    {{ plan_content | safe }}
                 </div>
             </div>
         </div>

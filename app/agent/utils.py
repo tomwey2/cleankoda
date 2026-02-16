@@ -25,9 +25,11 @@ def get_workspace() -> str:
     """Return the workspace directory path."""
     return get_env_settings().workspace
 
+
 def get_instance_dir() -> str:
     """Return the instance directory path."""
     return get_env_settings().instance_dir
+
 
 def get_workbench() -> str:
     """Return the workbench container name."""

@@ -23,13 +23,12 @@ from app.agent.services.summaries import (
     record_finish_task_summary,
 )
 from app.agent.state import AgentState, PlanState
-from app.core.localdb.models import Task
 from app.core.plan_utils import exist_plan, get_plan
-from app.core.localdb.db_task_utils import update_db_task, read_db_task
 
 logger = logging.getLogger(__name__)
 
 DASHBOARD_URL = "http://localhost:5000/dashboard"
+
 
 def create_analyst_node(llm: BaseChatModel, tools):
     """
@@ -71,10 +70,11 @@ def create_analyst_node(llm: BaseChatModel, tools):
                     log_agent_response("analyst", response, attempt=attempt + 1)
                     recorded, agent_summary = record_finish_task_summary(state, "analyst", response)
 
-                    plan, plan_state = _get_plan_info_in_db_task(exist_plan_before_llm_call)
-                    _save_plan_state(plan_state)
+                    plan_content, plan_state = _get_plan_content_and_plan_state(
+                        exist_plan_before_llm_call
+                    )
 
-                    if plan and has_finish_task_call(response):
+                    if plan_content and has_finish_task_call(response):
                         agent_summary = append_agent_summary(
                             agent_summary,
                             "Dashboard",
@@ -83,7 +83,7 @@ def create_analyst_node(llm: BaseChatModel, tools):
                         recorded = True
 
                     result = {
-                        "plan": plan,
+                        "plan_content": plan_content,
                         "plan_state": plan_state,
                         "messages": [response],
                         "current_node": "analyst",
@@ -129,22 +129,16 @@ def create_analyst_node(llm: BaseChatModel, tools):
     return analyst_node
 
 
-def _get_plan_info_in_db_task(
+def _get_plan_content_and_plan_state(
     exist_plan_before_llm_call: bool,
 ) -> tuple[str | None, PlanState | None]:
     """Get plan info after LLM call."""
     exist_plan_after_llm_call = exist_plan()
-    plan = get_plan() if exist_plan_after_llm_call else None
+    plan_content = get_plan() if exist_plan_after_llm_call else None
     plan_state = None
     if exist_plan_after_llm_call:
         plan_state = PlanState.CREATED
         if exist_plan_before_llm_call:
             plan_state = PlanState.UPDATED
 
-    return plan, plan_state
-
-
-def _save_plan_state(plan_state: PlanState):
-    db_task: Task | None = read_db_task()
-    if plan_state and db_task:
-        update_db_task(db_task.task_id, plan_state=plan_state.value)
+    return plan_content, plan_state

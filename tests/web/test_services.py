@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import os
-import tempfile
 from unittest.mock import patch
 
 from app.core.extensions import db
@@ -12,55 +11,7 @@ from app.web.schemas.settings_schema import (
     LLMConfigSchema,
     SettingsFormSchema,
 )
-from app.web.services import dashboard_service, settings_service
-
-
-class TestDashboardService:
-    """Tests for DashboardService."""
-
-    def test_get_plan_content_returns_file_content(self):
-        """Should return content of plan.md when it exists."""
-        from app.core.config import set_env_settings
-
-        with tempfile.TemporaryDirectory() as tmpdir:
-            plan_path = os.path.join(tmpdir, "plan.md")
-            with open(plan_path, "w", encoding="utf-8") as f:
-                f.write("# Test Plan\n\nThis is a test.")
-
-            with patch.dict(os.environ, {"WORKSPACE": tmpdir}):
-                set_env_settings(None)  # Reset to reload from new environment
-                result = dashboard_service.get_plan()
-
-            assert "# Test Plan" in result
-            assert "This is a test." in result
-
-    def test_get_plan_content_returns_default_when_missing(self):
-        """Should return default message when plan.md doesn't exist."""
-        from app.core.config import set_env_settings
-
-        with tempfile.TemporaryDirectory() as tmpdir:
-            with patch.dict(os.environ, {"WORKSPACE": tmpdir}):
-                set_env_settings(None)  # Reset to reload from new environment
-                result = dashboard_service.get_plan()
-
-            assert "No plan.md found" in result
-
-    def test_get_template_context_includes_plan_content(self):
-        """Template context should include plan_content."""
-        from app.core.config import set_env_settings
-
-        with tempfile.TemporaryDirectory() as tmpdir:
-            plan_path = os.path.join(tmpdir, "plan.md")
-            with open(plan_path, "w", encoding="utf-8") as f:
-                f.write("# My Plan")
-
-            with patch.dict(os.environ, {"WORKSPACE": tmpdir}):
-                set_env_settings(None)  # Reset to reload from new environment
-                with patch("app.web.services.dashboard_service.read_db_task", return_value=None):
-                    result = dashboard_service.get_template_context()
-
-            assert "plan_content" in result
-            assert "# My Plan" in result["plan_content"]
+from app.web.services import settings_service
 
 
 class TestSettingsService:

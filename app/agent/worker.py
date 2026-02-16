@@ -19,6 +19,7 @@ from app.agent.runtime import RuntimeSetting
 from app.agent.services.graph_assets import save_graph_as_mermaid, save_graph_as_png
 from app.agent.utils import get_workspace, save_state_to_instance
 from app.core.config import get_env_settings
+from app.core.localdb.db_task_utils import update_db_task
 
 logger = logging.getLogger(__name__)
 
@@ -68,6 +69,7 @@ async def run_agent_cycle(runtime: RuntimeSetting) -> None:
             "task_comments": [],
             "task_skill_level": None,
             "task_skill_level_reasoning": None,
+            "task_type": None,
             "agent_stack": runtime.agent_stack,
             "agent_skill_level": runtime.agent_settings.agent_skill_level,
             "plan_state": None,
@@ -86,7 +88,16 @@ async def run_agent_cycle(runtime: RuntimeSetting) -> None:
         async for current_state in app_graph.astream(
             inputs, config=thread_config, stream_mode="values"
         ):
-            if current_state["current_node"] and current_state["current_node"] != "task_fetch":
+            if current_state["task"]:
                 save_state_to_instance(current_state)
+                update_db_task(
+                    task_id=current_state["task"].id,
+                    task_name=current_state["task"].name,
+                    task_description=current_state["task"].description,
+                    task_type=current_state["task_type"],
+                    task_skill_level=current_state["task_skill_level"],
+                    plan_state=current_state["plan_state"],
+                    current_node=current_state["current_node"],
+                )
 
         logger.info("Finish graph cycle.")

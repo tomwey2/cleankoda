@@ -42,7 +42,10 @@ def create_db_task(task_id: str, task_name: str) -> Task:
     """insert task into sqlalchemy database"""
     logger.debug("Creating task in database: %s (%s)", task_id, task_name)
     try:
-        new_task = Task(task_id=task_id, task_name=task_name)
+        new_task = Task(
+            task_id=task_id,
+            task_name=task_name,
+        )
         db.session.add(new_task)
         db.session.commit()
         return new_task
