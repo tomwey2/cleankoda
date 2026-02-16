@@ -1,10 +1,10 @@
-# Lean Startup Strategy Paper: CAIASE
-CAIASE (Autonomous **C**oding **A**gents to scale rel**ia**ble **S**oftware **E**ngineering)
+# Lean Startup Strategy Paper: CleanKoda
+CleanKoda - Autonomous Coding Agents to scale reliable Software Engineering
 
 Date: January 1, 2026
 
 ## 1. Executive Summary
-The CAIASE strategy paper presents a disruptive approach to addressing the skills shortage in software development through the automation of software development with autonomous agents. Strategically, CAIASE focuses on the maintenance and scaling of existing systems (brownfield projects), in clear contrast to assistance-based competitors (Vibe Coding / Copilot), which focus on greenfield projects. The key unique selling proposition (USP) is the agent's autonomy as a "robot" that works independently, in accordance with processes, and around the clock. The key to acceptance is the "trust-first" strategy, in which the agent starts as a "tireless junior developer" who initially performs low-threshold, routine tasks and delivers only technically validated code.
+The CleanKoda strategy paper presents a disruptive approach to addressing the skills shortage in software development through the automation of software development with autonomous agents. Strategically, CleanKoda focuses on the maintenance and scaling of existing systems (brownfield projects), in clear contrast to assistance-based competitors (Vibe Coding / Copilot), which focus on greenfield projects. The key unique selling proposition (USP) is the agent's autonomy as a "robot" that works independently, in accordance with processes, and around the clock. The key to acceptance is the "trust-first" strategy, in which the agent starts as a "tireless junior developer" who initially performs low-threshold, routine tasks and delivers only technically validated code.
 
 ## 2. The vision (The foundation)
 **Core Vision:**
@@ -17,7 +17,7 @@ The future demand for software will continue to rise. At the same time, the glob
 
 The key trend to counteract this bottleneck is the automation of software development. In the V-model of software development, many processes on the right side (validation, integration, and deployment) have already been successfully automated (e.g., through CI/CD pipelines). However, the "creative" left side (requirements gathering, design, and implementation) remained the domain of human actors for a long time. Only with the advent of generative AI has it become possible to automate these intellectually demanding and creative processes as well.
 
-CAIASE aims to industrialize these previously human-dominated processes. This is achieved through the integration of autonomous agents that perform standardized tasks in a scalable and independent manner. This makes software development more productive and cost-efficient overall.
+CleanKoda aims to industrialize these previously human-dominated processes. This is achieved through the integration of autonomous agents that perform standardized tasks in a scalable and independent manner. This makes software development more productive and cost-efficient overall.
 
 # 3. Strategic positioning and differentiation
 How we achieve our vision and differentiate ourselves from the competition (Vibe Coding/Copilot).
@@ -31,7 +31,7 @@ Our hypothesis is: Companies do not prefer a “black box” that spews out code
 
 Comparison between Vibe Coding and our approach:
 
-| Characteristic | Vibe Coding / Copilots (The competition) | CAIASE (Our approach) |
+| Characteristic | Vibe Coding / Copilots (The competition) | CleanKoda (Our approach) |
 |----------------|------------------------------------------|-----------------------|
 | **Metaphor**       | Design Studio (Creative chaos)       | **Factory / Assembly line (Structured order)** |
 | **Role of AI**     | Assistant ("Iron Man suit")          | Worker ("Autonomous robot") |
@@ -45,7 +45,7 @@ Comparison between Vibe Coding and our approach:
 
 While the status quo (Vibe Coding / Copilot) provides developers with better tools for faster code generation—comparable to the transition from manual to electric screwdrivers—it remains a craft-based approach (software manufacturing).
 
-CAIASE transforms this craft-driven development into an automated production line, similar to a factory. The human developer at the implementation station is replaced by an autonomous unit.
+CleanKoda transforms this craft-driven development into an automated production line, similar to a factory. The human developer at the implementation station is replaced by an autonomous unit.
 
 Proven principles are retained:
 - **Seamless process integration:** We accept the existing infrastructure (Jira, Git, CI/CD) as our "factory floor." Instead of tearing down the floor, we simply automate the manual workstations within it.
@@ -58,19 +58,19 @@ Our approach, however, is based on the agent's autonomy. The AI acts as a "robot
 
 For this autonomy approach, essential features go beyond the capabilities of a mere assistance system:
 
-- **Self-Healing / Error Correction (Closed Loop):** If an assistant writes faulty code, a human corrects it. CAIASE, on the other hand, must be able to independently read the error message after a failed build (in the container), correct the code itself, and restart the build—without human intervention. This is the killer feature of autonomy. CAIASE delivers only tested code and never code with errors, which builds user trust in the process.
-- **Code Revision After Rejected Pull Requests:** CAIASE must be able to integrate user/reviewer feedback into its code by building upon the result that formed the basis of the original pull request.
-- **Environment Setup:** An assistant uses the developer's environment. CAIASE, however, must be able to independently execute commands like `npm install` or `pip install` in the container and resolve dependency conflicts on its own.
-- **Context awareness:** CAIASE not only reads the ticket but also actively considers additional project documentation, such as the CONTRIBUTING.md file or existing architecture documents in the repository, to ensure adherence to the required style and architectural specifications.
+- **Self-Healing / Error Correction (Closed Loop):** If an assistant writes faulty code, a human corrects it. CleanKoda, on the other hand, must be able to independently read the error message after a failed build (in the container), correct the code itself, and restart the build—without human intervention. This is the killer feature of autonomy. CleanKoda delivers only tested code and never code with errors, which builds user trust in the process.
+- **Code Revision After Rejected Pull Requests:** CleanKoda must be able to integrate user/reviewer feedback into its code by building upon the result that formed the basis of the original pull request.
+- **Environment Setup:** An assistant uses the developer's environment. CleanKoda, however, must be able to independently execute commands like `npm install` or `pip install` in the container and resolve dependency conflicts on its own.
+- **Context awareness:** CleanKoda not only reads the ticket but also actively considers additional project documentation, such as the CONTRIBUTING.md file or existing architecture documents in the repository, to ensure adherence to the required style and architectural specifications.
 - **Iterative approach:** The product must be able to break down a large ticket into smaller, manageable sub-steps before coding begins.
 - **Decoupling from human time constraints:** The agent's autonomy decouples software production from the physical presence of a human. While an assistant (Vibe Coding) saves time, it still requires constant human attention.
 
 ## C. The “Trust-First” Strategy
-To overcome the skepticism of experienced senior developers (“An AI can’t do that as well as I can”), CAIASE deliberately positions itself not as a competitor, but as a “tireless junior developer.”
+To overcome the skepticism of experienced senior developers (“An AI can’t do that as well as I can”), CleanKoda deliberately positions itself not as a competitor, but as a “tireless junior developer.”
 
-The expectation of CAIASE is that of a junior developer: make mistakes (require a review), no access to critical architecture, but reliably handle the routine tasks.
+The expectation of CleanKoda is that of a junior developer: make mistakes (require a review), no access to critical architecture, but reliably handle the routine tasks.
 
-CAIASE integrates seamlessly into the existing process and hierarchy. The agent doesn’t complain, works around the clock (24/7), incurs a fraction of the costs, and corrects errors in the pull request review immediately and without emotion. This mitigates the senior developer’s “ego problem” and builds trust in AI automation.
+CleanKoda integrates seamlessly into the existing process and hierarchy. The agent doesn’t complain, works around the clock (24/7), incurs a fraction of the costs, and corrects errors in the pull request review immediately and without emotion. This mitigates the senior developer’s “ego problem” and builds trust in AI automation.
 
 Instead of attempting to develop entire features autonomously right away (high risk, high distrust), the agent begins by taking on low-risk tasks that senior developers often perceive as tedious, unwelcome work:
 - Writing unit tests for existing code.
@@ -83,9 +83,9 @@ Once trust is established, more complex tasks can be tackled:
 - Refactoring code
 - Integration tests
 
-If CAIASE has proven itself at these levels, the agent can gradually take on more complex tasks, i.e. implement new features.
+If CleanKoda has proven itself at these levels, the agent can gradually take on more complex tasks, i.e. implement new features.
 
-As a prerequisite for building this trust, CAIASE must be able to independently assess the complexity of the task assigned to it. If the complexity exceeds the agent's current skill level, it must actively provide feedback.
+As a prerequisite for building this trust, CleanKoda must be able to independently assess the complexity of the task assigned to it. If the complexity exceeds the agent's current skill level, it must actively provide feedback.
 
 ## 4. The product (MVP definition)
 Concrete design of the Minimum Viable Product (MVP) to initiate the build-measure-learn cycle.
