@@ -29,7 +29,7 @@ def _get_tool_call_info(tool_call: dict) -> str:
     return f"{name}"
 
 
-def log_agent_response(
+def log_agent_response(  # pylint: disable=unused-argument
     agent_name: str,
     response: AIMessage,
     *,
