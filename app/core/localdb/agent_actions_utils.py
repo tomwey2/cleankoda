@@ -3,6 +3,7 @@ from sqlalchemy.exc import IntegrityError
 
 from app.core.extensions import db
 from app.core.localdb.models import AgentAction, AgentTask
+from sqlalchemy import select
 
 logger = logging.getLogger(__name__)
 
@@ -28,6 +29,15 @@ def create_db_agent_action(
             if args and name in ["read_file", "write_to_file", "run_command"]:
                 arg0_name, arg0_value = next(iter(args.items()))
 
+            last_agent_action = get_last_agent_action()
+            if (
+                last_agent_action
+                and last_agent_action.current_node == current_node
+                and last_agent_action.tool_name == name
+                and last_agent_action.tool_arg0_name == arg0_name
+                and last_agent_action.tool_arg0_value == arg0_value
+            ):
+                return
             new_agent_action = AgentAction(
                 task_id=agent_task.id,
                 current_node=current_node,
@@ -48,3 +58,9 @@ def create_db_agent_action(
         db.session.rollback()
         logging.error("Error creating agent action: %s", e)
         return None
+
+
+def get_last_agent_action() -> AgentAction | None:
+    """Get the last task from the database."""
+    stmt = select(AgentAction).order_by(AgentAction.id.desc())
+    return db.session.execute(stmt).scalar()
