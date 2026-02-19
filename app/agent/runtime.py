@@ -68,9 +68,6 @@ def prepare_runtime() -> Optional[RuntimeSetting]:
 def _get_agent_settings() -> Optional[AgentSettings]:
     """Load the active agent settings from the database."""
     settings = AgentSettings.query.first()
-    if not settings or not settings.is_active:
-        logger.info("Agent is not active or not configured. Skipping cycle.")
-        return None
     return settings
 
 

@@ -11,6 +11,8 @@ from app.agent.runtime import RuntimeSetting, prepare_runtime
 
 load_dotenv()
 
+DEFAULT_POLLING_INTERVAL_SECONDS = 60
+
 
 async def main():
     # 1. Logging Setup
@@ -27,28 +29,29 @@ async def main():
     with app.app_context():
         db.create_all()
 
+    async def run_cycle() -> int:
+        with app.app_context():
+            runtime: RuntimeSetting | None = prepare_runtime()
+            if not runtime:
+                logger.info("No runtime configured, skipping cycle")
+                return DEFAULT_POLLING_INTERVAL_SECONDS
+            if not runtime.agent_settings:
+                logger.info("Agent settings not found, skipping cycle")
+                return DEFAULT_POLLING_INTERVAL_SECONDS
+            if not runtime.agent_settings.is_active:
+                logger.info("Agent is not active, skipping cycle")
+                return runtime.agent_settings.polling_interval_seconds or DEFAULT_POLLING_INTERVAL_SECONDS
+            await run_agent_cycle(runtime)
+            return runtime.agent_settings.polling_interval_seconds or DEFAULT_POLLING_INTERVAL_SECONDS
+
     # 4. Der Infinite Loop
     while True:
-        polling_interval = 60
         try:
-            # Synchrone DB-Abfrage muss in einem Thread oder Sync-Kontext passieren.
-            # Da SQLAlchemy lazy loading etc. macht, ist es am sichersten,
-            # dies kurz synchron zu machen.
-            with app.app_context():
-                runtime: RuntimeSetting | None = prepare_runtime()
-                if not runtime:
-                    logger.error("No runtime found, skipping cycle")
-                    return
-                polling_interval = runtime.agent_settings.polling_interval_seconds
-                # Den eigentlichen Job ausführen
-                await run_agent_cycle(runtime)
-
+            polling_interval = await run_cycle()
         except Exception as e:
             logger.error("Error in main: %s", e, exc_info=True)
-            # Fallback Interval bei Fehler
-            polling_interval = 60
+            polling_interval = DEFAULT_POLLING_INTERVAL_SECONDS
 
-        # Schlafen bis zum nächsten Zyklus (non-blocking)
         await asyncio.sleep(polling_interval)
 
 
