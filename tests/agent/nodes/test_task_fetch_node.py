@@ -96,7 +96,7 @@ async def test_task_fetch_node_success(agent_settings, mock_board_provider):
             return_value=None,
         ),
         patch(
-            "app.agent.nodes.task_fetch_node.fetch_task_from_state",
+            "app.core.task_utils.fetch_task_from_state",
             new=AsyncMock(
                 return_value=BoardTask(
                     id="card1",
@@ -108,7 +108,7 @@ async def test_task_fetch_node_success(agent_settings, mock_board_provider):
             ),
         ),
         patch(
-            "app.agent.nodes.task_fetch_node.move_task_to_state",
+            "app.core.task_utils.move_task_to_state",
             new=AsyncMock(
                 return_value=BoardTask(
                     id="card1",
@@ -128,15 +128,18 @@ async def test_task_fetch_node_success(agent_settings, mock_board_provider):
         ),
     ):
         task_fetch = create_task_fetch_node(agent_settings)
-        result = await task_fetch({
-            "current_node": "any_node",
-        })
+        result = await task_fetch(
+            {
+                "current_node": "any_node",
+                "agent_task": None,
+            }
+        )
 
-        assert result["task"].id == "card1"
-        assert result["task"].name == "Test Task"
-        assert result["task"].state_id == "list2"  # Moved to in-progress state
+        assert result["board_task"].id == "card1"
+        assert result["board_task"].name == "Test Task"
+        assert result["board_task"].state_id == "list2"  # Moved to in-progress state
         assert result["current_node"] == "task_fetch"
-        assert result["task_comments"] == []
+        assert result["board_task_comments"] == []
         assert result["pr_review_message"] == ""
 
 
@@ -164,7 +167,7 @@ async def test_task_fetch_node_no_review_list(agent_settings, mock_board_provide
             return_value=None,
         ),
         patch(
-            "app.agent.nodes.task_fetch_node.fetch_task_from_state",
+            "app.core.task_utils.fetch_task_from_state",
             new=AsyncMock(
                 return_value=BoardTask(
                     id="card1",
@@ -176,7 +179,7 @@ async def test_task_fetch_node_no_review_list(agent_settings, mock_board_provide
             ),
         ),
         patch(
-            "app.agent.nodes.task_fetch_node.move_task_to_state",
+            "app.core.task_utils.move_task_to_state",
             new=AsyncMock(
                 return_value=BoardTask(
                     id="card1",
@@ -199,13 +202,14 @@ async def test_task_fetch_node_no_review_list(agent_settings, mock_board_provide
         result = await task_fetch(
             {
                 "current_node": "any_node",
+                "agent_task": None,
             }
         )
 
         # Should still fetch task from To Do even without review list
-        assert result["task"] is not None
-        assert result["task"].id == "card1"
-        assert result["task"].state_id == "list2"  # Moved to in-progress
+        assert result["board_task"] is not None
+        assert result["board_task"].id == "card1"
+        assert result["board_task"].state_id == "list2"  # Moved to in-progress
 
 
 @pytest.mark.asyncio
@@ -223,7 +227,7 @@ async def test_task_fetch_node_no_cards(agent_settings, mock_board_provider):
             return_value=None,
         ),
         patch(
-            "app.agent.nodes.task_fetch_node.fetch_task_from_state",
+            "app.core.task_utils.fetch_task_from_state",
             new=AsyncMock(return_value=None),
         ),
     ):
@@ -231,19 +235,20 @@ async def test_task_fetch_node_no_cards(agent_settings, mock_board_provider):
         result = await task_fetch(
             {
                 "current_node": "any_node",
+                "agent_task": None,
             }
         )
 
-        assert result["task"] is None
+        assert result["board_task"] is None
 
 
 @pytest.mark.asyncio
 async def test_task_fetch_node_with_comments(agent_settings, mock_board_provider):
     """Test task fetch with comments when task is already in In Progress (returned from review)."""
-    from app.core.localdb.models import Task
+    from app.core.localdb.models import AgentTask
 
     # Create a mock db_task to simulate an existing task
-    mock_db_task = Task(
+    mock_db_task = AgentTask(
         task_id="card1",
         task_name="Test Task",
         branch_name="feature/test",
@@ -292,13 +297,14 @@ async def test_task_fetch_node_with_comments(agent_settings, mock_board_provider
         result = await task_fetch(
             state={
                 "current_node": "any_node",
+                "agent_task": mock_db_task,
             }
         )
 
         # Comments should be included since task was already in In Progress (returned from review)
-        assert result["task_comments"] is not None
-        assert len(result["task_comments"]) == 1
-        assert result["task_comments"][0].text == "Please fix the bug"
+        assert result["board_task_comments"] is not None
+        assert len(result["board_task_comments"]) == 1
+        assert result["board_task_comments"][0].text == "Please fix the bug"
 
 
 @pytest.mark.asyncio
@@ -350,7 +356,7 @@ async def test_task_fetch_node_no_comments_from_todo(agent_settings, mock_board_
             return_value=None,
         ),
         patch(
-            "app.agent.nodes.task_fetch_node.fetch_task_from_state",
+            "app.core.task_utils.fetch_task_from_state",
             new=AsyncMock(
                 return_value=BoardTask(
                     id="card1",
@@ -373,12 +379,13 @@ async def test_task_fetch_node_no_comments_from_todo(agent_settings, mock_board_
         result = await task_fetch(
             state={
                 "current_node": "any_node",
+                "agent_task": None,
             }
         )
 
         # Comments should NOT be included since task was picked from To Do
-        assert result["task_comments"] is not None
-        assert len(result["task_comments"]) == 0
+        assert result["board_task_comments"] is not None
+        assert len(result["board_task_comments"]) == 0
 
 
 @pytest.mark.asyncio

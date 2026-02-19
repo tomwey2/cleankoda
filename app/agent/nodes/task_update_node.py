@@ -8,7 +8,6 @@ based on the agent's configuration.
 
 import logging
 from time import sleep
-from typing import Optional
 
 from langchain_core.messages import AIMessage, ToolMessage
 
@@ -41,19 +40,19 @@ def create_task_update_node(agent_settings: AgentSettings):
         """
         if state["current_node"] != "task_update":
             logger.info("--- TASK UPDATE node ---")
-        task: Optional[BoardTask] = state["task"] if state["task"] else None
-        if not task:
+        board_task: BoardTask | None = state["board_task"]
+        if not board_task:
             logger.warning("No task found in state")
             return {}
 
-        logger.info("Updating task %s", task)
+        logger.info("Updating task in board %s", board_task)
 
         board_provider: BoardProvider = create_board_provider(agent_settings)
 
         try:
             final_comments = _build_agent_comments(state)
             for comment in final_comments:
-                await board_provider.add_comment(task.id, comment)
+                await board_provider.add_comment(board_task.id, comment)
                 sleep(0.1)
         except Exception as e:  # pylint: disable=broad-exception-caught
             logger.error("Failed to add comment to task: %s", e)
@@ -64,12 +63,11 @@ def create_task_update_node(agent_settings: AgentSettings):
                 logger.warning("state_in_review not configured for provider %s", board_provider)
                 return
 
-            task_moveto_state_id = await board_provider.move_task_to_named_state(
-                task_id=task.id, state_name=task_moveto_state
+            await board_provider.move_task_to_named_state(
+                task_id=board_task.id, state_name=task_moveto_state
             )
 
             return {
-                "task_state_id": task_moveto_state_id,
                 "current_node": "task_update",
             }
         except ValueError as exc:
