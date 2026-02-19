@@ -44,13 +44,15 @@ def test_analyst_node_processes_non_coding_task_with_comment_tool():
                 analyst_node = create_analyst_node(mock_llm, mock_tools)
 
                 # Mock state for non-coding task
+                mock_agent_task = MagicMock()
                 state: AgentState = {
                     "messages": [
                         HumanMessage(content="Analyze the system architecture")
                     ],
                     "next_step": "analyst",
-                    "task": MagicMock(),
-                    "task_comments": [],
+                    "board_task": MagicMock(),
+                    "board_task_comments": [],
+                    "agent_task": mock_agent_task,
                     "pr_review_message": None,
                     "task_type": TaskType.ANALYZING,
                     "task_skill_level": "senior",
@@ -129,13 +131,15 @@ def test_analyst_node_processes_coding_task_with_plan_tool():
                 analyst_node = create_analyst_node(mock_llm, mock_tools)
 
                 # Mock state for coding task
+                mock_agent_task = MagicMock()
                 state: AgentState = {
                     "messages": [
                         HumanMessage(content="Implement a new feature")
                     ],
                     "next_step": "analyst",
-                    "task": MagicMock(),
-                    "task_comments": [],
+                    "board_task": MagicMock(),
+                    "board_task_comments": [],
+                    "agent_task": mock_agent_task,
                     "pr_review_message": None,
                     "task_type": TaskType.CODING,
                     "task_skill_level": "senior",
@@ -213,13 +217,15 @@ def test_analyst_node_handles_finish_task_with_empty_summary():
                 analyst_node = create_analyst_node(mock_llm, mock_tools)
 
                 # Mock state for non-coding task
+                mock_agent_task = MagicMock()
                 state: AgentState = {
                     "messages": [
                         HumanMessage(content="Analyze the system architecture")
                     ],
                     "next_step": "analyst",
-                    "task": MagicMock(),
-                    "task_comments": [],
+                    "board_task": MagicMock(),
+                    "board_task_comments": [],
+                    "agent_task": mock_agent_task,
                     "pr_review_message": None,
                     "task_type": TaskType.ANALYZING,
                     "task_skill_level": "senior",
@@ -271,8 +277,8 @@ def test_analyst_node_handles_finish_task_with_empty_summary():
                                 # Check that the response contains tool calls
                                 assert any(hasattr(msg, 'tool_calls') and msg.tool_calls for msg in result["messages"])
                                 
-                                # Verify finish_task_summary was called
-                                mock_record.assert_called_once()
+                                # Verify finish_task_summary was called exactly once (first successful tool call)
+                                assert mock_record.call_count == 1
 
     anyio.run(_test)
 
@@ -294,13 +300,15 @@ def test_analyst_node_handles_invalid_response_with_retry():
                 analyst_node = create_analyst_node(mock_llm, mock_tools)
 
                 # Mock state
+                mock_agent_task = MagicMock()
                 state: AgentState = {
                     "messages": [
                         HumanMessage(content="Test task")
                     ],
                     "next_step": "analyst",
-                    "task": MagicMock(),
-                    "task_comments": [],
+                    "board_task": MagicMock(),
+                    "board_task_comments": [],
+                    "agent_task": mock_agent_task,
                     "pr_review_message": None,
                     "task_type": TaskType.ANALYZING,
                     "task_skill_level": "senior",
@@ -362,13 +370,15 @@ def test_analyst_node_sets_current_node_flag():
                 analyst_node = create_analyst_node(mock_llm, mock_tools)
 
                 # Mock state with current_node already set to "analyst"
+                mock_agent_task = MagicMock()
                 state: AgentState = {
                     "messages": [
                         HumanMessage(content="Test task")
                     ],
                     "next_step": "analyst",
-                    "task": MagicMock(),
-                    "task_comments": [],
+                    "board_task": MagicMock(),
+                    "board_task_comments": [],
+                    "agent_task": mock_agent_task,
                     "pr_review_message": None,
                     "task_type": TaskType.ANALYZING,
                     "task_skill_level": "senior",

@@ -48,7 +48,7 @@ def create_task_fetch_node(agent_settings: AgentSettings):
 
             if not board_task:
                 logger.info("There is no current task to work on.")
-                return {"task": None}
+                return {"board_task": None}
 
             comments = []
             pr_review_message = ""
@@ -76,7 +76,7 @@ def create_task_fetch_node(agent_settings: AgentSettings):
 
         except Exception as e:  # pylint: disable=broad-exception-caught
             logger.error("Error fetching tasks: %s", e)
-            return {"task": None}
+            return {"board_task": None}
 
     return task_fetch
 

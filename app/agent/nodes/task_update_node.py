@@ -8,7 +8,6 @@ based on the agent's configuration.
 
 import logging
 from time import sleep
-from typing import Optional
 
 from langchain_core.messages import AIMessage, ToolMessage
 

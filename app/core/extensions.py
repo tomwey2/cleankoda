@@ -24,8 +24,8 @@ db = SQLAlchemy()
 
 
 @event.listens_for(Engine, "connect")
-def set_sqlite_pragma(dbapi_connection, connection_record):
-    # Prüfen, ob wir wirklich SQLite nutzen
+def set_sqlite_pragma(dbapi_connection, connection_record):  # pylint: disable=unused-argument
+    """Enable foreign key enforcement for SQLite connections."""
     if dbapi_connection.__class__.__module__ == "sqlite3":
         cursor = dbapi_connection.cursor()
         cursor.execute("PRAGMA foreign_keys=ON")
