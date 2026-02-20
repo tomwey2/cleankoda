@@ -7,36 +7,45 @@
 
         <!-- Agent Status Card -->
         <div class="card shadow-sm border-0 mb-4">
-            <div class="card-body">
+            <div class="card-header">
                 <h5 class="card-title fw-bold mb-1">Agent Status</h5>
-                {% if current_node %}
-                <div class="mt-2">
-                    <span class="badge bg-primary ms-2">{{ current_node }}</span>
-                </div>
+            </div>
+            <div class="card-body">
+                {% for agent_action in agent_actions %}
+                {% if agent_action.current_node in ['analyst', 'coder', 'bugfixer', 'tester'] %}
+                <span>({{ agent_action.current_node }}) {{ agent_action.tool_name }} {{ agent_action.tool_arg0_value
+                    }}</span>
+                <br>
                 {% endif %}
+                {% endfor %}
             </div>
         </div>
 
         <!-- Task Card -->
         <div class="card shadow-sm border-0 mb-4">
-            <div class="card-body">
-                <h5 class="card-title fw-bold mb-1">{{ task_name if task_name else 'No Active Task' }}</h5>
-                <p class="card-text text-muted mb-0">{{ task_description if task_description else 'Waiting for task...'
-                    }}</p>
-                {% if task_skill_level %}
-                <div class="mt-2">
-                    <span class="badge bg-secondary">{{ task_skill_level }}</span>
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="card-title fw-bold mb-1">{{ agent_task.task_name if agent_task.task_name else 'No Active
+                    Task' }}</h5>
+                {% if agent_task.task_skill_level %}
+                <div class="d-flex gap-2">
+                    <span class="badge bg-secondary">{{ agent_task.task_type }}</span>
+                    <span class="badge bg-secondary">{{ agent_task.task_skill_level }}</span>
                 </div>
                 {% endif %}
+            </div>
+            <div class="card-body">
+                <p class="card-text text-muted mb-0">{{ agent_task.task_description if agent_task.task_description else
+                    'Waiting for task...'
+                    }}</p>
             </div>
         </div>
 
         <!-- Plan Card -->
         <div class="card shadow-sm border-0 mb-5">
-            <div class="card-header bg-transparent border-0 d-flex justify-content-between align-items-center py-3">
+            <div class="card-header bg-transparent d-flex justify-content-between align-items-center py-3">
                 <h5 class="mb-0 fw-bold">Implementation Plan</h5>
                 <div class="d-flex gap-2">
-                    {% if plan_exists and plan_state != 'approved' %}
+                    {% if plan_exists and agent_task.plan_state != 'approved' %}
                     <button id="btn-reject" class="btn btn-outline-danger">
                         <i class="bi bi-x-circle me-1"></i>Reject
                     </button>
