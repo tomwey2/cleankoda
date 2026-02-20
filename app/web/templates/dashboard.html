@@ -71,13 +71,21 @@
                     <div class="card-body">
                         {% for agent_action in agent_actions %}
                         {% if agent_action.current_node in ['analyst', 'coder', 'bugfixer', 'tester'] %}
+                        {% if agent_action.tool_name != 'finish_task' %}
                         <span>({{ agent_action.current_node }}) {{ agent_action.tool_name }} {{
                             agent_action.tool_arg0_value
                             }}</span>
                         <br>
                         {% endif %}
+                        {% endif %}
                         {% endfor %}
-                        {{ agent_task.working_state }}
+                        <span>{{ agent_task.working_state }}</span>
+                        {% if agent_task.user_message %}
+                        <br><br>
+                        <span class="fw-bold">{{ agent_task.user_message }}</span>
+                        <br>
+                        <span>Waiting for user response...</span>
+                        {% endif %}
                     </div>
                 </div>
 
