@@ -63,7 +63,7 @@ def create_analyst_node(llm: BaseChatModel, tools):
             result: dict[str, Any] = {"user_message": "Review the plan and approve or reject it"}
 
             if has_finish_task_call(message=response):
-                _, agent_summary = record_finish_task_summary(
+                recorded, agent_summary = record_finish_task_summary(
                     state, role="analyst", ai_message=response
                 )
 
@@ -77,8 +77,10 @@ def create_analyst_node(llm: BaseChatModel, tools):
                         "Dashboard",
                         f"Plan available at\n\n {DASHBOARD_URL}",
                     )
+                    recorded = True
 
-                result["agent_summary"] = agent_summary
+                if recorded:
+                    result["agent_summary"] = agent_summary
 
                 agent_task = state["agent_task"]
                 agent_task.plan_content = plan_content

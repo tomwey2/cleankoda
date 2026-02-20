@@ -5,7 +5,9 @@ Provides `invoke_tool_node`, which encapsulates the common LLM-invoke-with-retry
 loop used by the Coder, Analyst, and Tester nodes.
 """
 
+import asyncio
 import logging
+import time
 from collections.abc import Callable
 from typing import Any
 
@@ -14,8 +16,12 @@ from langchain_core.messages import AIMessage, BaseMessage, HumanMessage, System
 from app.agent.services.logging import log_agent_response
 from app.agent.services.message_processing import filter_messages_for_llm, sanitize_response
 from app.agent.state import AgentState
+from app.core.config import get_env_settings
 
 logger = logging.getLogger(__name__)
+
+_rate_limit_lock: asyncio.Lock | None = None
+_last_llm_call_time: float = 0.0  # pylint: disable=invalid-name
 
 
 async def invoke_tool_node(  # pylint: disable=too-many-arguments,too-many-locals,duplicate-code
@@ -61,6 +67,7 @@ async def invoke_tool_node(  # pylint: disable=too-many-arguments,too-many-local
     for attempt in range(3):
         try:
             chain = llm.bind_tools(tools, tool_choice=current_tool_choice)
+            await _apply_rate_limit()
             response: AIMessage = await chain.ainvoke(current_messages)
 
             response = sanitize_response(response)
@@ -112,8 +119,22 @@ async def invoke_tool_node(  # pylint: disable=too-many-arguments,too-many-local
         "current_node": node_name,
     }
 
-    if llm_response_hook:
-        hook_result = llm_response_hook(state, fallback_message)
-        fallback_result.update(hook_result)
-
     return fallback_result
+
+
+async def _apply_rate_limit() -> None:
+    """Enforce the configured LLM calls-per-second limit, if set."""
+    calls_per_second = get_env_settings().llm_calls_per_second
+    if calls_per_second <= 0:
+        return
+    min_interval = 1.0 / calls_per_second
+    global _rate_limit_lock, _last_llm_call_time  # pylint: disable=global-statement
+    if _rate_limit_lock is None:
+        _rate_limit_lock = asyncio.Lock()
+    async with _rate_limit_lock:
+        now = time.monotonic()
+        wait = min_interval - (now - _last_llm_call_time)
+        if wait > 0:
+            logger.debug("Rate limit: waiting %.2fs before LLM call", wait)
+            await asyncio.sleep(wait)
+        _last_llm_call_time = time.monotonic()
