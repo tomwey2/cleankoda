@@ -34,6 +34,7 @@ from app.agent.tools.plan_tools import write_plan
 from app.agent.tools.finish_task import finish_task
 from app.agent.tools.run_command import run_command
 from app.agent.tools.thinking import thinking
+from app.agent.tools.report_test_result import report_test_result
 
 
 def route_after_tools_tester(state: AgentState):
@@ -149,6 +150,7 @@ def create_workflow(runtime: RuntimeSetting) -> StateGraph:
     tester_tools = [
         thinking,
         run_command,
+        report_test_result,
     ]
 
     # --- Graph Nodes ---
