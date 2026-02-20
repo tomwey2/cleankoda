@@ -23,7 +23,13 @@ async def get_template_context() -> dict:
     Returns:
         Dictionary with all template variables.
     """
-    dashboard_data: dict = {}
+    dashboard_data: dict = {
+        "agent_task": None,
+        "plan_content": "",
+        "plan_exists": False,
+        "current_node": "todo",
+        "agent_actions": [],
+    }
     agent_task: AgentTask | None = read_db_task()
     if agent_task:
         agent_actions: list[AgentAction] = read_db_agent_actions(agent_task)
