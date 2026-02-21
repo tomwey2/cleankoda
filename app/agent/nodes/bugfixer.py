@@ -32,13 +32,20 @@ def create_bugfixer_node(llm, tools):
     """
 
     def _llm_response_hook(state: AgentState, response: AIMessage) -> dict[str, Any]:
+        result: dict[str, Any] = {}
         if has_finish_task_call(message=response):
             recorded, agent_summary = record_finish_task_summary(
                 state=state, role="bugfixer", ai_message=response
             )
             if recorded:
-                return {"agent_summary": agent_summary}
-        return {}
+                result["agent_summary"] = agent_summary
+
+            result["user_message"] = (
+                "Review the pull request. If you approve it, move the task to 'done'.\n"
+                + "If you reject it, comment the task and move it to 'in progress'."
+            )
+
+        return result
 
     async def bugfixer_node(state: AgentState):
 

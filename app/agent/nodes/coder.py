@@ -33,11 +33,7 @@ def create_coder_node(llm, tools, agent_stack):
     """
 
     def _llm_response_hook(state: AgentState, response: AIMessage) -> dict[str, Any]:
-        result: dict[str, Any] = {
-            "user_message": "Review the pull request. If you approve it, "
-            + "move the task to 'done'. If you reject it, "
-            + "comment the task and move it to 'in progress'.",
-        }
+        result: dict[str, Any] = {}
 
         if has_finish_task_call(message=response):
             recorded, agent_summary = record_finish_task_summary(
@@ -45,6 +41,12 @@ def create_coder_node(llm, tools, agent_stack):
             )
             if recorded:
                 result["agent_summary"] = agent_summary
+
+            result["user_message"] = (
+                "Review the pull request. If you approve it, move the task to 'done'.\n"
+                + "If you reject it, comment the task and move it to 'in progress'."
+            )
+
         return result
 
     async def coder_node(state: AgentState):

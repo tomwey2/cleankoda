@@ -40,14 +40,19 @@ def create_analyst_node(llm: BaseChatModel, tools):
         A function that represents the analyst node.
     """
 
+    initial_plan_exists: bool | None = None
+
     async def analyst_node(state: AgentState):
+        nonlocal initial_plan_exists
         if state["current_node"] != "analyst":
             logger.info("--- ANALYST node ---")
         # Analyst may need more context for code analysis
         system_message = load_prompt("systemprompt_analyst.md", state)
         human_message = load_prompt("prompt_analyzing.md", state)
 
-        exist_plan_before_llm_call = exist_plan()
+        # Check if plan exists before node call on first run
+        if initial_plan_exists is None:
+            initial_plan_exists = exist_plan()
 
         def _llm_response_hook(state: AgentState, response: AIMessage) -> dict[str, Any]:
             """
@@ -60,7 +65,7 @@ def create_analyst_node(llm: BaseChatModel, tools):
             Returns:
                 A dictionary containing the updated state.
             """
-            result: dict[str, Any] = {"user_message": "Review the plan and approve or reject it"}
+            result: dict[str, Any] = {}
 
             if has_finish_task_call(message=response):
                 recorded, agent_summary = record_finish_task_summary(
@@ -68,7 +73,7 @@ def create_analyst_node(llm: BaseChatModel, tools):
                 )
 
                 plan_content, plan_state = _get_plan_content_and_plan_state(
-                    exist_plan_before_llm_call
+                    initial_plan_exists
                 )
 
                 if plan_content:
@@ -77,6 +82,7 @@ def create_analyst_node(llm: BaseChatModel, tools):
                         "Dashboard",
                         f"Plan available at\n\n {DASHBOARD_URL}",
                     )
+                    result["user_message"] = "Review the plan and approve or reject it"
                     recorded = True
 
                 if recorded:
@@ -106,13 +112,13 @@ def create_analyst_node(llm: BaseChatModel, tools):
 
 
 def _get_plan_content_and_plan_state(
-    exist_plan_before_llm_call: bool,
+    initial_plan_exists: bool,
 ) -> tuple[str | None, PlanState | None]:
     """
     Get plan info after LLM call.
 
     Args:
-        exist_plan_before_llm_call: Whether a plan existed before the LLM call.
+        initial_plan_exists: Whether a plan existed before the LLM call.
 
     Returns:
         A tuple containing the plan content and plan state.
@@ -122,7 +128,7 @@ def _get_plan_content_and_plan_state(
     plan_state = None
     if exist_plan_after_llm_call:
         plan_state = PlanState.CREATED
-        if exist_plan_before_llm_call:
+        if initial_plan_exists:
             plan_state = PlanState.UPDATED
 
     return plan_content, plan_state
