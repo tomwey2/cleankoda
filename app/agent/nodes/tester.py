@@ -70,8 +70,10 @@ def create_tester_node(llm, tools):
     async def tester_node(state: AgentState):
         if state["current_node"] != "tester":
             logger.info("--- TESTER node ---")
+
         system_message = load_prompt("systemprompt_tester.md", state)
         human_message = load_prompt("prompt_testing.md", state)
+
         return await invoke_tool_node(
             node_name="tester",
             state=state,
@@ -79,7 +81,7 @@ def create_tester_node(llm, tools):
             tools=tools,
             system_prompt=system_message,
             human_prompt=human_message,
-            max_messages=15,
+            max_messages=10,
             fallback_tool_name="report_test_result",
             fallback_tool_args={
                 "result": "fail",

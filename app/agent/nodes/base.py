@@ -20,8 +20,8 @@ from app.core.config import get_env_settings
 
 logger = logging.getLogger(__name__)
 
-_rate_limit_lock: asyncio.Lock | None = None
-_last_llm_call_time: float = 0.0  # pylint: disable=invalid-name
+_RATE_LIMIT_LOCK: asyncio.Lock | None = None
+_LAST_LLM_CALL_TIME: float = 0.0
 
 
 async def invoke_tool_node(  # pylint: disable=too-many-arguments,too-many-locals,duplicate-code
@@ -128,13 +128,13 @@ async def _apply_rate_limit() -> None:
     if calls_per_second <= 0:
         return
     min_interval = 1.0 / calls_per_second
-    global _rate_limit_lock, _last_llm_call_time  # pylint: disable=global-statement
-    if _rate_limit_lock is None:
-        _rate_limit_lock = asyncio.Lock()
-    async with _rate_limit_lock:
+    global _RATE_LIMIT_LOCK, _LAST_LLM_CALL_TIME  # pylint: disable=global-statement
+    if _RATE_LIMIT_LOCK is None:
+        _RATE_LIMIT_LOCK = asyncio.Lock()
+    async with _RATE_LIMIT_LOCK:
         now = time.monotonic()
-        wait = min_interval - (now - _last_llm_call_time)
+        wait = min_interval - (now - _LAST_LLM_CALL_TIME)
         if wait > 0:
             logger.debug("Rate limit: waiting %.2fs before LLM call", wait)
             await asyncio.sleep(wait)
-        _last_llm_call_time = time.monotonic()
+        _LAST_LLM_CALL_TIME = time.monotonic()
