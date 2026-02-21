@@ -22,8 +22,6 @@ def setup_logging(
     from a json or ini style file if provided, or use a default configuration.
     """
 
-    logger = logging.getLogger("entrypoint")
-
     config_path: Path | None = config_file_path
     if config_path is None:
         env_config = os.environ.get("LOGGING_CONFIG_FILE")
@@ -41,11 +39,7 @@ def setup_logging(
                 logging.config.dictConfig(config_data)
             else:
                 logging.config.fileConfig(config_path, disable_existing_loggers=False)
-            return logger
-        logger.warning(
-            "Logging config file '%s' not found. Falling back to built-in defaults.",
-            config_path,
-        )
+            return logging.getLogger("entrypoint")
 
     logging_config = {
         "version": 1,
@@ -74,6 +68,13 @@ def setup_logging(
     }
 
     logging.config.dictConfig(logging_config)
+
+    logger = logging.getLogger("entrypoint")
+    if config_path:
+        logger.warning(
+            "Logging config file '%s' not found. Falling back to built-in defaults.",
+            config_path,
+        )
     return logger
 
 
@@ -92,11 +93,9 @@ def _ensure_log_handler_directories(config_data: Dict[str, Any]) -> None:
         try:
             parent.mkdir(parents=True, exist_ok=True)
         except OSError as error:
-            logging.getLogger("entrypoint").warning(
-                "Failed to create log directory for handler '%s': %s",
-                handler_name,
-                error,
-            )
+            raise OSError(
+                f"Failed to create log directory for handler '{handler_name}': {error}"
+            ) from error
 
 
 def mask_secret(value: str) -> str:

@@ -34,7 +34,7 @@ The following loggers are pinned to `WARNING` to suppress verbose output:
 An external file overrides the built-in defaults entirely. Supply it in one of two ways:
 
 1. **Environment variable** – set `LOGGING_CONFIG_FILE` to the file path before starting the process.
-2. **Code** – pass `config_file=Path("path/to/file")` directly to `setup_logging()`.
+2. **Code** – pass `config_file_path=Path("path/to/file")` directly to `setup_logging()`.
 
 If the file path is provided but the file cannot be found, a warning is emitted and the built-in defaults remain in effect. This helps catch typos and missing local overrides early during startup.
 
