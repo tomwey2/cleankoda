@@ -17,7 +17,7 @@ Containerization using Docker makes it possible to run the AI Agent anywhere: in
 ## The Lean Startup Vision
 **CleanKoda** addresses the skills shortage in software development through the automation of software development with autonomous agents. Strategically, CleanKoda focuses on the maintenance and scaling of existing systems (brownfield projects), in clear contrast to assistance-based competitors (Vibe Coding / Copilot), which focus on greenfield projects. The key unique selling proposition (USP) is the agent's autonomy as a "robot" that works independently, in accordance with processes, and around the clock. The key to acceptance is the "trust-first" strategy, in which the agent starts as a "tireless junior developer" who initially performs low-threshold, routine tasks and delivers only technically validated code.
 
-![Show Case](./images/cleankoda-showcase-improved-readme.gif)
+![Show Case](./images/cleankoda-showcase-improve-readme.gif)
 
 The full strategy paper can be found here: [VISION and STRATEGY](VISION.md)
 
