@@ -23,12 +23,21 @@ def safe_truncate(value: Any, length: int = 100) -> str:
 def _get_tool_call_info(tool_call: dict) -> str:
     name = tool_call.get("name", "unknown")
     args = tool_call.get("args", {}) or {}
-    if name in ["read_file", "write_to_file", "run_command", "run_test"]:
-        params = list(args.values())
-        if params:
-            return f"{name} {params[0]}"
-        return name
-    return f"{name}"
+
+    key_param_map = {
+        "read_file": "file_path",
+        "write_to_file": "TargetFile",
+        "run_command": "CommandLine",
+        "run_test": "test_command",
+    }
+
+    if name in key_param_map:
+        param_key = key_param_map[name]
+        param_value = args.get(param_key)
+        if param_value:
+            return f"{name} {param_value}"
+
+    return name
 
 
 def log_agent_response(  # pylint: disable=unused-argument

@@ -35,3 +35,21 @@ def test_from_env_reads_custom_llm_timeout(minimal_env):
     settings = EnvironmentSettings.from_env()
 
     assert settings.llm_request_timeout_seconds == 45.0
+
+
+def test_from_env_raises_on_invalid_timeout_value(minimal_env):
+    """Invalid LLM_REQUEST_TIMEOUT_SECONDS should raise clear ValueError."""
+
+    minimal_env.setenv("LLM_REQUEST_TIMEOUT_SECONDS", "invalid")
+
+    with pytest.raises(ValueError, match="Invalid LLM_REQUEST_TIMEOUT_SECONDS value"):
+        EnvironmentSettings.from_env()
+
+
+def test_from_env_raises_on_invalid_rate_limit_value(minimal_env):
+    """Invalid LLM_CALLS_PER_SECOND should raise clear ValueError."""
+
+    minimal_env.setenv("LLM_CALLS_PER_SECOND", "not_a_number")
+
+    with pytest.raises(ValueError, match="Invalid LLM_CALLS_PER_SECOND value"):
+        EnvironmentSettings.from_env()

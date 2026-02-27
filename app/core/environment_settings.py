@@ -97,10 +97,24 @@ class EnvironmentSettings:  # pylint: disable=too-many-instance-attributes
         enable_mcp_str = os.environ.get("ENABLE_MCP_SERVERS", "true").lower()
         enable_mcp_servers = enable_mcp_str in {"true", "1", "yes", "on"}
 
-        llm_calls_per_second = float(os.environ.get("LLM_CALLS_PER_SECOND", "0"))
-        llm_request_timeout_seconds = float(
-            os.environ.get("LLM_REQUEST_TIMEOUT_SECONDS", "180")
-        )
+        try:
+            llm_calls_per_second = float(os.environ.get("LLM_CALLS_PER_SECOND", "0"))
+        except ValueError as e:
+            raise ValueError(
+                f"Invalid LLM_CALLS_PER_SECOND value: {os.environ.get('LLM_CALLS_PER_SECOND')}. "
+                "Must be a valid number."
+            ) from e
+
+        try:
+            llm_request_timeout_seconds = float(
+                os.environ.get("LLM_REQUEST_TIMEOUT_SECONDS", "180")
+            )
+        except ValueError as e:
+            timeout_value = os.environ.get("LLM_REQUEST_TIMEOUT_SECONDS")
+            raise ValueError(
+                "Invalid LLM_REQUEST_TIMEOUT_SECONDS value: "
+                f"{timeout_value}. Must be a valid number."
+            ) from e
 
         return cls(
             encryption_key=encryption_key,

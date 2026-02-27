@@ -85,9 +85,14 @@ def _resolve_agent_stack(env_value: str | None) -> AgentStack:
         return AgentStack.CONDUCTOR
 
     workbench_name = get_workbench()
-    derived_stack = (
-        AgentStack.FRONTEND if workbench_name == "workbench-frontend" else AgentStack.BACKEND
-    )
+
+    if workbench_name == "workbench-frontend":
+        derived_stack = AgentStack.FRONTEND
+    elif workbench_name == "workbench-java-node":
+        derived_stack = AgentStack.CONDUCTOR
+    else:
+        derived_stack = AgentStack.BACKEND
+
     logger.warning(
         "AGENT_STACK not provided or invalid; derived stack '%s' from workbench '%s'",
         derived_stack,

@@ -64,7 +64,13 @@ async def invoke_tool_node(  # pylint: disable=too-many-arguments,too-many-local
 
     current_tool_choice = "auto"
 
-    timeout_seconds = max(get_env_settings().llm_request_timeout_seconds, 1.0)
+    configured_timeout = get_env_settings().llm_request_timeout_seconds
+    timeout_seconds = max(configured_timeout, 1.0)
+    if configured_timeout < 1.0:
+        logger.warning(
+            "LLM_REQUEST_TIMEOUT_SECONDS=%s is too low, clamping to 1.0s",
+            configured_timeout,
+        )
 
     for attempt in range(3):
         try:
@@ -134,6 +140,16 @@ async def invoke_tool_node(  # pylint: disable=too-many-arguments,too-many-local
                 e,
                 exc_info=True,
             )
+            current_tool_choice = "any"
+            current_messages.append(
+                HumanMessage(
+                    content=(
+                        "ERROR: Previous call failed with "
+                        f"{type(e).__name__}. Retry with a tool call."
+                    )
+                )
+            )
+            continue
 
     # Fallback
     logger.error("Agent stuck after 3 attempts. Hard exit.")

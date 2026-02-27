@@ -5,6 +5,7 @@ from __future__ import annotations
 from flask import Flask
 
 from app.agent.runtime import RuntimeSetting, prepare_runtime
+from app.agent.state import AgentStack
 from app.core.extensions import db
 from app.core.localdb.models import AgentSettings
 
@@ -22,6 +23,7 @@ def test_prepare_runtime_returns_context(tmp_path, monkeypatch):
     workspace.mkdir()
     monkeypatch.setenv("WORKSPACE", workspace.as_posix())
     monkeypatch.setenv("WORKBENCH", "workbench-backend")
+    monkeypatch.delenv("AGENT_STACK", raising=False)
 
     app = _create_app(f"sqlite:///{tmp_path / 'runtime.db'}")
     ensure_called = {}
@@ -50,7 +52,7 @@ def test_prepare_runtime_returns_context(tmp_path, monkeypatch):
         context = prepare_runtime()
 
     assert isinstance(context, RuntimeSetting)
-    assert context.agent_stack == "backend"
+    assert context.agent_stack == AgentStack.BACKEND
     assert context.agent_settings.task_readfrom_state == "todo"
     assert "command" in context.mcp_system_def
     assert ensure_called["repo_url"] == "https://example.com/foo/bar.git"
@@ -62,6 +64,7 @@ def test_prepare_runtime_returns_none_for_unknown_system(tmp_path, monkeypatch):
     workspace.mkdir()
     monkeypatch.setenv("WORKSPACE", workspace.as_posix())
     monkeypatch.setenv("WORKBENCH", "workbench-backend")
+    monkeypatch.delenv("AGENT_STACK", raising=False)
 
     app = _create_app(f"sqlite:///{tmp_path / 'runtime_invalid.db'}")
 

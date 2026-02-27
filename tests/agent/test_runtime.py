@@ -30,3 +30,13 @@ def test_resolve_agent_stack_defaults_to_backend_for_unknown_workbench(monkeypat
     result = _resolve_agent_stack("")
 
     assert result == AgentStack.BACKEND
+
+
+def test_resolve_agent_stack_derives_conductor_from_java_node_workbench(monkeypatch):
+    """workbench-java-node should derive to AgentStack.CONDUCTOR."""
+
+    monkeypatch.setattr("app.agent.runtime.get_workbench", lambda: "workbench-java-node")
+
+    result = _resolve_agent_stack(None)
+
+    assert result == AgentStack.CONDUCTOR
