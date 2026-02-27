@@ -55,7 +55,7 @@ def prepare_runtime() -> Optional[RuntimeSetting]:
     env_settings = get_env_settings()
     agent_stack = _resolve_agent_stack(env_settings.agent_stack)
     logger.info("Agent stack: %s", agent_stack)
-    
+
     mcp_system_def = MCP_SYSTEM_DEFINITIONS[settings.task_system_type]
 
     return RuntimeSetting(

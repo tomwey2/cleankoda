@@ -27,8 +27,7 @@ def _get_tool_call_info(tool_call: dict) -> str:
         params = list(args.values())
         if params:
             return f"{name} {params[0]}"
-        else:
-            return f"{name}"
+        return name
     return f"{name}"
 
 

@@ -2,7 +2,7 @@
 
 import asyncio
 
-import anyio
+import pytest
 from langchain_core.messages import AIMessage
 
 from app.agent.nodes.base import invoke_tool_node
@@ -36,24 +36,20 @@ class _FakeLLM:
         )
 
 
-async def _run_invoke(**kwargs):
-    """Helper to execute invoke_tool_node inside anyio."""
-
-    return await invoke_tool_node(**kwargs)
-
-
-@anyio.run
+@pytest.mark.anyio
 async def test_invoke_tool_node_retries_after_timeout(monkeypatch):
     """invoke_tool_node should retry with tool_choice='any' after timeout."""
 
     fake_llm = _FakeLLM()
 
-    monkeypatch.setattr("app.agent.nodes.base.filter_messages_for_llm", lambda *_: [])
+    monkeypatch.setattr(
+        "app.agent.nodes.base.filter_messages_for_llm", lambda *_, **__: []
+    )
     monkeypatch.setattr("app.agent.nodes.base.sanitize_response", lambda resp: resp)
     monkeypatch.setattr("app.agent.nodes.base.log_agent_response", lambda *args, **kwargs: None)
 
     state = {"messages": []}
-    result = await _run_invoke(
+    result = await invoke_tool_node(
         node_name="tester",
         state=state,
         llm=fake_llm,
