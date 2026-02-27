@@ -23,6 +23,7 @@ def test_prepare_runtime_returns_context(tmp_path, monkeypatch):
     workspace.mkdir()
     monkeypatch.setenv("WORKSPACE", workspace.as_posix())
     monkeypatch.setenv("WORKBENCH", "workbench-backend")
+    # secures the agent stack is derived from workbench, not explicitly set
     monkeypatch.delenv("AGENT_STACK", raising=False)
 
     app = _create_app(f"sqlite:///{tmp_path / 'runtime.db'}")
@@ -64,6 +65,7 @@ def test_prepare_runtime_returns_none_for_unknown_system(tmp_path, monkeypatch):
     workspace.mkdir()
     monkeypatch.setenv("WORKSPACE", workspace.as_posix())
     monkeypatch.setenv("WORKBENCH", "workbench-backend")
+    # secures the agent stack is derived from workbench, not explicitly set
     monkeypatch.delenv("AGENT_STACK", raising=False)
 
     app = _create_app(f"sqlite:///{tmp_path / 'runtime_invalid.db'}")
