@@ -64,11 +64,22 @@ async def invoke_tool_node(  # pylint: disable=too-many-arguments,too-many-local
 
     current_tool_choice = "auto"
 
+    timeout_seconds = max(get_env_settings().llm_request_timeout_seconds, 1.0)
+
     for attempt in range(3):
         try:
             chain = llm.bind_tools(tools, tool_choice=current_tool_choice)
             await _apply_rate_limit()
-            response: AIMessage = await chain.ainvoke(current_messages)
+            logger.debug(
+                "Invoking LLM (node=%s, attempt=%d, tool_choice=%s, timeout=%ss)",
+                node_name,
+                attempt + 1,
+                current_tool_choice,
+                timeout_seconds,
+            )
+            response: AIMessage = await asyncio.wait_for(
+                chain.ainvoke(current_messages), timeout=timeout_seconds
+            )
 
             response = sanitize_response(response)
 
@@ -96,8 +107,33 @@ async def invoke_tool_node(  # pylint: disable=too-many-arguments,too-many-local
                 HumanMessage(content="ERROR: Invalid response. You MUST call a tool!")
             )
 
+        except asyncio.TimeoutError:
+            logger.warning(
+                "LLM call timed out (node=%s, attempt=%d, tool_choice=%s, timeout=%ss)",
+                node_name,
+                attempt + 1,
+                current_tool_choice,
+                timeout_seconds,
+            )
+            current_messages.append(
+                HumanMessage(
+                    content=(
+                        "ERROR: Previous LLM call timed out. Respond quickly and call the "
+                        "appropriate tool to continue."
+                    )
+                )
+            )
+            current_tool_choice = "any"
+            continue
         except Exception as e:  # pylint: disable=broad-exception-caught
-            logger.error("Error in LLM call (Attempt %d): %s", attempt + 1, e, exc_info=True)
+            logger.error(
+                "Error in LLM call (node=%s, attempt=%d, tool_choice=%s): %s",
+                node_name,
+                attempt + 1,
+                current_tool_choice,
+                e,
+                exc_info=True,
+            )
 
     # Fallback
     logger.error("Agent stuck after 3 attempts. Hard exit.")

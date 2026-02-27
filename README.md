@@ -150,6 +150,8 @@ Other options:
 |Workbench container|`WORKBENCH`|Name of the Docker container that hosts the runnable workbench (e.g., `workbench-backend`). Defaults to compose value if unset|
 |Agent stack override|`AGENT_STACK`|Force the runtime tech stack to `backend` or `frontend`. When omitted/invalid, the stack is derived from `WORKBENCH`|
 |MCP control|`ENABLE_MCP_SERVERS` (default `true`)|Set to `false`/`0`/`no` to skip spawning the Git and task MCP servers when running locally|
+|LLM throughput|`LLM_CALLS_PER_SECOND`|Optional rate limiter for outbound LLM requests. Set to `0` (default) to disable|
+|LLM timeout|`LLM_REQUEST_TIMEOUT_SECONDS`|Maximum seconds to wait for a single LLM response before aborting the call (default `180`). Helpful when using cloud-hosted Ollama models that may stall|
 
 #### 4. Run the Agent via Docker Container (recommended)
 ##### 4.1 Build the Image

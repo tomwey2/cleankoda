@@ -69,6 +69,7 @@ class EnvironmentSettings:  # pylint: disable=too-many-instance-attributes
     github_repo_url: str = ""
     enable_mcp_servers: bool = True
     llm_calls_per_second: float = 0.0
+    llm_request_timeout_seconds: float = 180.0
 
     @classmethod
     def from_env(cls) -> EnvironmentSettings:
@@ -97,6 +98,9 @@ class EnvironmentSettings:  # pylint: disable=too-many-instance-attributes
         enable_mcp_servers = enable_mcp_str in {"true", "1", "yes", "on"}
 
         llm_calls_per_second = float(os.environ.get("LLM_CALLS_PER_SECOND", "0"))
+        llm_request_timeout_seconds = float(
+            os.environ.get("LLM_REQUEST_TIMEOUT_SECONDS", "180")
+        )
 
         return cls(
             encryption_key=encryption_key,
@@ -119,6 +123,7 @@ class EnvironmentSettings:  # pylint: disable=too-many-instance-attributes
             github_repo_url=os.environ.get("GITHUB_REPO_URL", ""),
             enable_mcp_servers=enable_mcp_servers,
             llm_calls_per_second=llm_calls_per_second,
+            llm_request_timeout_seconds=llm_request_timeout_seconds,
         )
 
     def get_database_uri(self, base_dir: Path) -> str:
