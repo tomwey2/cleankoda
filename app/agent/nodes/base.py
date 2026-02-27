@@ -97,7 +97,7 @@ async def invoke_tool_node(  # pylint: disable=too-many-arguments,too-many-local
             )
 
         except Exception as e:  # pylint: disable=broad-exception-caught
-            logger.error("Error in LLM call (Attempt %d): %s", attempt + 1, e)
+            logger.error("Error in LLM call (Attempt %d): %s", attempt + 1, e, exc_info=True)
 
     # Fallback
     logger.error("Agent stuck after 3 attempts. Hard exit.")

@@ -59,6 +59,7 @@ class AgentStack(StrEnum):
 
     BACKEND = "backend"
     FRONTEND = "frontend"
+    CONDUCTOR = "conductor"
 
 
 class AgentState(TypedDict):

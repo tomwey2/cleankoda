@@ -48,6 +48,20 @@ services:
       # the socket to connect to the docker daemon
       - /var/run/docker.sock:/var/run/docker.sock
 
+  workbench-java-node:
+    build:
+      context: .
+      dockerfile: Dockerfile.java-node
+    container_name: workbench-java-node
+    # in which workspace=working_dir the commands are executed
+    working_dir: /coding-agent-workspace
+    network_mode: host
+    volumes:
+      - workspace:/coding-agent-workspace
+      # the socket to connect to the docker daemon
+      - /var/run/docker.sock:/var/run/docker.sock
+
+
 volumes:
   workspace:
   #instance:
