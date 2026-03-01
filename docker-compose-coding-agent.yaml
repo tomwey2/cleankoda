@@ -1,0 +1,75 @@
+version: "3.9"
+
+services:
+  webapp:
+    build: .
+    container_name: frontend
+    ports:
+      - "5000:5000"
+    command: uv run run_web.py # <-- Startet NUR Flask
+    env_file: .env
+    environment:
+      - WORKSPACE=/coding-agent-workspace
+    volumes:
+      - /home/gat/tmp/conductor:/coding-agent-workspace
+      - ./app/instance:/coding-agent/app/instance
+
+  cleancoda-docker-host:
+    image: docker:27-dind
+    container_name: cleancoda-docker-host
+    privileged: true
+    environment:
+      DOCKER_TLS_CERTDIR: ""
+    networks:
+      - cleancoda
+    volumes:
+      - docker-data:/var/lib/docker
+    healthcheck:
+      test: ["CMD", "docker", "info"]
+      interval: 10s
+      timeout: 5s
+      retries: 6
+
+  cleancoda-workbench-java-node:
+    build:
+      context: .
+      dockerfile: Dockerfile.java-node
+    container_name: cleancoda-workbench-java-node
+    depends_on:
+      cleancoda-docker-host:
+        condition: service_healthy
+    network_mode: "service:cleancoda-docker-host"
+    environment:
+      DOCKER_HOST: tcp://localhost:2375
+      TESTCONTAINERS_HOST_OVERRIDE: cleancoda-docker-host
+      DOCKER_TLS_VERIFY: ""
+      DOCKER_CERT_PATH: ""
+    working_dir: /coding-agent-workspace
+    volumes:
+      - /home/gat/tmp/conductor:/coding-agent-workspace
+    tty: true
+
+  ai-coding-agent:
+    build:
+      context: .
+      dockerfile: Dockerfile.agent
+    container_name: ai-coding-agent
+    command: uv run run_agent.py
+    env_file: .env
+    environment:
+      - WORKSPACE=/coding-agent-workspace
+    volumes:
+      - ./app/instance:/coding-agent/app/instance
+      - /home/gat/tmp/conductor:/coding-agent-workspace
+      # the socket to connect to the docker daemon
+      - /var/run/docker.sock:/var/run/docker.sock
+    networks:
+      - cleancoda
+
+volumes:
+  docker-data:
+    driver: local
+
+networks:
+  cleancoda:
+    driver: bridge

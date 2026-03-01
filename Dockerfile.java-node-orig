@@ -1,0 +1,89 @@
+FROM eclipse-temurin:21-jdk-jammy
+
+# Set environment variables
+ENV DEBIAN_FRONTEND=noninteractive
+ENV JAVA_HOME=/opt/java/openjdk
+
+WORKDIR /coding-agent-workspace
+
+# Install minimal system dependencies
+RUN apt-get update && apt-get install -y \
+    curl \
+    wget \
+    gnupg \
+    git \
+    unzip \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install Node.js 18
+RUN curl -fsSL https://deb.nodesource.com/setup_18.x | bash - && \
+    apt-get install -y nodejs && \
+    rm -rf /var/lib/apt/lists/*
+
+# Install basic build tools for testing capability
+RUN apt-get update && apt-get install -y \
+    maven \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install Gradle (lightweight)
+RUN wget -O /tmp/gradle.zip https://services.gradle.org/distributions/gradle-8.5-bin.zip && \
+    unzip -d /opt/gradle /tmp/gradle.zip && \
+    rm /tmp/gradle.zip && \
+    ln -s /opt/gradle/gradle-8.5/bin/gradle /usr/local/bin/gradle
+
+# Create a simple daemon script
+COPY <<EOF /usr/local/bin/daemon
+#!/bin/bash
+echo "Java/Node Daemon Container Started"
+echo "Java: $(java -version 2>&1 | head -1)"
+echo "Node.js: $(node --version)"
+# echo "Workspace: /coding-agent-workspace"
+# echo "Container is ready for test execution..."
+# echo "Use 'docker exec <container> run-tests' to execute tests"
+
+# Keep container running
+tail -f /dev/null
+EOF
+
+RUN chmod +x /usr/local/bin/daemon
+
+# Create test execution script
+COPY <<EOF /usr/local/bin/run-tests
+#!/bin/bash
+set -e
+
+echo "=== Running Tests ==="
+
+# Run Java tests if pom.xml exists
+if [ -f "pom.xml" ]; then
+    echo "Running Maven tests..."
+    mvn test
+fi
+
+# Run Java tests if build.gradle exists
+if [ -f "build.gradle" ] || [ -f "build.gradle.kts" ]; then
+    echo "Running Gradle tests..."
+    gradle test
+fi
+
+# Run Node.js tests if package.json exists
+if [ -f "package.json" ]; then
+    echo "Installing Node.js dependencies..."
+    npm ci
+    
+    # Run tests based on scripts in package.json
+    if npm run test --silent 2>/dev/null; then
+        echo "Running npm test..."
+        npm test
+    else
+        echo "No test script found in package.json"
+    fi
+fi
+
+echo "=== Test Execution Complete ==="
+EOF
+
+RUN chmod +x /usr/local/bin/run-tests
+
+# Start the daemon
+CMD ["/usr/local/bin/daemon"]
