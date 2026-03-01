@@ -1,5 +1,6 @@
 """A collection of tools for the agent to interact with files"""
 
+import fnmatch
 import logging
 import os
 
@@ -86,15 +87,29 @@ def read_file(filepath: str):
 
 
 @tool
-def list_files(directory: str = "."):
+def list_files(
+    directory: str = ".",
+    max_files: int = 500,
+    max_depth: int | None = None,
+    summary: bool = False,
+    pattern: str | None = None
+):
     """
     Lists files in a directory (recursive).
+    
+    Args:
+        directory: Directory to list (relative to workspace)
+        max_files: Maximum number of files to return (default: 500)
+        max_depth: Maximum depth to recurse (None = unlimited)
+        summary: If True, return directory tree with counts instead of file list
+        pattern: Optional glob pattern to filter files (e.g., "*.py", "src/**/*.java")
     """
     try:
         clean_dir = directory.lstrip("/")
         target_dir = os.path.join(get_workspace(), clean_dir)
         target_dir_real = os.path.realpath(target_dir)
         workspace_real = os.path.realpath(get_workspace())
+
         if not target_dir_real.startswith(workspace_real):
             logger.warning(
                 "Access denied target directory: %s is not in workspace %s",
@@ -103,14 +118,73 @@ def list_files(directory: str = "."):
             )
             return "Access denied"
 
+        # Enhanced ignore patterns
+        ignore_patterns = {
+            ".git", ".gradle", "node_modules", "__pycache__",
+            ".pytest_cache", ".venv", "venv", "build", "dist",
+            "target", ".idea", ".vscode", "*.egg-info"
+        }
+
+        start_depth = target_dir_real.count(os.sep)
         file_list = []
-        for root, _, files in os.walk(target_dir):
-            if ".git" in root:
+        dir_summary = {}
+        truncated = False
+
+        for root, dirs, files in os.walk(target_dir):
+            # Filter ignored directories in-place
+            dirs[:] = [d for d in dirs if d not in ignore_patterns]
+
+            # Check depth limit
+            if max_depth is not None:
+                current_depth = root.count(os.sep) - start_depth
+                if current_depth >= max_depth:
+                    dirs.clear()
+                    continue
+
+            # Skip ignored patterns in path
+            if any(pattern in root for pattern in ignore_patterns):
                 continue
-            for file in files:
-                rel_path = os.path.relpath(os.path.join(root, file), get_workspace())
-                file_list.append(rel_path)
-        return "\n".join(file_list) if file_list else "No files found."
+
+            if summary:
+                rel_root = os.path.relpath(root, get_workspace())
+                dir_summary[rel_root] = len(files)
+            else:
+                for file in files:
+                    if len(file_list) >= max_files:
+                        truncated = True
+                        break
+
+                    rel_path = os.path.relpath(os.path.join(root, file), get_workspace())
+
+                    # Apply pattern filter if specified
+                    if pattern and not fnmatch.fnmatch(rel_path, pattern):
+                        continue
+
+                    file_list.append(rel_path)
+
+                if truncated:
+                    break
+
+        if summary:
+            if not dir_summary:
+                return "No files found."
+            result = ["Directory Summary:"]
+            for dir_path, count in sorted(dir_summary.items()):
+                result.append(f"  {dir_path}: {count} files")
+            return "\n".join(result)
+
+        if not file_list:
+            return "No files found."
+
+        result = "\n".join(file_list)
+        if truncated:
+            result += (
+                f"\n\n[TRUNCATED: Showing first {max_files} files. "
+                f"Use max_files parameter to see more, or use summary=True for overview]"
+            )
+
+        return result
+
     except Exception as e:  # pylint: disable=broad-exception-caught
         return str(e)
 

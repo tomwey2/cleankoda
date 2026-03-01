@@ -24,14 +24,20 @@ logger = logging.getLogger(__name__)
 class TesterResult(BaseModel):
     """Call this tool ONLY when you have completed the testing process."""
 
-    result: Literal["pass", "fail"] = Field(
+    result: Literal["pass", "fail", "blocked"] = Field(
         ...,
-        description="The final result. 'pass' if tests and PR are successful, 'fail' otherwise.",
+        description=(
+            "The final result. 'pass' if tests succeed, 'fail' if code has bugs "
+            "that the coder can fix, 'blocked' if environmental/infrastructure "
+            "issues prevent testing."
+        ),
     )
     summary: str = Field(
         ...,
-        description="A short summary of what happened (e.g. 'PR created at xyz' "
-        + "or 'Tests failed because of NPE').",
+        description=(
+            "A short summary of what happened (e.g. 'PR created at xyz', "
+            "'Tests failed because of NPE', or 'Docker container not running')."
+        ),
     )
 
 
