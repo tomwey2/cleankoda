@@ -1,6 +1,7 @@
 """Tool for adding comments to tasks."""
 
 import logging
+import traceback
 
 from langchain.tools import ToolRuntime, tool
 
@@ -54,7 +55,9 @@ async def add_task_comment(
 
     except ValueError as e:
         logger.error("Failed to add comment: %s", str(e))
+        logger.debug("Add comment ValueError stacktrace:\n%s", traceback.format_exc())
         return f"Error: {str(e)}"
     except Exception as e:  # pylint: disable=broad-exception-caught
         logger.error("Board provider error: %s", str(e))
+        logger.debug("Add comment unexpected error stacktrace:\n%s", traceback.format_exc())
         return f"Failed to add comment: {str(e)}"

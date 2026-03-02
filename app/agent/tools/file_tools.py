@@ -3,6 +3,7 @@
 import fnmatch
 import logging
 import os
+import traceback
 
 from langchain_core.tools import tool
 
@@ -41,6 +42,8 @@ def write_to_file_in_workspace(filepath: str, content: str):
             f.write(content)
         return f"Successfully wrote to {full_path}"
     except Exception as e:  # pylint: disable=broad-exception-caught
+        logger.error("Error writing file %s: %s", full_path, e)
+        logger.debug("Write file error stacktrace:\n%s", traceback.format_exc())
         return f"ERROR writing file: {str(e)}"
 
 def write_to_file_in_instance_dir(filepath: str, content: str):
@@ -54,6 +57,8 @@ def write_to_file_in_instance_dir(filepath: str, content: str):
             f.write(content)
         return f"Successfully wrote to {full_path}"
     except Exception as e:  # pylint: disable=broad-exception-caught
+        logger.error("Error writing file %s: %s", full_path, e)
+        logger.debug("Write file error stacktrace:\n%s", traceback.format_exc())
         return f"ERROR writing file: {str(e)}"
 
 
@@ -66,7 +71,7 @@ def read_file_in_workspace(filepath: str):
         if not os.path.exists(full_path):
             return (
                 f"ERROR: File {full_path} does not exist. "
-                + "(Current dir: {os.listdir(WORKSPACE)})"
+                + f"(Current dir: {os.listdir(get_workspace())})"
             )
 
         with open(full_path, "r", encoding="utf-8") as f:
@@ -75,6 +80,8 @@ def read_file_in_workspace(filepath: str):
                 return "(File is empty)"
             return content
     except Exception as e:  # pylint: disable=broad-exception-caught
+        logger.error("Error reading file %s: %s", full_path, e)
+        logger.debug("Read file error stacktrace:\n%s", traceback.format_exc())
         return f"ERROR reading file: {str(e)}"
 
 
@@ -186,6 +193,8 @@ def list_files(
         return result
 
     except Exception as e:  # pylint: disable=broad-exception-caught
+        logger.error("Unexpected error in list_files: %s", e)
+        logger.debug("List files error stacktrace:\n%s", traceback.format_exc())
         return str(e)
 
 

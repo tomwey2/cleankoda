@@ -1,6 +1,7 @@
 """Tool for executing commands inside the workbench development container."""
 
 import logging
+import traceback
 
 import docker
 from docker.errors import APIError, NotFound
@@ -14,6 +15,7 @@ try:  # docker socket might be unavailable in some environments
     DOCKER_CLIENT = docker.from_env()
 except Exception as exc:  # pylint: disable=broad-exception-caught
     logger.warning("No docker connection! %s", exc)
+    logger.debug("Docker connection failure stacktrace:\n%s", traceback.format_exc())
     DOCKER_CLIENT = None
 
 MAX_TOOL_OUTPUT_CHARS = 20000
@@ -62,11 +64,17 @@ def run_command(command: str) -> str:
         return f"❌ FAILED (Exit Code {exit_code}):\n{output}"
 
     except NotFound:
+        logger.error("Container not found: %s", get_workbench())
+        logger.debug("Container not found stacktrace:\n%s", traceback.format_exc())
         return (
             f"Error: Container '{get_workbench()}' not found. "
             "Please start the docker-compose setup."
         )
-    except APIError as api_exc:
-        return f"Docker API Error: {api_exc}"
+    except APIError:
+        logger.error("Docker API error occurred")
+        logger.debug("Docker API error stacktrace:\n%s", traceback.format_exc())
+        return "Docker API Error occurred"
     except Exception as err:  # pylint: disable=broad-exception-caught
+        logger.error("Unexpected system error in run_command: %s", err)
+        logger.debug("System error stacktrace:\n%s", traceback.format_exc())
         return f"System Error: {err}"
