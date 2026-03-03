@@ -50,6 +50,7 @@ def run_command(command: str) -> str:
                 f"(Status: {container.status})."
             )
 
+        command = f"bash -c \"{command}\""
         logger.info("Executing in workbench: %s", command)
 
         exec_result = container.exec_run(command, workdir="/coding-agent-workspace")
@@ -60,7 +61,11 @@ def run_command(command: str) -> str:
         output = _truncate_tool_output(output)
 
         if exit_code == 0:
+            logger.info("Command %s executed successfully", command)
+            logger.debug("Command output:\n%s", output)
             return f"✅ SUCCESS:\n{output}"
+        logger.info("Command %s failed with exit code %s", command, exit_code)
+        logger.debug("Command output:\n%s", output)
         return f"❌ FAILED (Exit Code {exit_code}):\n{output}"
 
     except NotFound:
