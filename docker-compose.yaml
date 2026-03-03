@@ -25,6 +25,7 @@ services:
     env_file: .env
     environment:
       - WORKSPACE=/coding-agent-workspace
+      - WORKBENCH_WORKSPACE=/coding-agent-workspace
     volumes:
       - ./app/instance:/coding-agent/app/instance
       - workspace:/coding-agent-workspace

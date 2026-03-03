@@ -148,6 +148,7 @@ Other options:
 |---------|------------------------|-----------------|
 |Instance directory|`INSTANCE_DIR`|Optional override for the SQLite folder (defaults to `app/instance`)|
 |Workbench container|`WORKBENCH`|Name of the Docker container that hosts the runnable workbench (e.g., `workbench-backend`). Defaults to compose value if unset|
+|Workbench workspace|`WORKBENCH_WORKSPACE`|Path to workspace inside the workbench container where commands are executed. Defaults to `WORKSPACE` value if not set|
 |Agent stack override|`AGENT_STACK`|Force the runtime tech stack to `backend` or `frontend`. When omitted/invalid, the stack is derived from `WORKBENCH`|
 |MCP control|`ENABLE_MCP_SERVERS` (default `true`)|Set to `false`/`0`/`no` to skip spawning the Git and task MCP servers when running locally|
 

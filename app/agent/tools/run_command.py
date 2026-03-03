@@ -6,7 +6,8 @@ import docker
 from docker.errors import APIError, NotFound
 from langchain_core.tools import tool
 
-from app.agent.utils import get_workbench
+from app.agent.utils import get_workbench, get_workspace, get_workbench_workspace
+
 
 logger = logging.getLogger(__name__)
 
@@ -32,6 +33,35 @@ def _truncate_tool_output(output: str, limit: int = MAX_TOOL_OUTPUT_CHARS) -> st
     )
 
 
+def _translate_workspace_path(command: str) -> str:
+    """Translate agent workspace paths to container workspace paths.
+
+    The LLM may generate commands with agent workspace paths (e.g.,
+    /home/user/.local/workspace) but these need to be translated to
+    container paths (/coding-agent-workspace) for execution.
+
+    Args:
+        command: The command string potentially containing host paths
+
+    Returns:
+        Command with host workspace paths replaced by container paths
+    """
+    agent_workspace = get_workspace()
+    workbench_workspace = get_workbench_workspace()
+
+    # Replace host workspace path with container workspace path
+    if agent_workspace in command:
+        translated = command.replace(agent_workspace, workbench_workspace)
+        logger.debug(
+            "Translated workspace path: %s -> %s",
+            agent_workspace,
+            workbench_workspace
+        )
+        return translated
+
+    return command
+
+
 @tool
 # pylint: disable=too-many-return-statements
 def run_command(command: str) -> str:
@@ -48,9 +78,15 @@ def run_command(command: str) -> str:
                 f"(Status: {container.status})."
             )
 
-        logger.info("Executing in workbench: %s", command)
+        # Translate any host workspace paths to container paths
+        translated_command = _translate_workspace_path(command)
 
-        exec_result = container.exec_run(command, workdir="/coding-agent-workspace")
+        logger.info("Executing in workbench: %s", translated_command)
+
+        exec_result = container.exec_run(
+            ["bash", "-lc", translated_command],
+            workdir="/coding-agent-workspace",
+        )
         output = exec_result.output.decode("utf-8")
         exit_code = exec_result.exit_code
 
