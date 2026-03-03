@@ -1,22 +1,22 @@
 """
-GitHub Projects v2 implementation of the BoardProvider interface.
+GitHub Projects v2 implementation of the TaskProvider interface.
 
 This module provides a GitHubProvider class that wraps the GitHub Projects v2
-GraphQL API client and implements the BoardProvider interface for consistent
-board operations across different systems.
+GraphQL API client and implements the TaskProvider interface for consistent
+task operations across different systems.
 """
 
 import logging
 from datetime import datetime, timezone
 from typing import Optional
 
-from app.core.taskboard.board_provider import (
-    BoardComment,
-    BoardProvider,
-    BoardStateMove,
-    BoardTask,
+from app.core.taskprovider.task_provider import (
+    ProviderTaskComment,
+    TaskProvider,
+    ProviderTaskStateMove,
+    ProviderTask,
 )
-from app.core.taskboard.github_client import (
+from app.core.taskprovider.github_client import (
     add_comment_to_issue,
     create_draft_issue,
     get_issue_comments,
@@ -32,12 +32,12 @@ from app.core.localdb.models import AgentSettings, TaskSystem
 logger = logging.getLogger(__name__)
 
 
-class GitHubProvider(BoardProvider):
+class GitHubProvider(TaskProvider):
     """
-    GitHub Projects v2 implementation of the BoardProvider interface.
+    GitHub Projects v2 implementation of the TaskProvider interface.
 
     This class wraps the GitHub GraphQL API client functions and provides
-    a consistent interface for board operations.
+    a consistent interface for task operations.
     """
 
     def __init__(self, agent_settings: AgentSettings):
@@ -54,7 +54,7 @@ class GitHubProvider(BoardProvider):
         """Fetch all states (columns) from the GitHub Project."""
         return await get_project_columns(self.agent_settings)
 
-    async def get_task(self, task_id: str) -> Optional[BoardTask]:
+    async def get_task(self, task_id: str) -> Optional[ProviderTask]:
         """Fetch a specific task (project item) by ID."""
         item = await get_project_item(task_id, self.agent_settings)
 
@@ -62,7 +62,7 @@ class GitHubProvider(BoardProvider):
             logger.warning("GitHub Issue %s not found", task_id)
             return None
 
-        return BoardTask(
+        return ProviderTask(
             id=item["id"],
             name=item.get("title", ""),
             description=item.get("body", ""),
@@ -71,7 +71,7 @@ class GitHubProvider(BoardProvider):
             url=item.get("url", ""),
         )
 
-    async def get_tasks_from_state(self, state_id: str) -> list[BoardTask]:
+    async def get_tasks_from_state(self, state_id: str) -> list[ProviderTask]:
         """
         Fetch all tasks from a specific state (column).
 
@@ -88,7 +88,7 @@ class GitHubProvider(BoardProvider):
         items = await get_items_from_column(target_column["name"], self.agent_settings)
 
         return [
-            BoardTask(
+            ProviderTask(
                 id=item["id"],
                 name=item["title"],
                 description=item["body"] or "",
@@ -117,12 +117,12 @@ class GitHubProvider(BoardProvider):
         """
         await add_comment_to_issue(task_id, comment, self.agent_settings)
 
-    async def get_comments(self, task_id: str) -> list[BoardComment]:
+    async def get_comments(self, task_id: str) -> list[ProviderTaskComment]:
         """Fetch all comments for a GitHub task."""
         comments = await get_issue_comments(task_id, self.agent_settings)
 
         return [
-            BoardComment(
+            ProviderTaskComment(
                 id=comment["id"],
                 text=comment["text"],
                 author=comment["member_creator"],
@@ -131,7 +131,7 @@ class GitHubProvider(BoardProvider):
             for comment in comments
         ]
 
-    async def get_state_moves(self, task_id: str) -> list[BoardStateMove]:
+    async def get_state_moves(self, task_id: str) -> list[ProviderTaskStateMove]:
         """
         Fetch the history of state moves (column changes) for a task.
 
@@ -141,7 +141,7 @@ class GitHubProvider(BoardProvider):
         moves = await get_item_status_history(task_id, self.agent_settings)
 
         return [
-            BoardStateMove(
+            ProviderTaskStateMove(
                 id=move["id"],
                 date=self._parse_timestamp(move.get("date")),
                 state_before=move.get("state_before"),
@@ -150,7 +150,7 @@ class GitHubProvider(BoardProvider):
             for move in moves
         ]
 
-    async def create_task(self, name: str, description: str, state_name: str) -> BoardTask:
+    async def create_task(self, name: str, description: str, state_name: str) -> ProviderTask:
         """Create a new task (draft issue) in the specified state (column)."""
         result = await create_draft_issue(
             name,
@@ -159,7 +159,7 @@ class GitHubProvider(BoardProvider):
             self.agent_settings,
         )
 
-        return BoardTask(
+        return ProviderTask(
             id=result["id"],
             name=result["title"],
             description=description,

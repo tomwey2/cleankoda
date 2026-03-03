@@ -1,11 +1,11 @@
-"""Tests for the GitHub board provider implementation."""
+"""Tests for the GitHub task provider implementation."""
 
 from unittest.mock import AsyncMock, patch
 
 import pytest
 
-from app.core.taskboard.board_provider import BoardTask
-from app.core.taskboard.github_provider import GitHubProvider
+from app.core.taskprovider.task_provider import ProviderTask
+from app.core.taskprovider.github_provider import GitHubProvider
 from app.core.localdb.models import AgentSettings, TaskSystem
 
 
@@ -13,7 +13,7 @@ from app.core.localdb.models import AgentSettings, TaskSystem
 def agent_settings():
     """Fixture with GitHub task system configuration."""
     task_system = TaskSystem(
-        board_provider="github",
+        task_provider="github",
         api_key="token",
         token="token",
         board_id="proj_123",
@@ -32,7 +32,7 @@ def github_provider(agent_settings):
 
 @pytest.mark.asyncio
 async def test_get_task(github_provider):
-    """Ensure get_task maps project item fields into BoardTask."""
+    """Ensure get_task maps project item fields into ProviderTask."""
     mock_item = {
         "id": "item123",
         "title": "Example Task",
@@ -43,13 +43,13 @@ async def test_get_task(github_provider):
     }
 
     with patch(
-        "app.core.taskboard.github_provider.get_project_item",
+        "app.core.taskprovider.github_provider.get_project_item",
         new=AsyncMock(return_value=mock_item),
     ) as mock_get:
         task = await github_provider.get_task("item123")
 
         mock_get.assert_called_once_with("item123", github_provider.agent_settings)
-        assert isinstance(task, BoardTask)
+        assert isinstance(task, ProviderTask)
         assert task.id == "item123"
         assert task.name == "Example Task"
         assert task.description == "Details"

@@ -8,7 +8,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import anyio
 from langchain.tools import ToolRuntime
 
-from app.core.taskboard.board_provider import BoardTask
+from app.core.taskprovider.task_provider import ProviderTask
 from app.agent.tools.add_task_comment import add_task_comment
 
 # Suppress Pydantic serialization warnings in tests
@@ -23,7 +23,7 @@ def test_add_task_comment_tool_adds_comment_successfully():
         mock_agent_settings = MagicMock()
 
         # Mock current task
-        mock_task = BoardTask(
+        mock_task = ProviderTask(
             id="task123",
             name="Test Task",
             description="Test description",
@@ -34,7 +34,7 @@ def test_add_task_comment_tool_adds_comment_successfully():
         # Mock runtime with state and context
         mock_runtime = ToolRuntime(
             state={
-                "board_task": mock_task,
+                "provider_task": mock_task,
                 "messages": [],
                 "current_node": "analyst",
             },
@@ -52,9 +52,9 @@ def test_add_task_comment_tool_adds_comment_successfully():
         mock_provider.add_comment = AsyncMock()
 
         with patch(
-            "app.agent.tools.add_task_comment.create_board_provider",
+            "app.agent.tools.add_task_comment.create_task_provider",
             return_value=mock_provider,
-        ) as mock_create_board_provider:
+        ) as mock_create_task_provider:
             result = await add_task_comment.ainvoke(
                 {
                     "comment": "This is a test comment",
@@ -66,7 +66,7 @@ def test_add_task_comment_tool_adds_comment_successfully():
             assert "task123" in result
             assert "This is a test comment" in result
             mock_provider.add_comment.assert_called_once_with("task123", "This is a test comment")
-            mock_create_board_provider.assert_called_once_with(mock_agent_settings)
+            mock_create_task_provider.assert_called_once_with(mock_agent_settings)
 
     anyio.run(_test)
 
@@ -105,7 +105,7 @@ def test_add_task_comment_tool_handles_none_agent_settings():
 
     async def _test():
         # Mock current task
-        mock_task = BoardTask(
+        mock_task = ProviderTask(
             id="task123",
             name="Test Task",
             description="Test description",
@@ -116,7 +116,7 @@ def test_add_task_comment_tool_handles_none_agent_settings():
         # Mock runtime with None context
         mock_runtime = ToolRuntime(
             state={
-                "board_task": mock_task,
+                "provider_task": mock_task,
                 "messages": [],
                 "current_node": "analyst",
             },
@@ -126,7 +126,7 @@ def test_add_task_comment_tool_handles_none_agent_settings():
             tool_call_id="test_call_none_settings",
             store=None,
         )
-        
+
         # Set context to None for this specific test
         mock_runtime.context = None
 
@@ -143,13 +143,13 @@ def test_add_task_comment_tool_handles_none_agent_settings():
 
 
 def test_add_task_comment_tool_handles_value_error():
-    """Test that the tool handles ValueError from board provider gracefully."""
+    """Test that the tool handles ValueError from task provider gracefully."""
 
     async def _test():
         mock_agent_settings = MagicMock()
 
         # Mock current task
-        mock_task = BoardTask(
+        mock_task = ProviderTask(
             id="task123",
             name="Test Task",
             description="Test description",
@@ -160,7 +160,7 @@ def test_add_task_comment_tool_handles_value_error():
         # Mock runtime with state and context
         mock_runtime = ToolRuntime(
             state={
-                "board_task": mock_task,
+                "provider_task": mock_task,
                 "messages": [],
                 "current_node": "analyst",
             },
@@ -178,7 +178,7 @@ def test_add_task_comment_tool_handles_value_error():
         mock_provider.add_comment = AsyncMock(side_effect=ValueError("Task not found"))
 
         with patch(
-            "app.agent.tools.add_task_comment.create_board_provider",
+            "app.agent.tools.add_task_comment.create_task_provider",
             return_value=mock_provider,
         ):
             result = await add_task_comment.ainvoke(
@@ -194,13 +194,13 @@ def test_add_task_comment_tool_handles_value_error():
 
 
 def test_add_task_comment_tool_handles_runtime_error():
-    """Test that the tool handles RuntimeError from board provider gracefully."""
+    """Test that the tool handles RuntimeError from task provider gracefully."""
 
     async def _test():
         mock_agent_settings = MagicMock()
 
         # Mock current task
-        mock_task = BoardTask(
+        mock_task = ProviderTask(
             id="task123",
             name="Test Task",
             description="Test description",
@@ -211,7 +211,7 @@ def test_add_task_comment_tool_handles_runtime_error():
         # Mock runtime with state and context
         mock_runtime = ToolRuntime(
             state={
-                "board_task": mock_task,
+                "provider_task": mock_task,
                 "messages": [],
                 "current_node": "analyst",
             },
@@ -226,10 +226,12 @@ def test_add_task_comment_tool_handles_runtime_error():
         mock_runtime.context = mock_agent_settings
 
         mock_provider = MagicMock()
-        mock_provider.add_comment = AsyncMock(side_effect=RuntimeError("API error: Failed to add comment"))
+        mock_provider.add_comment = AsyncMock(
+            side_effect=RuntimeError("API error: Failed to add comment")
+        )
 
         with patch(
-            "app.agent.tools.add_task_comment.create_board_provider",
+            "app.agent.tools.add_task_comment.create_task_provider",
             return_value=mock_provider,
         ):
             result = await add_task_comment.ainvoke(
@@ -249,7 +251,7 @@ def test_add_task_comment_tool_has_correct_metadata():
     # Check that the tool has the correct name and description
     assert add_task_comment.name == "add_task_comment"
     assert "Adds a comment to the current task" in add_task_comment.description
-    assert "board system" in add_task_comment.description
+    assert "task system" in add_task_comment.description
 
 
 def test_add_task_comment_tool_logs_long_comment():
@@ -259,7 +261,7 @@ def test_add_task_comment_tool_logs_long_comment():
         mock_agent_settings = MagicMock()
 
         # Mock current task
-        mock_task = BoardTask(
+        mock_task = ProviderTask(
             id="task123",
             name="Test Task",
             description="Test description",
@@ -270,7 +272,7 @@ def test_add_task_comment_tool_logs_long_comment():
         # Mock runtime with state and context
         mock_runtime = ToolRuntime(
             state={
-                "board_task": mock_task,
+                "provider_task": mock_task,
                 "messages": [],
                 "current_node": "analyst",
             },
@@ -291,7 +293,7 @@ def test_add_task_comment_tool_logs_long_comment():
         long_comment = "This is a very long comment that exceeds the 100 character limit for logging purposes and should be truncated in the log message"
 
         with patch(
-            "app.agent.tools.add_task_comment.create_board_provider",
+            "app.agent.tools.add_task_comment.create_task_provider",
             return_value=mock_provider,
         ):
             with patch("app.agent.tools.add_task_comment.logger") as mock_logger:
