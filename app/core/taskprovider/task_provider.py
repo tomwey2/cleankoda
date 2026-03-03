@@ -1,7 +1,7 @@
 """
-Abstract interface for board system integrations.
+Abstract interface for external task system integrations.
 
-This module defines the contract that all board providers (Trello, GitHub, Jira, etc.)
+This module defines the contract that all task providers (Trello, GitHub, Jira, etc.)
 must implement. It provides domain models that are independent of any specific
 board system implementation.
 """
@@ -37,7 +37,7 @@ class BoardTask:
 
 
 @dataclass
-class BoardComment:
+class BoardTaskComment:
     """
     Domain model for a comment on a task.
 
@@ -58,7 +58,7 @@ class BoardComment:
 
 
 @dataclass
-class BoardStateMove:
+class BoardTaskStateMove:
     """
     Domain model for tracking when a task moves between states.
 
@@ -75,11 +75,11 @@ class BoardStateMove:
     state_after: str | None
 
 
-class BoardProvider(ABC):
+class TaskProvider(ABC):
     """
-    Abstract interface for board system operations.
+    Abstract interface for external task system operations.
 
-    All board providers (Trello, GitHub Projects, Jira, etc.) must implement
+    All task providers (Trello, GitHub Projects, Jira, etc.) must implement
     this interface to ensure consistent behavior across different systems.
     """
 
@@ -163,7 +163,7 @@ class BoardProvider(ABC):
         """
 
     @abstractmethod
-    async def get_comments(self, task_id: str) -> list[BoardComment]:
+    async def get_comments(self, task_id: str) -> list[BoardTaskComment]:
         """
         Fetch all comments for a task.
 
@@ -178,7 +178,7 @@ class BoardProvider(ABC):
         """
 
     @abstractmethod
-    async def get_state_moves(self, task_id: str) -> list[BoardStateMove]:
+    async def get_state_moves(self, task_id: str) -> list[BoardTaskStateMove]:
         """
         Fetch the history of state moves for a task.
 

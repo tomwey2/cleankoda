@@ -1,26 +1,26 @@
 """
-Factory for creating board provider instances.
+Factory for creating task provider instances.
 
-This module provides a factory function that creates the appropriate board
+This module provides a factory function that creates the appropriate task
 provider based on the system configuration, enabling easy switching between
-different board systems (Trello, GitHub, Jira, etc.).
+different task systems (Trello, GitHub, Jira, etc.).
 """
 
 import logging
 
-from app.core.taskboard.board_provider import BoardProvider
-from app.core.taskboard.github_provider import GitHubProvider
-from app.core.taskboard.trello_provider import TrelloProvider
+from app.core.taskprovider.task_provider import TaskProvider
+from app.core.taskprovider.github_provider import GitHubProvider
+from app.core.taskprovider.trello_provider import TrelloProvider
 from app.core.localdb.models import AgentSettings
 
 logger = logging.getLogger(__name__)
 
 
-def create_board_provider(agent_settings: AgentSettings) -> BoardProvider:
+def create_task_provider(agent_settings: AgentSettings) -> TaskProvider:
     """
-    Factory function to create the appropriate board provider.
+    Factory function to create the appropriate task provider.
 
-    The provider type is determined by the 'board_provider' key inside
+    The provider type is determined by the 'task_provider' key inside
     AgentSettings.task_system_type.
     If not specified, defaults to 'trello' for backward compatibility.
 

@@ -14,7 +14,7 @@ from typing import Annotated, TypedDict
 from langchain_core.messages import BaseMessage
 from langgraph.graph.message import add_messages
 
-from app.core.taskboard.board_provider import BoardTask, BoardComment
+from app.core.taskprovider.task_provider import BoardTask, BoardTaskComment
 from app.core.localdb.models import AgentTask
 
 
@@ -72,21 +72,30 @@ class AgentState(TypedDict):
 
     messages: Annotated[list[BaseMessage], add_messages]
     next_step: str
+    # information from the external task system
     board_task: BoardTask | None
-    board_task_comments: list[BoardComment]
+    board_task_comments: list[BoardTaskComment]
+    # information from the table agent_tasks of the local database
     agent_task: AgentTask | None
-    pr_review_message: str | None
+    # agent information from settings
     agent_stack: AgentStack
+    tech_stack: dict | None
+    agent_skill_level: str | None
+    agent_summary: list[str] | None
     retry_count: int  # Attempts: how often switched between coder and tester
     test_result: str | None
     error_log: str | None  # Optional: Stores the last error explicitly
+    # information from the git system
     git_branch: str | None
-    agent_skill_level: str | None
-    agent_summary: list[str] | None
+    pr_review_message: str | None
+    # the last agent node that is executed
     current_node: str | None
+    # the tool calls that was created from the last agent node
     current_tool_calls: list[dict]
-    last_update: datetime | None
+    # the human message that was sent from the last agent node
     prompt: str | None
+    # the system prompt that was sent from the last agent node
     system_prompt: str | None
-    tech_stack: str | None
+    # message from the system to the user
     user_message: str | None
+    last_update: datetime | None
