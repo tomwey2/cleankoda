@@ -3,7 +3,6 @@
 import logging
 from typing import Any, Dict
 
-from app.agent.models import AgentSummary
 from app.agent.services.git_workspace import (
     commit as git_commit,
     has_changes as git_has_changes,
@@ -15,7 +14,7 @@ from app.agent.services.summaries import (
     build_agent_summary_markdown,
 )
 from app.agent.services.pull_request import create_or_update_pr
-from app.agent.state import AgentState, TaskType
+from app.agent.state import AgentState, AgentSummary, TaskType
 from app.agent.utils import get_workspace
 from app.core.config import get_env_settings
 from app.core.localdb.agent_tasks_utils import update_db_task

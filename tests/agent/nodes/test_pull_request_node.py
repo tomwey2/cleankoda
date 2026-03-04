@@ -4,10 +4,10 @@ from unittest.mock import Mock
 
 import pytest
 
-from app.agent.models import AgentSummary
 from app.agent.nodes import pull_request as pr_module
 from app.core.localdb.models import AgentTask
 from app.core.taskprovider.task_provider import ProviderTask
+from app.agent.state import AgentSummary
 
 
 @pytest.fixture

@@ -7,7 +7,7 @@ from unittest.mock import AsyncMock, MagicMock
 import pytest
 from langchain_core.messages import AIMessage, HumanMessage, ToolMessage
 
-from app.agent.models import AgentSummary
+from app.agent.state import AgentSummary
 from app.core.taskprovider.task_provider import ProviderTask
 from app.agent.nodes.task_update_node import (
     AGENT_DEFAULT_COMMENT,

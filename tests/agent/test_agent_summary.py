@@ -2,7 +2,7 @@
 
 import pytest
 
-from app.agent.models import AgentSummary
+from app.agent.state import AgentSummary
 
 
 def test_agent_summary_creation():

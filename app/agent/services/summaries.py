@@ -4,7 +4,6 @@ from typing import Optional, Tuple
 
 from langchain_core.messages import AIMessage, BaseMessage
 
-
 from app.agent.state import AgentState, AgentSummary
 
 
@@ -137,7 +136,7 @@ def build_agent_summary_markdown(
 
 
 def get_agent_summary_entries(state: AgentState) -> list[AgentSummary]:
-    """Return the list of cached summary entries, with message-based fallback."""
+    """Return the list of cached summary entries."""
     cached_entries = [
         entry for entry in (state.get("agent_summary") or []) if isinstance(entry, AgentSummary)
     ]
