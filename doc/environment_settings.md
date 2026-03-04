@@ -102,6 +102,7 @@ All other settings are optional and validated when used:
 - `DATABASE_URL` - Database connection URL (default: sqlite in instance/)
 - `INSTANCE_DIR` - Flast instance Directory used for sqlite database (default: instance/)
 - `WORKBENCH` - Docker container name that hosts the runnable workbench environment (e.g., `workbench-backend` or `workbench-frontend`). Defaults to empty, which requires docker-compose defaults.
+- `WORKBENCH_WORKSPACE` - Path to workspace inside the workbench container where commands are executed. Defaults to the `WORKSPACE` value if not set. This allows separating the agent's workspace path from the container's execution path.
 - `AGENT_STACK` - Optional override for the runtime technology stack. Accepts `backend` or `frontend`. When unset or invalid, the stack is derived automatically from the `WORKBENCH` name.
 - `GITHUB_REPO_URL` - Default GitHub repository URL (default: empty)
 - `ENABLE_MCP_SERVERS` - Enable MCP servers (default: `true`)
@@ -109,6 +110,52 @@ All other settings are optional and validated when used:
 - `LLM_CALLS_PER_SECOND` - Optional rate limit for LLM calls. Set to a positive float to cap how many tool-call attempts are sent to the LLM each second (default: `0`, which means unlimited). Useful when working with providers that enforce strict QPS limits.
 
 When `LLM_CALLS_PER_SECOND` is configured, the shared `invoke_tool_node` helper delays each LLM invocation just enough to keep the average call rate at or below the configured value. This guard applies to every tool-based node (coder, analyst, tester, bugfixer) and is enforced per worker process. Leave the value at `0` to keep the existing behavior with no throttling.
+
+## Workspace Path Configuration
+
+The application distinguishes between two workspace paths to support different deployment scenarios:
+
+### `WORKSPACE` (Agent Workspace)
+- **Purpose**: Path where the AI agent operates and manages files
+- **Location**: May be a host path when running locally, or a container path in Docker
+- **Used by**: File operations, code generation, and agent file system access
+- **Example**: `/home/user/.local/workspace` (local) or `/coding-agent-workspace` (Docker)
+
+### `WORKBENCH_WORKSPACE` (Container Workspace)
+- **Purpose**: Path where commands are executed inside the workbench container
+- **Location**: Always a path inside the Docker workbench container
+- **Used by**: `run_command` tool for executing shell commands
+- **Default**: Falls back to `WORKSPACE` value if not explicitly set
+- **Example**: `/coding-agent-workspace`
+
+### Path Translation
+
+The `run_command` tool automatically translates agent workspace paths to container workspace paths:
+
+```python
+# LLM generates command with agent workspace:
+"cd /home/user/.local/workspace && mvn clean test"
+
+# run_command translates to container workspace:
+"cd /coding-agent-workspace && mvn clean test"
+```
+
+This allows the same agent code to work both locally and in Docker without modification.
+
+### Configuration Examples
+
+**Docker Development (docker-compose.yaml):**
+```yaml
+environment:
+  - WORKSPACE=/coding-agent-workspace
+  - WORKBENCH_WORKSPACE=/coding-agent-workspace
+```
+
+**Local Development (.env):**
+```bash
+WORKSPACE=/home/user/.local/workspace
+WORKBENCH_WORKSPACE=/coding-agent-workspace
+```
 
 ## Validation Helper Methods
 

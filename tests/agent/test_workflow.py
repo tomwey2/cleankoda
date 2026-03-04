@@ -68,6 +68,11 @@ class TestRouteAfterToolsTester:
         )
         assert route_after_tools_tester(state) == "failed"
 
+    def test_routes_to_error_when_environment_issue(self):
+        ai_msg = self._make_report_test_result_msg("error")
+        state = _base_state(messages=[ai_msg, HumanMessage(content="tool output")])
+        assert route_after_tools_tester(state) == "error"
+
     def test_loops_tester_when_no_report_test_result(self):
         ai_msg = AIMessage(
             content="",
@@ -210,6 +215,17 @@ def test_create_workflow_registers_all_nodes(workflow_mocks):
     )
     assert tools_coder_mapping["finish"] == "tester"
     assert {"coder"}.issubset(tools_coder_mapping.keys())
+
+    tools_tester_mapping = dict(
+        next(
+            mapping.items()
+            for source, mapping in workflow.conditional_edges
+            if source == "tools_tester"
+        )
+    )
+    assert tools_tester_mapping["error"] == "task_update"
+    assert tools_tester_mapping["pass"] == "pull_request"
+    assert tools_tester_mapping["failed"] == "coder"
 
     assert ("tester", "tools_tester") in workflow.edges
     assert ("pull_request", "task_update") in workflow.edges

@@ -26,7 +26,8 @@ class EnvironmentSettings:  # pylint: disable=too-many-instance-attributes
 
     Attributes:
         encryption_key: Fernet encryption key for database encryption (required).
-        workspace: Path to the coding workspace (required).
+        workspace: Path to the agent's coding workspace (required). This is where
+            the agent operates and may be a host path when running locally.
         github_token: GitHub Personal Access Token for API access (optional).
         openai_api_key: OpenAI API key for LLM access (optional).
         mistral_api_key: Mistral AI API key for LLM access (optional).
@@ -39,9 +40,12 @@ class EnvironmentSettings:  # pylint: disable=too-many-instance-attributes
         database_url: Database connection URL (optional, uses sqlite default).
         instance_dir: Directory for sqlite database files and other instance data.
         workbench: Docker container name for the workbench.
+        workbench_workspace: Path to workspace inside the workbench container. This
+            is where commands are executed and defaults to the workspace value.
         agent_stack: Preferred agent stack (backend/frontend) override.
         github_repo_url: Default GitHub repository URL.
         enable_mcp_servers: Whether to enable MCP servers.
+        llm_calls_per_second: LLM calls per second.
     """
 
     # Required settings (needed for app startup)
@@ -65,6 +69,7 @@ class EnvironmentSettings:  # pylint: disable=too-many-instance-attributes
     database_url: str | None = None
     instance_dir: str = "/coding-agent/app/instance"
     workbench: str = ""
+    workbench_workspace: str = ""
     agent_stack: str = ""
     github_repo_url: str = ""
     enable_mcp_servers: bool = True
@@ -98,9 +103,13 @@ class EnvironmentSettings:  # pylint: disable=too-many-instance-attributes
 
         llm_calls_per_second = float(os.environ.get("LLM_CALLS_PER_SECOND", "0"))
 
+        # WORKBENCH_WORKSPACE defaults to WORKSPACE if not set
+        workbench_workspace = os.environ.get("WORKBENCH_WORKSPACE", workspace)
+
         return cls(
             encryption_key=encryption_key,
             workspace=workspace,
+            workbench_workspace=workbench_workspace,
             github_token=os.environ.get("GITHUB_TOKEN"),
             openai_api_key=os.environ.get("OPENAI_API_KEY"),
             mistral_api_key=os.environ.get("MISTRAL_API_KEY"),

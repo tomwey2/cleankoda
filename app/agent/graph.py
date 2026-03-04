@@ -38,8 +38,8 @@ from app.agent.tools.report_test_result import report_test_result
 def route_after_tools_tester(state: AgentState):
     """
     Routes flow after the tester's tools have run. Checks for a 'pass' result
-    to finish, a 'fail' result to loop back to the coder, or loops
-    back to the tester if other tools were used.
+    to finish, a 'fail' result to loop back to the coder, a 'error' result
+    to end with error status, or loops back to the tester if other tools were used.
     """
     messages = state["messages"]
 
@@ -62,7 +62,9 @@ def route_after_tools_tester(state: AgentState):
 
                 if result == "pass":
                     return "pass"  # Success -> End
-                # Failed -> Back to the handler
+                if result == "error":
+                    return "error"  # Environmental issue -> End with error
+                # Failed -> Back to the coder
                 return "failed"
 
     # If no 'report_test_result' was present (e.g., only 'run_command' or 'git_add')
@@ -235,6 +237,7 @@ def create_workflow(runtime: RuntimeSetting) -> StateGraph:
             "tester": "tester",  # Loop (for git, mvn)
             "pass": "pull_request",  # Success
             "failed": "coder",  # Tests failed back to coder
+            "error": "task_update",  # Environment issue -> surface to user
         },
     )
 

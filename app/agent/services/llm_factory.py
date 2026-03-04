@@ -113,7 +113,7 @@ def get_llm(agent_settings: AgentSettings, large: bool = True) -> BaseChatModel:
     if not provider_factory:
         raise ValueError(f"Unknown LLM provider: {provider}")
 
-    logger.info(
+    logger.debug(
         "Creating LLM: provider=%s, model=%s, temperature=%s",
         provider,
         model,
