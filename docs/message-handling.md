@@ -2,23 +2,24 @@
 
 ## Overview
 
-The agent uses a dual-message system to maintain both global conversation history and per-node message stacks. This architecture ensures clean context for each LLM node while preserving the complete interaction history.
+The agent uses a dual-message system to maintain both per-node conversation context and complete history preservation. This architecture ensures clean context for each LLM node while preserving the complete interaction history.
 
 ## Message Fields in AgentState
 
-### 1. `messages` (Global History)
+### 1. `messages` (Per-Node Stack)
+
+- **Type**: `Annotated[list[BaseMessage], add_messages]`
+- **Purpose**: Current node's message stack for LLM context
+- **Scope**: Single node execution, reset on node switch
+- **Usage**: LLM context for current node operations
+- **Managed by**: Standard LangGraph `ToolNode` and agent nodes
+
+### 2. `message_history` (Complete History)
 
 - **Type**: `Annotated[list[BaseMessage], add_messages]`
 - **Purpose**: Complete conversation history across all nodes
 - **Scope**: Entire agent execution lifecycle
 - **Usage**: Audit trail, debugging, full context preservation
-
-### 2. `node_messages` (Per-Node Stack)
-
-- **Type**: `Annotated[list[BaseMessage], add_messages]`
-- **Purpose**: Isolated message stack for each LLM node (analyst, coder, tester)
-- **Scope**: Single node execution, reset on node switch
-- **Usage**: LLM context for current node operations
 
 ## Message Flow
 
@@ -27,31 +28,35 @@ The agent uses a dual-message system to maintain both global conversation histor
 When switching between nodes:
 
 1. **Detection**: `state.get("current_node") != node_name` in `invoke_tool_node`
-2. **Reset**: `node_messages` is cleared
-3. **Initialization**: New stack starts with:
+2. **Preservation**: Old `messages` are copied to `message_history`
+3. **Reset**: `messages` is cleared
+4. **Initialization**: New `messages` stack starts with:
+
    ```python
    [
        SystemMessage(content=system_prompt),
        HumanMessage(content=human_prompt)  # includes previous node summary
    ]
    ```
-4. **Previous Node Summary**: The `human_prompt` is rendered from templates (e.g., `prompt_testing.md`) and includes `agent_summary` entries from the previous node
+
+5. **Previous Node Summary**: The `human_prompt` is rendered from templates (e.g., `prompt_testing.md`) and includes `agent_summary` entries from the previous node
 
 ### Tool Call Loop (same node)
 
 When a node makes multiple tool calls:
 
 1. **Detection**: `state.get("current_node") == node_name`
-2. **Preservation**: Existing `node_messages` are retained
+2. **Preservation**: Existing `messages` are retained
 3. **Filtering**: `filter_messages_for_llm` applied to keep recent context
-4. **Accumulation**: New messages added to stack:
+4. **Accumulation**: Standard `ToolNode` automatically adds ToolMessages to `messages`:
+
    ```python
    [
        SystemMessage(content=system_prompt),
        HumanMessage(content=human_prompt),
-       ...filtered_existing_node_messages,
+       ...filtered_existing_messages,
        AIMessage(with tool_calls),
-       ToolMessage(tool results)
+       ToolMessage(tool results)  # Added by ToolNode
    ]
    ```
 
@@ -92,10 +97,10 @@ if is_node_switch:
         HumanMessage(content=human_prompt),
     ]
 else:
-    # Tool call loop: preserve and filter existing node_messages
-    existing_node_messages = state.get("node_messages", [])
+    # Tool call loop: preserve and filter existing messages
+    existing_messages = state.get("messages", [])
     filtered_messages = filter_messages_for_llm(
-        existing_node_messages, max_messages=max_messages
+        existing_messages, max_messages=max_messages
     )
     current_messages = [
         SystemMessage(content=system_prompt),
@@ -104,39 +109,28 @@ else:
 ```
 
 **Returns**:
+
 ```python
 {
-    "messages": [response],        # Global history
-    "node_messages": [response],   # Per-node stack
+    "messages": [response],              # Per-node stack
+    "message_history": old_messages,     # Preservation (on node switch)
     "current_node": node_name,
     ...
 }
 ```
 
-### Custom ToolNode Wrapper (`app/agent/graph.py`)
+### Standard ToolNode (`app/agent/graph.py`)
 
-Standard `ToolNode` only updates `messages`. Our wrapper also updates `node_messages`:
+The architecture uses LangGraph's standard `ToolNode` without any custom wrapper:
 
 ```python
-def _create_tool_node_with_node_messages(tools: list):
-    base_tool_node = ToolNode(tools)
-    
-    def tool_node_wrapper(state: AgentState):
-        result = base_tool_node.invoke(state)
-        tool_messages = [
-            msg for msg in result.get("messages", []) 
-            if isinstance(msg, ToolMessage)
-        ]
-        
-        return {
-            "messages": result.get("messages", []),
-            "node_messages": tool_messages,  # Add to per-node stack
-        }
-    
-    return tool_node_wrapper
+# Tool Nodes
+workflow.add_node("tools_coder", ToolNode(coder_tools))
+workflow.add_node("tools_analyst", ToolNode(analyst_tools))
+workflow.add_node("tools_tester", ToolNode(tester_tools))
 ```
 
-**Why needed**: Ensures ToolMessages are added to `node_messages` so the next LLM call has the correct context.
+**Why this works**: `ToolNode` automatically updates the `messages` field with ToolMessages. Since `messages` is now the per-node stack (not global history), this naturally provides the correct context for the next LLM call.
 
 ## Prompt Templates and Summaries
 
@@ -182,15 +176,16 @@ The `record_finish_task_summary` and tester's `_llm_response_hook` extract these
 
 ### Router Node
 
-- **Does NOT use** `node_messages`
+- **Does NOT use** per-node message management
 - Uses structured output with minimal context (`max_messages=3`)
-- Only reads from global `messages` for routing decisions
+- Reads from `messages` for routing decisions (not reset between calls)
 
 ### Analyst, Coder, Tester Nodes
 
-- **Use** `node_messages` for LLM context
+- **Use** `messages` for per-node LLM context
 - **Receive** previous node summaries via prompt templates
 - **Maintain** isolated conversation stacks during tool call loops
+- **Preserve** old messages to `message_history` on node switch
 
 ## Benefits
 
@@ -210,17 +205,23 @@ Within a node, the conversation history is preserved across tool calls, allowing
 - Error recovery
 - Iterative refinement
 
-### 3. LLM Provider Compatibility
+### 3. Simplicity
+
+- **No custom wrappers**: Uses standard LangGraph `ToolNode`
+- **Natural flow**: `messages` works as LangGraph expects
+- **Less code**: Simpler implementation, easier to maintain
+
+### 4. LLM Provider Compatibility
 
 The message sequence is carefully managed to comply with provider requirements:
 - Mistral: No consecutive AIMessages
 - OpenAI: Flexible message ordering
 - Anthropic: Tool use patterns
 
-### 4. Debugging and Auditing
+### 5. Debugging and Auditing
 
-- `messages`: Complete audit trail
-- `node_messages`: Current node's focused context
+- `messages`: Current node's focused context
+- `message_history`: Complete audit trail
 - Both available for inspection and logging
 
 ## Common Patterns
@@ -230,19 +231,19 @@ The message sequence is carefully managed to comply with provider requirements:
 ```
 Coder finishes → finish_task(summary="...")
                 ↓
-Tester starts → receives summary in prompt
+Tester starts → old messages preserved to message_history
                 ↓
-Tester's node_messages = [SystemMessage, HumanMessage with summary]
+Tester's messages = [SystemMessage, HumanMessage with summary]
 ```
 
 ### Pattern 2: Tool Call Loop
 
 ```
-Tester calls run_command → node_messages += [AIMessage, ToolMessage]
+Tester calls run_command → messages += [AIMessage, ToolMessage]
                          ↓
-Tester calls run_command again → filtered node_messages used as context
+Tester calls run_command again → filtered messages used as context
                                 ↓
-node_messages = [SystemMessage, HumanMessage, ToolMessage, AIMessage, ToolMessage]
+messages = [SystemMessage, HumanMessage, ToolMessage, AIMessage, ToolMessage]
 ```
 
 ### Pattern 3: Error Recovery
@@ -261,22 +262,29 @@ Coder restarts → receives test failure summary in prompt
 
 **Cause**: AIMessage followed by another AIMessage in the sequence.
 
-**Solution**: Ensure ToolNode wrapper adds ToolMessages to `node_messages`.
+**Solution**: This should not occur with the current architecture. Standard `ToolNode` automatically adds ToolMessages to `messages`, preventing consecutive AIMessages.
 
 ### Issue: Node loses context between tool calls
 
-**Cause**: `node_messages` not being preserved in tool call loops.
+**Cause**: `messages` being cleared when it shouldn't be.
 
-**Solution**: Check `is_node_switch` logic in `invoke_tool_node`.
+**Solution**: Check `is_node_switch` logic in `invoke_tool_node` - should only clear on actual node switch, not during tool call loops.
 
 ### Issue: Previous node summary not appearing
 
 **Cause**: `agent_summary` not populated or template not rendering.
 
-**Solution**: 
+**Solution**:
+
 1. Verify `record_finish_task_summary` is called
 2. Check prompt template has `{% if agent_summary %}` block
 3. Ensure `load_prompt` receives full `state` dict
+
+### Issue: Message history not being preserved
+
+**Cause**: `message_history` not being updated on node switch.
+
+**Solution**: Verify that `invoke_tool_node` copies old `messages` to `message_history` when `is_node_switch` is true.
 
 ## Testing
 

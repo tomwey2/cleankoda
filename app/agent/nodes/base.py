@@ -59,16 +59,16 @@ async def invoke_tool_node(  # pylint: disable=too-many-arguments,too-many-local
     is_node_switch = state.get("current_node") != node_name
 
     if is_node_switch:
-        # Node switch: initialize new node_messages with system and human prompts
+        # Node switch: preserve current messages to history and start fresh
         current_messages: list[BaseMessage | SystemMessage | HumanMessage] = [
             SystemMessage(content=system_prompt),
             HumanMessage(content=human_prompt),
         ]
     else:
-        # Same node (tool call loop): preserve existing node_messages
-        existing_node_messages = state.get("node_messages", [])
+        # Same node (tool call loop): preserve existing messages
+        existing_messages = state.get("messages", [])
         filtered_messages = filter_messages_for_llm(
-            existing_node_messages, max_messages=max_messages
+            existing_messages, max_messages=max_messages
         )
         current_messages: list[BaseMessage | SystemMessage | HumanMessage] = [
             SystemMessage(content=system_prompt),
@@ -92,12 +92,17 @@ async def invoke_tool_node(  # pylint: disable=too-many-arguments,too-many-local
 
                 result: dict[str, Any] = {
                     "messages": [response],
-                    "node_messages": [response],
                     "current_node": node_name,
                     "current_tool_calls": tool_calls,
                     "prompt": human_prompt,
                     "system_prompt": system_prompt,
                 }
+
+                # On node switch, preserve old messages to history before clearing
+                if is_node_switch:
+                    old_messages = state.get("messages", [])
+                    if old_messages:
+                        result["message_history"] = old_messages
 
                 if llm_response_hook:
                     hook_result = llm_response_hook(state, response)

@@ -7,7 +7,7 @@ the edges (the transitions between nodes), and the conditional logic that
 routes the flow of execution based on the current state.
 """
 
-from langchain_core.messages import AIMessage, ToolMessage
+from langchain_core.messages import AIMessage
 from langgraph.graph import END, StateGraph
 from langgraph.prebuilt import ToolNode
 
@@ -33,31 +33,6 @@ from app.agent.tools.finish_task import finish_task
 from app.agent.tools.run_command import run_command
 from app.agent.tools.thinking import thinking
 from app.agent.tools.report_test_result import report_test_result
-
-
-def _create_tool_node_with_node_messages(tools: list):
-    """
-    Wrapper around ToolNode that also updates node_messages field.
-
-    The standard ToolNode only updates the 'messages' field. We need to also
-    update 'node_messages' to maintain the per-node message stack.
-    """
-    base_tool_node = ToolNode(tools)
-
-    def tool_node_wrapper(state: AgentState):
-        # Execute the base tool node
-        result = base_tool_node.invoke(state)
-
-        # Extract ToolMessages from the result
-        tool_messages = [msg for msg in result.get("messages", []) if isinstance(msg, ToolMessage)]
-
-        # Update both messages and node_messages
-        return {
-            "messages": result.get("messages", []),
-            "node_messages": tool_messages,
-        }
-
-    return tool_node_wrapper
 
 
 def route_after_tools_tester(state: AgentState):
@@ -178,10 +153,10 @@ def create_workflow(runtime: RuntimeSetting) -> StateGraph:
         create_tester_node(runtime.llm_large, tester_tools),
     )
 
-    # Tool Nodes - use wrapper to update both messages and node_messages
-    workflow.add_node("tools_coder", _create_tool_node_with_node_messages(coder_tools))
-    workflow.add_node("tools_analyst", _create_tool_node_with_node_messages(analyst_tools))
-    workflow.add_node("tools_tester", _create_tool_node_with_node_messages(tester_tools))
+    # Tool Nodes
+    workflow.add_node("tools_coder", ToolNode(coder_tools))
+    workflow.add_node("tools_analyst", ToolNode(analyst_tools))
+    workflow.add_node("tools_tester", ToolNode(tester_tools))
 
     workflow.add_node("pull_request", create_pull_request_node())
     workflow.add_node("task_update", create_task_update_node(runtime.agent_settings))

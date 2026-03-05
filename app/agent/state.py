@@ -95,7 +95,7 @@ class AgentState(TypedDict):
     """
 
     messages: Annotated[list[BaseMessage], add_messages]
-    node_messages: Annotated[list[BaseMessage], add_messages]
+    message_history: Annotated[list[BaseMessage], add_messages]
     next_step: str
     # information from the external task system
     provider_task: ProviderTask | None
