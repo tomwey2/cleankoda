@@ -1,7 +1,20 @@
 # TASK
+
 Implement the following task:
 Task: {{agent_task.task_name}}
 Description: {{agent_task.task_description}}
+
+{% if agent_summary %}
+
+## PREVIOUS NODE SUMMARY
+
+The previous agent completed the following work:
+
+{% for summary in agent_summary %}
+- **[{{ summary.role }}]** {{ summary.summary }}
+{% endfor %}
+
+{% endif %}
 {% if provider_task_comments %}
 # REVIEW COMMENTS
 The Pull Request was rejected with the following review comments: 

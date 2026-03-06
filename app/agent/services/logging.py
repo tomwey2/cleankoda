@@ -47,7 +47,11 @@ def log_agent_response(  # pylint: disable=unused-argument
             logger.debug("Tool Call: %s", name)
             args = tool_call.get("args", {}) or {}
             for key, value in args.items():
-                logger.debug(" └─ %s: %s", key, safe_truncate(value, length=arg_limit))
+                if name == "write_to_file" and key == "write_content":
+                    out_value = safe_truncate(value, arg_limit)
+                else:
+                    out_value = value
+                logger.debug(" └─ %s: %s", key, out_value)
 
     if getattr(response, "content", None):
         logger.debug("Content: %s", safe_truncate(response.content, content_limit))

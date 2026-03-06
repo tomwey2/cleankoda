@@ -11,7 +11,13 @@ import time
 from collections.abc import Callable
 from typing import Any
 
-from langchain_core.messages import AIMessage, BaseMessage, HumanMessage, SystemMessage
+from langchain_core.messages import (
+    AIMessage,
+    BaseMessage,
+    HumanMessage,
+    RemoveMessage,
+    SystemMessage,
+)
 
 from app.agent.services.logging import log_agent_response
 from app.agent.services.message_processing import filter_messages_for_llm, sanitize_response
@@ -55,12 +61,22 @@ async def invoke_tool_node(  # pylint: disable=too-many-arguments,too-many-local
     Returns:
         A state-update dict suitable for returning from a LangGraph node.
     """
-    filtered_messages = filter_messages_for_llm(state["messages"], max_messages=max_messages)
+    # Detect node switch: if current_node differs from node_name, we're switching nodes
+    is_node_switch = state.get("current_node") != node_name
+
+    # Always start with system and human prompts
     current_messages: list[BaseMessage | SystemMessage | HumanMessage] = [
         SystemMessage(content=system_prompt),
         HumanMessage(content=human_prompt),
     ]
-    current_messages += filtered_messages
+
+    # On tool call loop (not node switch), append filtered existing messages
+    if not is_node_switch:
+        existing_messages = state.get("messages", [])
+        filtered_messages = filter_messages_for_llm(
+            existing_messages, max_messages=max_messages
+        )
+        current_messages.extend(filtered_messages)
 
     current_tool_choice = "auto"
 
@@ -72,17 +88,34 @@ async def invoke_tool_node(  # pylint: disable=too-many-arguments,too-many-local
 
             response = sanitize_response(response)
 
-            tool_calls = getattr(response, "tool_calls", [])
-            if tool_calls:
+            tool_calls = getattr(response, "tool_calls", []) or []
+            if tool_calls and len(tool_calls) > 0:
                 log_agent_response(node_name, response, attempt=attempt + 1)
 
+                # On node switch, preserve old messages to history and clear them
+                messages_to_add = [response]
+                if is_node_switch:
+                    old_messages = state.get("messages", [])
+                    if old_messages:
+                        # Create RemoveMessage for each old message to clear them
+                        remove_messages = [
+                            RemoveMessage(id=msg.id) for msg in old_messages if msg.id
+                        ]
+                        messages_to_add = remove_messages + [response]
+
                 result: dict[str, Any] = {
-                    "messages": [response],
+                    "messages": messages_to_add,
                     "current_node": node_name,
                     "current_tool_calls": tool_calls,
                     "prompt": human_prompt,
                     "system_prompt": system_prompt,
                 }
+
+                # Preserve old messages to history on node switch
+                if is_node_switch:
+                    old_messages = state.get("messages", [])
+                    if old_messages:
+                        result["message_history"] = old_messages
 
                 if llm_response_hook:
                     hook_result = llm_response_hook(state, response)
