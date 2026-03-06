@@ -29,17 +29,24 @@ When switching between nodes:
 
 1. **Detection**: `state.get("current_node") != node_name` in `invoke_tool_node`
 2. **Preservation**: Old `messages` are copied to `message_history`
-3. **Reset**: `messages` is cleared
-4. **Initialization**: New `messages` stack starts with:
-
-   ```python
-   [
-       SystemMessage(content=system_prompt),
-       HumanMessage(content=human_prompt)  # includes previous node summary
-   ]
-   ```
-
+3. **Clearing**: Old messages are removed using `RemoveMessage` instances
+4. **Reset**: New `messages` stack contains only the new AIMessage response
 5. **Previous Node Summary**: The `human_prompt` is rendered from templates (e.g., `prompt_testing.md`) and includes `agent_summary` entries from the previous node
+
+**Message Clearing Mechanism**:
+
+LangGraph's `add_messages` reducer doesn't support replacement - it only appends. To clear messages at node switch, we use `RemoveMessage`:
+
+```python
+# Create RemoveMessage for each old message
+remove_messages = [
+    RemoveMessage(id=msg.id) for msg in old_messages if msg.id
+]
+# Return removal markers + new response
+messages_to_add = remove_messages + [response]
+```
+
+This ensures the `messages` field is truly reset at node boundaries.
 
 ### Tool Call Loop (same node)
 
@@ -97,23 +104,40 @@ if is_node_switch:
         HumanMessage(content=human_prompt),
     ]
 else:
-    # Tool call loop: preserve and filter existing messages
+    # Tool call loop: use filtered existing messages directly
     existing_messages = state.get("messages", [])
-    filtered_messages = filter_messages_for_llm(
+    current_messages = filter_messages_for_llm(
         existing_messages, max_messages=max_messages
     )
-    current_messages = [
-        SystemMessage(content=system_prompt),
-        HumanMessage(content=human_prompt),
-    ] + filtered_messages
 ```
 
-**Returns**:
+**Returns on node switch**:
+
+```python
+# Clear old messages using RemoveMessage
+messages_to_add = [response]
+if is_node_switch:
+    old_messages = state.get("messages", [])
+    if old_messages:
+        # Create RemoveMessage for each old message
+        remove_messages = [
+            RemoveMessage(id=msg.id) for msg in old_messages if msg.id
+        ]
+        messages_to_add = remove_messages + [response]
+
+{
+    "messages": messages_to_add,         # RemoveMessages + new response
+    "message_history": old_messages,     # Preservation
+    "current_node": node_name,
+    ...
+}
+```
+
+**Returns on tool call loop**:
 
 ```python
 {
-    "messages": [response],              # Per-node stack
-    "message_history": old_messages,     # Preservation (on node switch)
+    "messages": [response],              # Just the new AIMessage
     "current_node": node_name,
     ...
 }

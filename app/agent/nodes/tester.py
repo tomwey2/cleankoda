@@ -67,7 +67,7 @@ def create_tester_node(llm, tools):
         """
         summary_entries = list(state.get("agent_summary") or [])
         report_args = _get_report_result_args(response)
-        if report_args and tests_passed(report_args):
+        if report_args:
             summary = report_args.get("summary", "")
             summary_entries = append_agent_summary(summary_entries, "tester", summary)
         if summary_entries:
