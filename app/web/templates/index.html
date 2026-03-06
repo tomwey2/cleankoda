@@ -7,8 +7,8 @@
     <title>CleanKoda | Autonomous Coding Agents for Reliable Software Engineering</title>
     <!-- Bootstrap 5.3 CDN -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
-    <!-- Font Awesome -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <!-- Bootstrap Icons -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
     <!-- Google Fonts: Inter (UI) & JetBrains Mono (Code) -->
     <link
         href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&family=JetBrains+Mono:wght@400;700&display=swap"
@@ -73,15 +73,14 @@
     <nav class="navbar navbar-expand-lg navbar-dark bg-transparent pt-4">
         <div class="container">
             <a class="navbar-brand fw-bold" href="#">
-                <span class="text-primary">&lt;/&gt;</span> CleanKoda
+                <span class="h4 text-primary"><i class="bi bi-robot me-2"></i></span> CleanKoda
             </a>
             <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
                 <span class="navbar-toggler-icon"></span>
             </button>
             <div class="collapse navbar-collapse justify-content-end" id="navbarNav">
                 <div class="d-flex align-items-center">
-                    <a href="#" class="btn text-light fw-semibold me-3"><i
-                            class="fa-brands fa-github me-2"></i>Github</a>
+                    <a href="#" class="btn text-light fw-semibold me-3"><i class="bi bi-github me-2"></i>Github</a>
                     <a href="#" class="btn text-light btn-outline-light fw-semibold me-3">Sign In</a>
                     <a href="/dashboard" class="btn btn-primary fw-semibold">Start your project</a>
                 </div>
@@ -136,9 +135,10 @@
                 <!-- Feature 1: Self-healing -->
                 <div class="col-md-6 col-lg-4">
                     <div class="card feature-card h-100 p-4 border-0 rounded-4 shadow-sm">
-                        <div class="card-body">
-                            <h3 class="h1 mb-3">🔄</h3>
+                        <div class="card-header">
                             <h5 class="card-title fw-bold text-white">Self-Healing & Quality Gates</h5>
+                        </div>
+                        <div class="card-body">
                             <p class="card-text text-secondary">If a build or unit test fails, the agent reads the
                                 error, corrects the code, and re-tests autonomously. CleanKoda never submits untested
                                 code, creating necessary trust for production.</p>
@@ -148,9 +148,10 @@
                 <!-- Feature 2: Review Resilience -->
                 <div class="col-md-6 col-lg-4">
                     <div class="card feature-card h-100 p-4 border-0 rounded-4 shadow-sm">
-                        <div class="card-body">
-                            <h3 class="h1 mb-3">💬</h3>
+                        <div class="card-header">
                             <h5 class="card-title fw-bold text-white">Review Resilience</h5>
+                        </div>
+                        <div class="card-body">
                             <p class="card-text text-secondary">If a pull request is rejected by a human reviewer,
                                 CleanKoda doesn't start from scratch. It perfectly understands the feedback and
                                 integrates it into the existing codebase.</p>
@@ -160,9 +161,10 @@
                 <!-- Feature 3: Sandboxing -->
                 <div class="col-md-6 col-lg-4">
                     <div class="card feature-card h-100 p-4 border-0 rounded-4 shadow-sm">
-                        <div class="card-body">
-                            <h3 class="h1 mb-3">🛡️</h3>
+                        <div class="card-header">
                             <h5 class="card-title fw-bold text-white">Sandboxing & IT Security</h5>
+                        </div>
+                        <div class="card-body">
                             <p class="card-text text-secondary">CleanKoda operates in its own strictly isolated
                                 container environment. It can execute code and use tools without modifying your
                                 company's host infrastructure or creating security vulnerabilities.</p>
@@ -172,9 +174,10 @@
                 <!-- Feature 4: Contextual awareness -->
                 <div class="col-md-6 col-lg-4">
                     <div class="card feature-card h-100 p-4 border-0 rounded-4 shadow-sm">
-                        <div class="card-body">
-                            <h3 class="h1 mb-3">🧠</h3>
+                        <div class="card-header">
                             <h5 class="card-title fw-bold text-white">Contextual Awareness</h5>
+                        </div>
+                        <div class="card-body">
                             <p class="card-text text-secondary">CleanKoda doesn't just read isolated tickets. Through
                                 "learning by doing", the agent builds implicit architectural and domain knowledge with
                                 each resolved ticket.</p>
@@ -184,9 +187,10 @@
                 <!-- Feature 5: Quality over quantity -->
                 <div class="col-md-6 col-lg-4">
                     <div class="card feature-card h-100 p-4 border-0 rounded-4 shadow-sm">
-                        <div class="card-body">
-                            <h3 class="h1 mb-3">💎</h3>
+                        <div class="card-header">
                             <h5 class="card-title fw-bold text-white">Quality Over Quantity</h5>
+                        </div>
+                        <div class="card-body">
                             <p class="card-text text-secondary">No "AI slop". CleanKoda delivers precise, maintainable,
                                 and architecturally sound code changes. The aim is for maintainers to accept the PR with
                                 absolute confidence.</p>
@@ -196,9 +200,10 @@
                 <!-- Feature 6: Methodical planning -->
                 <div class="col-md-6 col-lg-4">
                     <div class="card feature-card h-100 p-4 border-0 rounded-4 shadow-sm">
-                        <div class="card-body">
-                            <h3 class="h1 mb-3">📐</h3>
+                        <div class="card-header">
                             <h5 class="card-title fw-bold text-white">Methodical Planning</h5>
+                        </div>
+                        <div class="card-body">
                             <p class="card-text text-secondary">Before the first line of code is written, CleanKoda
                                 analyzes complex tickets, designs an implementation plan, and breaks down the
                                 architecture into manageable, logical steps.</p>
@@ -208,9 +213,10 @@
                 <!-- Feature 7: Asynchronous scalability -->
                 <div class="col-md-6 col-lg-4">
                     <div class="card feature-card h-100 p-4 border-0 rounded-4 shadow-sm">
-                        <div class="card-body">
-                            <h3 class="h1 mb-3">🚀</h3>
+                        <div class="card-header">
                             <h5 class="card-title fw-bold text-white">Asynchronous Scalability</h5>
+                        </div>
+                        <div class="card-body">
                             <p class="card-text text-secondary">CleanKoda's autonomy decouples development progress from
                                 human work time. The agent handles complex refactorings while the human team tackles
                                 other strategic tasks.</p>
@@ -278,7 +284,7 @@
                     <!-- Erfolgsmeldung (Initial versteckt) -->
                     <div id="successMessage" class="d-none text-center py-4">
                         <div class="mb-3">
-                            <i class="fa-solid fa-circle-check text-success" style="font-size: 3rem;"></i>
+                            <i class="bi bi-check-circle-fill text-success" style="font-size: 3rem;"></i>
                         </div>
                         <h4 class="text-white fw-bold mb-2">Request Received!</h4>
                         <p class="text-secondary mb-0">Thank you. We will review your architecture notes and reach out
@@ -303,7 +309,7 @@
 
             // 1. UI auf "Laden" setzen
             submitBtn.disabled = true;
-            submitBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin me-2"></i>Sending...';
+            submitBtn.innerHTML = 'Sending...';
 
             // Formulardaten auslesen (für Supabase vorbereitet)
             const formData = {
