@@ -28,7 +28,7 @@ The same applies to GitHub: If the status of a pull request changes (e.g., if a 
 ### Technical Implementation in Code (Flask Backend - Hybrid Setup)
 Flask spawns the worker as soon as actual work has been validated. This is where our hybrid strategy comes into play: The gateway dynamically decides, via an environment variable (DEPLOYMENT_MODE), whether the agent is started via the Google API (SaaS) or via the local Docker environment (on-premises).
 
-´´´python
+```python
 import os
 import docker
 from google.cloud import run_v2
@@ -94,14 +94,14 @@ def _spawn_local_docker_container(target_language, env_vars):
         remove=True # Wichtig: Container löscht sich nach der Arbeit selbst!
     )
     return container.id
-´´´
+```
 
 ## 3. The Worker: The "Fat Image" Pattern
 Since Cloud Run jobs are isolated and do not share disks with other containers, the "brain" (LangGraph) and the "muscles" (programming environment, e.g., Java/Maven) must reside in the same Docker container. We build a specific base image for each target language.
 
 Example: Dockerfile.java
 
-´´´
+```dockerfile
   # 1. The Official Python Image
   FROM python:3.11-slim
 
@@ -115,7 +115,7 @@ Example: Dockerfile.java
 
   # 4. The starting signal
   CMD ["python", "run_agent.py"]
-´´´
+```
 
 ## 4. The Stateless Lifecycle ("Fire and Forget")
 
@@ -174,7 +174,7 @@ Architectural Comparison
 
 The base image (Dockerfile) is identical for both worlds. The magic happens in the agent's Python entry point, where, depending on the mode, it either dies after one run or remains permanently alive:
 
-´´´python
+```python
 import os
 import sys
 import time
@@ -201,6 +201,6 @@ def main():
 
 if __name__ == "__main__":
     main()
-´´´
+```
 
 This clean abstraction makes CleanKoda a B2B product ready for use by both cost-conscious startups (SaaS in the Google Cloud) and highly regulated corporations (on-premise in banks) without any additional architectural effort!
