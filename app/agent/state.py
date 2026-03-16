@@ -83,6 +83,7 @@ class AgentStack(StrEnum):
 
     BACKEND = "backend"
     FRONTEND = "frontend"
+    GRADLE_NODE = "gradle-node"
 
 
 class AgentState(TypedDict):
