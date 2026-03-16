@@ -4,11 +4,11 @@ This document describes the final, scalable serverless architecture for CleanKod
 ## 1. GCP Products at a Glance
 Although we operate entirely serverless, we use two different Google Cloud deployment models for the frontend (dashboard/gateway) and the agent (worker with workbench):
 
-### The Flask App (frontend/gateway) -> Google Cloud Run Service
-Why this product? A "service" is designed to respond to incoming web traffic (HTTP requests). It wakes up in milliseconds, delivers the dashboard, accepts webhooks, and automatically scales to multiple instances when there are many visitors.
+### 1. The Flask App (frontend/gateway) -> Google Cloud Run Service
+- Why this product? A "service" is designed to respond to incoming web traffic (HTTP requests). It wakes up in milliseconds, delivers the dashboard, accepts webhooks, and automatically scales to multiple instances when there are many visitors.
 
-### The Agent (worker/fat image) -> Google Cloud Run Job
-Why this product? A "job" does not listen for web traffic. It is designed for asynchronous AI tasks. A job can run for hours and terminates completely autonomously ("fire and forget") once it has finished its work.
+### 2. The Agent (worker/fat image) -> Google Cloud Run Job
+- Why this product? A "job" does not listen for web traffic. It is designed for asynchronous AI tasks. A job can run for hours and terminates completely autonomously ("fire and forget") once it has finished its work.
 
 ## 2. The Intelligent API Gateway & Event Trigger (Shift-Left)
 To prevent resource-intensive AI agents from running into a void, the stateless Flask app acts as an intelligent gatekeeper. We move the pure check logic ("Is there work?") to the cost-effective frontend. The worker job is only started if there is actual work available at that precise moment.
@@ -97,9 +97,9 @@ def _spawn_local_docker_container(target_language, env_vars):
 ```
 
 ## 3. The Worker: The "Fat Image" Pattern
-Since Cloud Run jobs are isolated and do not share disks with other containers, the "brain" (LangGraph) and the "muscles" (programming environment, e.g., Java/Maven) must reside in the same Docker container. We build a specific base image for each target language.
+Since Cloud Run jobs are isolated and do not share disks with other containers, **the agent** (LangGraph) and **the workbench** (programming environment, e.g., Java/Maven) must reside in the same Docker container. We build a specific base image for each target language.
 
-Example: Dockerfile.java
+Example: `Dockerfile.java`
 
 ```dockerfile
   # 1. The Official Python Image
@@ -117,18 +117,17 @@ Example: Dockerfile.java
   CMD ["python", "run_agent.py"]
 ```
 
-## 4. The Stateless Lifecycle ("Fire and Forget")
+## 4. The Stateless Lifecycle ("Fire and Forget") in the Serverless World
 
 The agent never waits for a human. Waiting consumes processing time. The process is strictly asynchronous and stateless:
 
-1. Job Creation: Flask starts the job and passes the task parameters (TICKET_ID, etc.).
+1. Job Creation: Flask starts the job and passes the task parameters (`TICKET_ID`, etc.).
 
-2. Local Execution: LangGraph starts up, knows exactly what to do based on the variables, and clones the code to the local file system (/workspace).
+2. Local Execution: LangGraph starts up, knows exactly what to do based on the variables, and clones the code to the local file system (`/workspace`).
 
-3. The Self-Healing Loop: The agent modifies the code and tests it locally (e.g., os.system("mvn test")).
+3. The Self-Healing Loop: The agent modifies the code and tests it locally (e.g., `os.system("mvn test")`).
 
-4. Completion & Scale-to-Zero: The agent pushes the pull request to GitHub and enters the status into the Supabase database. Python then reaches script termination (sys.exit(0)).
-
+4. Completion & Scale-to-Zero: The agent pushes the pull request to GitHub and enters the status into the Supabase database. Python then reaches script termination (`sys.exit(0)`).
 
 5. Hard Kill: In the millisecond that Python terminates, Google (or the local Docker daemon via `remove=True`) shuts down the container. The temporary code is deleted, and the cost drops to €0.00.
 
@@ -144,19 +143,18 @@ The agent never waits for a human. Waiting consumes processing time. The process
 
 The system is divided into two plans. The backend dynamically determines whose costs the agent will incur.
 
-- "Start Free" Plan (BYOK): Users provide their own OpenAI/Anthropic API key. The user bears 100% of the LLM costs. Additionally, the repository size is limited to restrict cloud costs.
+- **"Start Free" Plan (BYOK):** Users provide their own OpenAI/Anthropic API key. The user bears 100% of the LLM costs. Additionally, the repository size is limited to restrict cloud costs.
 
-- "Paid Plans" (Bundled SaaS): CleanKoda uses its master API key; LLM and cloud costs are cross-subsidized by the SaaS fee.
+- **"Paid Plans" (Bundled SaaS):** CleanKoda uses its master API key; LLM and cloud costs are cross-subsidized by the SaaS fee.
 
 ## 7. Database & Multi-tenancy (Supabase)
 To guarantee a stateless architecture, Supabase (serverless PostgreSQL) completely replaces local databases.
 
-1. Auth & Identity: Supabase manages the login system (JWT tokens) securely and scalably: Supabase handles the entire login system (e.g., "Sign in with GitHub" or "Sign in with Google"). Flask does not need to store passwords. We use Supabase's secure JWT tokens (JSON Web Tokens) to manage user sessions in the dashboard.
+**1. Auth & Identity:** Supabase manages the login system (JWT tokens) securely and scalably: Supabase handles the entire login system (e.g., "Sign in with GitHub" or "Sign in with Google"). Flask does not need to store passwords. We use Supabase's secure JWT tokens (JSON Web Tokens) to manage user sessions in the dashboard.
 
-2. Multi-tenancy (RLS): Each table is assigned a tenant_id. Supabase's "Row Level Security" (RLS) ensures at the database level that a user may only read or edit rows where the tenant_id matches their own user ID. Even in the event of a bug in our Flask backend, Customer A can never see Customer B's data.
+**2. Multi-tenancy (RLS):** Each table is assigned a tenant_id. Supabase's "Row Level Security" (RLS) ensures at the database level that a user may only read or edit rows where the tenant_id matches their own user ID. Even in the event of a bug in our Flask backend, Customer A can never see Customer B's data.
 
-
-2. Multi-tenancy (RLS) 3. Operations Dashboard: The Supabase Studio web interface serves as a direct admin panel. CleanKoda does not require its own admin panel. The Supabase Studio (web interface) acts as a control center: Here you can immediately see new registrations, active agent jobs, connected repositories, and, in the case of support requests, directly view the logs (agent_logs table) of a specific job.
+**3. Operations Dashboard:** The Supabase Studio web interface serves as a direct admin panel. CleanKoda does not require its own admin panel. The Supabase Studio (web interface) acts as a control center: Here you can immediately see new registrations, active agent jobs, connected repositories, and, in the case of support requests, directly view the logs (agent_logs table) of a specific job.
 
 ## 8. The Hybrid Strategy: Serverless & On-Premise from ONE Codebase
 
@@ -172,7 +170,7 @@ Architectural Comparison
 
 ### The lifecycle switch (in the agent run_agent.py)
 
-The base image (Dockerfile) is identical for both worlds. The magic happens in the agent's Python entry point, where, depending on the mode, it either dies after one run or remains permanently alive:
+The base image (`Dockerfile`) is identical for both worlds. The magic happens in the agent's Python entry point, where, depending on the mode, it either dies after one run or remains permanently alive:
 
 ```python
 import os
