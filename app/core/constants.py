@@ -58,5 +58,5 @@ TECH_STACKS = {
             "build": "npm run build",
             "run": "npm run dev",
         },
-    },    
+    },
 }

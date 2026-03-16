@@ -75,7 +75,7 @@ class TestWriteToFileInWorkspace:
     """Tests for write_to_file_in_workspace function"""
 
     @patch("app.agent.tools.file_tools.get_workspace")
-    @patch("builtins.open", new_callable=mock_open)
+    @patch("builtins.open", new_callable=mock_open, read_data="content")
     @patch("os.makedirs")
     @patch("os.path.realpath")
     def test_write_to_file_success(self, mock_realpath, mock_makedirs, mock_file, mock_get_workspace):
@@ -86,8 +86,9 @@ class TestWriteToFileInWorkspace:
         result = write_to_file_in_workspace("test.txt", "content")
         
         assert "Successfully wrote" in result
-        mock_file.assert_called_once_with("/workspace/test.txt", "w", encoding="utf-8")
-        mock_file().write.assert_called_once_with("content")
+        # Called twice: once for write, once for read verification
+        assert mock_file.call_count == 2
+        mock_file.assert_called_with("/workspace/test.txt", "r", encoding="utf-8")  # Last call is read verification
 
     @patch("app.agent.tools.file_tools.get_workspace")
     @patch("builtins.open", side_effect=IOError("Permission denied"))
@@ -340,3 +341,14 @@ class TestWriteToFileTool:
         
         assert "Successfully wrote" in result
         mock_write.assert_called_once_with("test.txt", "content")
+
+    @patch("app.agent.tools.file_tools.write_to_file_in_workspace")
+    def test_write_to_file_partial_content_warning(self, mock_write):
+        """Test write_to_file tool warns about potential partial content"""
+        mock_write.return_value = "Successfully wrote to /workspace/test.txt"
+        
+        # Test with very short content (should trigger warning)
+        result = write_to_file.invoke({"filepath": "test.txt", "content": "short"})
+        
+        assert "Successfully wrote" in result
+        mock_write.assert_called_once_with("test.txt", "short")

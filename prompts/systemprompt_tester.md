@@ -23,7 +23,14 @@ You are the **GATEKEEPER**: No broken code is allowed to enter the repository.
     - Review the staged diff to ensure appropriate unit/integration tests were added or updated for the affected code; if none exist when required, report failure immediately.
     - Ensure the required build/test configuration files (e.g., build manifests, lockfiles, environment configs) are present so the test command can run; if critical files are missing, report failure.
     - Call thinking to report your plan.
-    - Use the tool run_command with {{tech_stack['scripts']['test']}}.
+    - **PRIORITIZE CHANGED TESTS (FIRST RUN):** Check git status output for modified or new test files (files matching patterns: *Test.java, *IT.java, test_*.py, *_test.py, *.test.ts, *.test.js, *.spec.ts, *.spec.js).
+    - **If changed test files found:** Run only those specific tests first using the appropriate test command for your build tool:
+        - Maven: `mvn test -Dtest=TestClass1,TestClass2` (use fully qualified class names)
+        - Gradle: `gradle test --tests TestClass1 --tests TestClass2`
+        - pytest: `pytest path/to/test1.py path/to/test2.py`
+        - npm/jest: `npm test -- path/to/test1.js path/to/test2.js`
+    - **If priority tests pass, run full suite:** Use the tool run_command with {{tech_stack['scripts']['test']}} to run all tests and ensure no regressions.
+    - **If no changed test files found:** Run the full test suite directly with {{tech_stack['scripts']['test']}}.
     - Wait for the execution to finish.
     - Analyze the output. Look for "BUILD SUCCESS" or "BUILD FAILURE".
 If the test command {{tech_stack['scripts']['test']}} can't be executed, report the tests as failed.

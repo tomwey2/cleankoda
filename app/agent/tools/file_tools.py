@@ -1,5 +1,6 @@
 """A collection of tools for the agent to interact with files"""
 
+import hashlib
 from dataclasses import dataclass
 import fnmatch
 import logging
@@ -81,6 +82,7 @@ def write_to_file_in_workspace(filepath: str, content: str):
         Success message or error message
     """
     try:
+        logger.info("write_to_file called with content length: %d", len(content))
         logger.debug("Writing to workspace file: %s", filepath)
         full_path = _get_full_workspace_path(filepath)
 
@@ -90,9 +92,25 @@ def write_to_file_in_workspace(filepath: str, content: str):
             os.makedirs(parent_dir, exist_ok=True)
             logger.debug("Ensured directory exists: %s", parent_dir)
 
+        # Calculate content hash for verification
+        content_hash = hashlib.md5(content.encode()).hexdigest()
+        logger.debug("Content hash before write: %s", content_hash)
+
         # Write content to file
         with open(full_path, "w", encoding="utf-8") as f:
             f.write(content)
+
+        # Verify content after write
+        with open(full_path, "r", encoding="utf-8") as f:
+            written_content = f.read()
+        written_hash = hashlib.md5(written_content.encode()).hexdigest()
+
+        if content_hash != written_hash:
+            logger.error("CONTENT MISMATCH! Expected %d bytes, got %d bytes",
+                        len(content), len(written_content))
+            return f"ERROR: Content verification failed for {full_path}"
+
+        logger.debug("Content verification passed: %d bytes", len(written_content))
 
         logger.debug("Successfully wrote %d bytes to %s", len(content), full_path)
         return f"Successfully wrote to {full_path}"
@@ -382,23 +400,23 @@ def read_file(
         File content, optionally limited to specified line range
     """
     content = read_file_in_workspace(filepath)
-    
+
     if start_line is None and end_line is None:
         return content
-    
+
     lines = content.split('\n')
-    
+
     # Convert to 0-indexed for Python slicing
     start_idx = (start_line - 1) if start_line is not None else 0
     end_idx = end_line if end_line is not None else len(lines)
-    
+
     # Ensure indices are within bounds
     start_idx = max(0, start_idx)
     end_idx = min(len(lines), end_idx)
-    
+
     # Extract the requested lines
     selected_lines = lines[start_idx:end_idx]
-    
+
     return '\n'.join(selected_lines)
 
 
@@ -483,5 +501,9 @@ def list_files(
 def write_to_file(filepath: str, content: str):
     """
     Writes content to a file.
+    
+    WARNING: This replaces the ENTIRE file content. If you only want to modify
+    specific lines, read the full file first, make your changes, then write the complete content.
     """
+
     return write_to_file_in_workspace(filepath, content)
