@@ -385,39 +385,17 @@ def _validate_directory_access(directory: str, workspace: str) -> str | None:
 
 
 @tool
-def read_file(
-    filepath: str, start_line: int | None = None, end_line: int | None = None
-) -> str:
+def read_file(filepath: str) -> str:
     """
-    Reads the content of a file.
+    Reads the entire content of a file.
     
     Args:
         filepath: Path to the file to read
-        start_line: Optional starting line number (1-indexed, inclusive)
-        end_line: Optional ending line number (1-indexed, inclusive)
     
     Returns:
-        File content, optionally limited to specified line range
+        Complete file content
     """
-    content = read_file_in_workspace(filepath)
-
-    if start_line is None and end_line is None:
-        return content
-
-    lines = content.split('\n')
-
-    # Convert to 0-indexed for Python slicing
-    start_idx = (start_line - 1) if start_line is not None else 0
-    end_idx = end_line if end_line is not None else len(lines)
-
-    # Ensure indices are within bounds
-    start_idx = max(0, start_idx)
-    end_idx = min(len(lines), end_idx)
-
-    # Extract the requested lines
-    selected_lines = lines[start_idx:end_idx]
-
-    return '\n'.join(selected_lines)
+    return read_file_in_workspace(filepath)
 
 
 @tool
