@@ -17,7 +17,8 @@ Containerization using Docker makes it possible to run the AI Agent anywhere: in
 ![Show Case](./images/cleankoda-showcase-improve-readme.gif)
 
 ## The Lean Startup Vision
-**CleanKoda** is an autonomous AI software developer designed to counteract a potential next "software crisis" caused by declining demand for entry-level professionals. CleanKoda focuses on brownfield projects—the maintenance of complex, existing enterprise systems—to automate repetitive tasks. Its "trust-first" approach begins with low-risk tasks such as bug fixing and unit test development. The goal is to deliver maintainable and clean code changes so that the human experts are significantly relieved of routine work and can focus on high-level tasks.
+
+**CleanKoda** is an autonomous AI software developer designed to counteract a potential next "software crisis" caused by declining demand for entry-level professionals (see recent studies of Stanford, ETH Zurich and Indeed). CleanKoda focuses on brownfield projects—the maintenance of complex, existing enterprise systems—to automate repetitive tasks. Its "trust-first" approach begins with low-risk tasks such as bug fixing and unit test development. The goal is to deliver maintainable and clean code changes so that the human experts are significantly relieved of routine work and can focus on high-level tasks.
 
 The full strategy paper can be found here: [VISION and STRATEGY](VISION.md)
 
@@ -47,8 +48,9 @@ Key milestones for professionalization include:
 - [ ] **Active Code Reviews:** Agents will evolve from pure contributors to reviewers. They will analyze open Pull Requests, provide constructive feedback on code quality and security, and suggest optimizations—acting as an automated senior developer.
 - [ ] **Collaborative Swarm Intelligence:** Moving beyond isolated tasks, agents will be capable of communicating and collaborating with each other. This "swarm" capability will allow multiple agents to work jointly on complex, large-scale features, ensuring architectural consistency across the codebase.
 - [X] **Choose your preferred LLM** Support of other LLM providers, included open source models that run locally. 
-- [ ] **Context Engineering** Optimize the agent's input with additional information (system prompt, coding plan, test results) that he needs to effectively perform his task.
-- [ ] **Memory** to be able to refer back to past events and **learn** from feedback. 
+- [ ] **Skills and Context Engineering** Optimize the agent's input away from rigid, monolithic "Megaprompts" towards dynamic, skill-based prompt architecture, so that the agent only receives the specific context (skills) it needs for the current task.
+- [ ] **RAG & Knowledge Retrieval:** Improve context depth in large-scale codebases through efficient retrieval using additional documents (requirements specifications, architecture documents)
+- [ ] **Memory & Learning Capability** to be able to refer back to past events and **learn** from feedback. CleanKoda learns continuously by analysis of project documentation and builds implicit architectural and domain knowledge.
 
 **Commercialization & Next Steps** To realize this vision, we are transitioning this project into a dedicated startup. We plan to accelerate development through an upcoming crowdfunding campaign.
 
