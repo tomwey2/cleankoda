@@ -14,10 +14,10 @@ It operates completely unsupervised to:
 
 Containerization using Docker makes it possible to run the AI Agent anywhere: in the cloud as managed Service (SaaS), in the company network (as Enterprise Edition), or even locally on your computer.
 
+![Show Case](./images/cleankoda-showcase-improve-readme.gif)
+
 ## The Lean Startup Vision
 **CleanKoda** is an autonomous AI software developer designed to counteract a potential next "software crisis" caused by declining demand for entry-level professionals. CleanKoda focuses on brownfield projects—the maintenance of complex, existing enterprise systems—to automate repetitive tasks. Its "trust-first" approach begins with low-risk tasks such as bug fixing and unit test development. The goal is to deliver maintainable and clean code changes so that the human experts are significantly relieved of routine work and can focus on high-level tasks.
-
-![Show Case](./images/cleankoda-showcase-improve-readme.gif)
 
 The full strategy paper can be found here: [VISION and STRATEGY](VISION.md)
 
@@ -28,10 +28,10 @@ Here is a [short Video that explains the vision and strategy](https://weyrath.co
 As a **Proof of Concept (POC)**, the system demonstrates the following advanced capabilities:
 
 - **Multi-Agent Architecture:** Uses **LangGraph** to route tasks to specialized sub-agents (`Coder`, `Bugfixer`, `Analyst`, `Tester`, `Explainer`).
+- **Resilient AI Logic:** AI workflows are robustly implemented through design patterns like loops (review & critique) and coordinator/router (hierarchical task decompostion). This enables advanced **self-healing mechanisms** with retry loops and iterative prompting to prevent stalling and minimize hallucinations.
 - **Autonomous Git Operations:** Manages the full Git lifecycle—cloning, branching, committing, pushing, and pull requests—using the **Model Context Protocol (MCP)**.
 - **Explainable PR Descriptions (XAI):** On successful tests, an Explainer node synthesizes the implementation plan with thought and tool-action history from the database to generate a structured PR description.
 - **Task Management Integration:** Connects to external task/issue management systems (e.g. Trello, JIRA) to retrieve assignments and report status updates automatically. This also controls the **Human in the Loop** process.
-- **Resilient AI Logic:** Features advanced **self-healing mechanisms** with retry loops and iterative prompting to prevent stalling and minimize hallucinations.
 - **Dockerized & Scalable:** Runs in secure, isolated containers, allowing for effortless horizontal scaling—simply spin up additional instances to expand your virtual workforce on demand.
 - **LLM Selection:** Choose AI provider (OpenAI, Google, Mistral) and select a large LLMs for complex tasks and a small LLM for simple tasks, ensuring high-quality and precise results at optimized costs.
 - **Workbench Integration:** Integrates workbenches to provide a development environment for the Coding Agent executing unit tests.
