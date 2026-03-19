@@ -329,6 +329,170 @@ class TestListFiles:
         assert result == "Access denied"
 
 
+class TestListFilesContentPattern:
+    """Tests for list_files content_pattern functionality"""
+
+    @patch("app.agent.tools.file_tools.get_workspace")
+    @patch("os.walk")
+    @patch("os.path.realpath")
+    @patch("builtins.open", new_callable=mock_open)
+    def test_list_files_with_content_pattern(self, mock_file, mock_realpath, mock_walk, mock_get_workspace):
+        """Test file listing with content pattern filter"""
+        mock_get_workspace.return_value = "/workspace"
+        mock_realpath.side_effect = lambda x: x
+        mock_walk.return_value = [
+            ("/workspace", [], ["file1.py", "file2.py", "file3.py"]),
+        ]
+        
+        # Mock file contents
+        def open_side_effect(filepath, *args, **kwargs):
+            content_map = {
+                "/workspace/file1.py": "def test_function():\n    pass",
+                "/workspace/file2.py": "def main():\n    print('hello')",
+                "/workspace/file3.py": "class MyClass:\n    pass",
+            }
+            return mock_open(read_data=content_map.get(filepath, ""))()
+        
+        mock_file.side_effect = open_side_effect
+        
+        result = list_files.invoke({"directory": ".", "content_pattern": "def.*test"})
+        
+        assert "file1.py" in result
+        assert "file2.py" not in result
+        assert "file3.py" not in result
+
+    @patch("app.agent.tools.file_tools.get_workspace")
+    @patch("os.walk")
+    @patch("os.path.realpath")
+    @patch("builtins.open", new_callable=mock_open)
+    def test_list_files_content_pattern_case_sensitive(self, mock_file, mock_realpath, mock_walk, mock_get_workspace):
+        """Test content pattern with case sensitivity"""
+        mock_get_workspace.return_value = "/workspace"
+        mock_realpath.side_effect = lambda x: x
+        mock_walk.return_value = [
+            ("/workspace", [], ["file1.txt", "file2.txt"]),
+        ]
+        
+        def open_side_effect(filepath, *args, **kwargs):
+            content_map = {
+                "/workspace/file1.txt": "TODO: fix this",
+                "/workspace/file2.txt": "todo: check this",
+            }
+            return mock_open(read_data=content_map.get(filepath, ""))()
+        
+        mock_file.side_effect = open_side_effect
+        
+        # Case insensitive (default)
+        result = list_files.invoke({"directory": ".", "content_pattern": "TODO"})
+        assert "file1.txt" in result
+        assert "file2.txt" in result
+        
+        # Case sensitive
+        result = list_files.invoke({"directory": ".", "content_pattern": "TODO", "case_sensitive": True})
+        assert "file1.txt" in result
+        assert "file2.txt" not in result
+
+    @patch("app.agent.tools.file_tools.get_workspace")
+    @patch("os.walk")
+    @patch("os.path.realpath")
+    @patch("builtins.open", new_callable=mock_open)
+    def test_list_files_combined_pattern_and_content(self, mock_file, mock_realpath, mock_walk, mock_get_workspace):
+        """Test combining filename pattern and content pattern"""
+        mock_get_workspace.return_value = "/workspace"
+        mock_realpath.side_effect = lambda x: x
+        mock_walk.return_value = [
+            ("/workspace", [], ["test.py", "main.py", "test.txt"]),
+        ]
+        
+        def open_side_effect(filepath, *args, **kwargs):
+            content_map = {
+                "/workspace/test.py": "import unittest",
+                "/workspace/main.py": "import unittest",
+                "/workspace/test.txt": "import unittest",
+            }
+            return mock_open(read_data=content_map.get(filepath, ""))()
+        
+        mock_file.side_effect = open_side_effect
+        
+        result = list_files.invoke({
+            "directory": ".",
+            "pattern": "*.py",
+            "content_pattern": "import unittest"
+        })
+        
+        assert "test.py" in result
+        assert "main.py" in result
+        assert "test.txt" not in result
+
+    @patch("app.agent.tools.file_tools.get_workspace")
+    @patch("os.walk")
+    @patch("os.path.realpath")
+    @patch("builtins.open")
+    def test_list_files_content_pattern_unreadable_file(self, mock_file, mock_realpath, mock_walk, mock_get_workspace):
+        """Test that unreadable files are skipped gracefully"""
+        mock_get_workspace.return_value = "/workspace"
+        mock_realpath.side_effect = lambda x: x
+        mock_walk.return_value = [
+            ("/workspace", [], ["readable.txt", "unreadable.bin"]),
+        ]
+        
+        def open_side_effect(filepath, *args, **kwargs):
+            if "unreadable" in filepath:
+                raise IOError("Cannot read binary file")
+            return mock_open(read_data="some content")()
+        
+        mock_file.side_effect = open_side_effect
+        
+        result = list_files.invoke({"directory": ".", "content_pattern": "content"})
+        
+        assert "readable.txt" in result
+        assert "unreadable.bin" not in result
+
+    @patch("app.agent.tools.file_tools.get_workspace")
+    @patch("os.walk")
+    @patch("os.path.realpath")
+    @patch("builtins.open", new_callable=mock_open)
+    def test_list_files_content_pattern_no_matches(self, mock_file, mock_realpath, mock_walk, mock_get_workspace):
+        """Test content pattern with no matching files"""
+        mock_get_workspace.return_value = "/workspace"
+        mock_realpath.side_effect = lambda x: x
+        mock_walk.return_value = [
+            ("/workspace", [], ["file1.txt", "file2.txt"]),
+        ]
+        
+        mock_file.return_value = mock_open(read_data="some other content")()
+        
+        result = list_files.invoke({"directory": ".", "content_pattern": "NONEXISTENT"})
+        
+        assert result == "No files found."
+
+    @patch("app.agent.tools.file_tools.get_workspace")
+    @patch("os.walk")
+    @patch("os.path.realpath")
+    @patch("builtins.open", new_callable=mock_open)
+    def test_list_files_content_pattern_regex(self, mock_file, mock_realpath, mock_walk, mock_get_workspace):
+        """Test content pattern with regex patterns"""
+        mock_get_workspace.return_value = "/workspace"
+        mock_realpath.side_effect = lambda x: x
+        mock_walk.return_value = [
+            ("/workspace", [], ["file1.py", "file2.py"]),
+        ]
+        
+        def open_side_effect(filepath, *args, **kwargs):
+            content_map = {
+                "/workspace/file1.py": "import pandas as pd",
+                "/workspace/file2.py": "import numpy",
+            }
+            return mock_open(read_data=content_map.get(filepath, ""))()
+        
+        mock_file.side_effect = open_side_effect
+        
+        result = list_files.invoke({"directory": ".", "content_pattern": r"import\s+(pandas|numpy)"})
+        
+        assert "file1.py" in result
+        assert "file2.py" in result
+
+
 class TestWriteToFileTool:
     """Tests for write_to_file tool"""
 

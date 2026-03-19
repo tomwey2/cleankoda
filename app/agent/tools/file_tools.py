@@ -5,6 +5,7 @@ from dataclasses import dataclass
 import fnmatch
 import logging
 import os
+import re
 
 from langchain_core.tools import tool
 
@@ -209,12 +210,16 @@ class _FileListingContext:
         workspace: Absolute path to workspace directory
         max_files: Maximum number of files to collect
         pattern: Optional glob pattern for filtering files
+        content_pattern: Optional regex pattern for filtering by file content
+        case_sensitive: Whether content matching should be case-sensitive
         file_list: Accumulated list of matching file paths
         truncated: Flag indicating if max_files limit was reached
     """
     workspace: str
     max_files: int
     pattern: str | None
+    content_pattern: str | None
+    case_sensitive: bool
     file_list: list[str]
     truncated: bool = False
 
@@ -263,6 +268,34 @@ def _should_skip_directory(
     return False
 
 
+def _matches_content_pattern(
+        filepath: str, pattern: str, case_sensitive: bool = False
+) -> bool:
+    """Check if file content matches the given pattern (grep-like).
+
+    Args:
+        filepath: Absolute path to the file
+        pattern: Regex pattern to search for in file content
+        case_sensitive: Whether to perform case-sensitive matching
+
+    Returns:
+        True if pattern found in file content, False otherwise
+    """
+    try:
+        with open(filepath, "r", encoding="utf-8", errors="ignore") as f:
+            content = f.read()
+
+        flags = 0 if case_sensitive else re.IGNORECASE
+        return bool(re.search(pattern, content, flags))
+    except Exception as e:  # pylint: disable=broad-exception-caught
+        logger.debug(
+            "Could not read file %s for content matching: %s",
+            filepath,
+            str(e)
+        )
+        return False
+
+
 def _process_files_for_listing(root: str, files: list[str], ctx: _FileListingContext) -> None:
     """Process files in a directory for the file listing.
 
@@ -292,6 +325,19 @@ def _process_files_for_listing(root: str, files: list[str], ctx: _FileListingCon
         if ctx.pattern and not fnmatch.fnmatch(rel_path, ctx.pattern):
             logger.debug("File %s does not match pattern %s", rel_path, ctx.pattern)
             continue
+
+        # Apply content pattern filter if specified
+        if ctx.content_pattern:
+            full_path = os.path.join(root, file)
+            if not _matches_content_pattern(
+                full_path, ctx.content_pattern, ctx.case_sensitive
+            ):
+                logger.debug(
+                    "File %s does not match content pattern %s",
+                    rel_path,
+                    ctx.content_pattern
+                )
+                continue
 
         # Add matching file to the list
         ctx.file_list.append(rel_path)
@@ -399,12 +445,15 @@ def read_file(filepath: str) -> str:
 
 
 @tool
+# pylint: disable=too-many-arguments,too-many-locals
 def list_files(
     directory: str = ".",
     max_files: int = 500,
     max_depth: int | None = None,
     summary: bool = False,
-    pattern: str | None = None
+    pattern: str | None = None,
+    content_pattern: str | None = None,
+    case_sensitive: bool = False
 ) -> str:
     """
     Lists files in a directory (recursive).
@@ -414,16 +463,21 @@ def list_files(
         max_files: Maximum number of files to return (default: 500)
         max_depth: Maximum depth to recurse (None = unlimited)
         summary: If True, return directory tree with counts instead of file list
-        pattern: Optional glob pattern to filter files (e.g., "*.py", "src/**/*.java")
+        pattern: Optional glob pattern to filter files by name (e.g., "*.py", "src/**/*.java")
+        content_pattern: Optional regex pattern to filter files by content (grep-like)
+        case_sensitive: Whether content_pattern matching should be case-sensitive (default: False)
     """
     try:
         logger.debug(
-            "Listing files: directory=%s, max_files=%d, max_depth=%s, summary=%s, pattern=%s",
+            "list_files: directory=%s, max_files=%d, max_depth=%s, "
+            "summary=%s, pattern=%s, content_pattern=%s, case_sensitive=%s",
             directory,
             max_files,
             max_depth,
             summary,
-            pattern
+            pattern,
+            content_pattern,
+            case_sensitive
         )
 
         # Get workspace and validate directory access
@@ -440,6 +494,8 @@ def list_files(
             workspace=workspace,
             max_files=max_files,
             pattern=pattern,
+            content_pattern=content_pattern,
+            case_sensitive=case_sensitive,
             file_list=[]
         )
 
@@ -462,10 +518,13 @@ def list_files(
 
         # Format and return results
         if summary:
-            logger.debug("Returning directory summary for %d directories", len(dir_summary))
+            logger.debug(
+                "list_files: Returning directory summary for %d directories",
+                len(dir_summary)
+            )
             return _format_summary_result(dir_summary)
 
-        logger.debug("Returning file list with %d files", len(ctx.file_list))
+        logger.debug("list_files: Returning file list with %d files", len(ctx.file_list))
         return _format_file_list_result(ctx.file_list, ctx.truncated, max_files)
 
     except Exception as e:  # pylint: disable=broad-exception-caught
