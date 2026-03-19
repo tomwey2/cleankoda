@@ -11,10 +11,10 @@
 - **Analyze** code, create a implementation plan to **write** code or fix bugs
 - **Push** changes via pull requests to your remote repository
 
-Containerization using Docker makes it possible to run the CleanKoda anywhere: in the cloud as managed Service (SaaS), on premise in the company network (as Enterprise Edition), or even locally on your computer. 
+Containerization using Docker makes it possible to run the CleanKoda anywhere and secure: in the cloud as managed Service (SaaS), on premise in the company network (as Enterprise Edition), or even locally on your computer. 
 
 CleanKoda is designed to counteract a potential next "software crisis" caused by declining demand for entry-level professionals (see recent studies of Stanford, ETH Zurich and Indeed). It focuses on brownfield projects—the maintenance of complex, existing enterprise systems—to automate repetitive tasks. Its "trust-first" approach begins with low-risk tasks such as bug fixing and unit test development. The goal is to deliver maintainable and clean code changes so that the human experts are significantly relieved of routine work and can focus on high-level tasks.
-The full [Lean Startup Vision](VISION.md) and a [short Video auf LinkedIn](https://www.linkedin.com/posts/thomas-weyrath_ai-softwareengineering-futurofwork-activity-7432682072449630208--zRg?utm_source=share&utm_medium=member_desktop&rcm=ACoAADscgC8BiMUyz0spFR0jOVHwfm3BFtIuF_o) 
+The full [Lean Startup Vision](VISION.md) and a [short video at LinkedIn](https://www.linkedin.com/posts/thomas-weyrath_ai-softwareengineering-futurofwork-activity-7432682072449630208--zRg?utm_source=share&utm_medium=member_desktop&rcm=ACoAADscgC8BiMUyz0spFR0jOVHwfm3BFtIuF_o) 
 
 ### Show Case
 ![Show Case](./images/cleankoda-showcase-improve-readme.gif)
@@ -28,7 +28,7 @@ As a **Proof of Concept (POC)**, the system demonstrates the following advanced 
 - **Autonomous Git Operations:** Manages the full Git lifecycle—cloning, branching, committing, pushing, and pull requests—using the **Model Context Protocol (MCP)**.
 - **Explainable PR Descriptions (XAI):** On successful tests, an Explainer node synthesizes the implementation plan with thought and tool-action history from the database to generate a structured PR description.
 - **Task Management Integration:** Connects to external task/issue management systems (e.g. Trello, JIRA) to retrieve assignments and report status updates automatically. This also controls the **Human in the Loop** process.
-- **Dockerized & Scalable:** Runs in secure, isolated containers, allowing for effortless horizontal scaling—simply spin up additional instances to expand your virtual workforce on demand.
+- **Dockerized & Scalable:** Runs in secure, isolated containers (sandbox), allowing for effortless horizontal scaling—simply spin up additional instances to expand your virtual workforce on demand.
 - **LLM Selection:** Choose AI provider (OpenAI, Google, Mistral) and select a large LLMs for complex tasks and a small LLM for simple tasks, ensuring high-quality and precise results at optimized costs.
 - **Workbench Integration:** Integrates workbenches to provide a development environment for the Coding Agent executing unit tests.
 - **Trust-First Strategy:** The Coding Agent initially takes on repetitive tasks until trust in its work is established. Only then are more complex tasks addressed. 
