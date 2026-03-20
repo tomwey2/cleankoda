@@ -98,7 +98,7 @@ async def invoke_tool_node(  # pylint: disable=too-many-arguments,too-many-local
             existing_messages, max_messages=max_messages
         )
         current_messages.extend(filtered_messages)
-        
+
         # Check for excessive exploration tool calls
         exploration_count = _count_consecutive_exploration_calls(existing_messages)
         if exploration_count >= MAX_CONSECUTIVE_EXPLORATION_CALLS:
@@ -108,9 +108,13 @@ async def invoke_tool_node(  # pylint: disable=too-many-arguments,too-many-local
             )
             current_messages.append(
                 HumanMessage(
-                    content=f"STOP exploring! You've called exploration tools {exploration_count} times in a row. "
-                    "You have enough information. Move to the next step: use 'thinking' to diagnose, "
-                    "then 'write_to_file' to fix, or 'finish_task' if done."
+                    content=(
+                        f"STOP exploring! You've called exploration tools "
+                        f"{exploration_count} times in a row. "
+                        "You have enough information. Move to the next step: "
+                        "use 'thinking' to diagnose, then 'write_to_file' to fix, "
+                        "or 'finish_task' if done."
+                    )
                 )
             )
 

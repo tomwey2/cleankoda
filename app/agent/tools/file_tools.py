@@ -445,7 +445,7 @@ def read_file(filepath: str) -> str:
 
 
 @tool
-# pylint: disable=too-many-arguments,too-many-locals
+# pylint: disable=too-many-arguments,too-many-locals,too-many-positional-arguments
 def list_files(
     directory: str = ".",
     max_files: int = 500,
@@ -456,7 +456,10 @@ def list_files(
     case_sensitive: bool = False
 ) -> str:
     """
-    Lists files in a directory (recursive).
+    Lists files in a directory (recursive). Can filter by filename pattern AND/OR by file content.
+
+    Use content_pattern to search for files containing specific text (like grep -r).
+    This is useful for finding files with specific imports, functions, classes, or text patterns.
 
     Args:
         directory: Directory to list (relative to workspace)
@@ -464,8 +467,14 @@ def list_files(
         max_depth: Maximum depth to recurse (None = unlimited)
         summary: If True, return directory tree with counts instead of file list
         pattern: Optional glob pattern to filter files by name (e.g., "*.py", "src/**/*.java")
-        content_pattern: Optional regex pattern to filter files by content (grep-like)
+        content_pattern: Optional regex pattern to filter files by content (grep-like).
+            Examples: "TODO", "def.*test", "import pandas", "@Override"
         case_sensitive: Whether content_pattern matching should be case-sensitive (default: False)
+    
+    Examples:
+        - Find all files containing "TODO": content_pattern="TODO"
+        - Find Python files with test functions: pattern="*.py", content_pattern="def.*test"
+        - Find Java files with specific annotation: pattern="*.java", content_pattern="@Override"
     """
     try:
         logger.debug(
