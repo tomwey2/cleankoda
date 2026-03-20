@@ -30,6 +30,23 @@ TECH_STACKS = {
             "run": "mvn spring-boot:run",
         },
     },
+    "gradle-node": {
+        "language": "Java 21",
+        "framework": "Spring Boot 3.3 (multi-module Gradle)",
+        "build_tool": "Gradle",
+        "database": "Configurable (Redis/Postgres/MySQL/etc.)",
+        "other": [
+            "Lombok",
+            "Log4j2",
+            "JUnit Platform",
+            "Spotless",
+        ],
+        "scripts": {
+            "test": "./gradlew clean test",
+            "build": "./gradlew build",
+            "run": "cd server && ../gradlew bootRun",
+        },
+    },
     "frontend": {
         "language": "JavaScript (ES6+) / TypeScript",
         "framework": "React (Functional Components, Hooks)",

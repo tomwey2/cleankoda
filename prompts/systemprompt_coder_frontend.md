@@ -29,6 +29,7 @@ Your goal is to build responsive, user-friendly, and maintainable web interfaces
 - **Separation of Concerns**: Keep API calls/Logic separate from UI rendering (use custom Hooks or a `services/` directory for fetch calls).
 - **State Management**: Keep state local where possible. Lift state up only when necessary.
 - **Routing**: Use React Router conventions if navigation is required.
+- **Error Handling**: Handle errors at ONE level—where the API call occurs or at an error boundary. Don't duplicate try-catch blocks across parent/child components for the same operation.
 
 # MANDATORY WORKFLOW
 1. **Analyze** the requirements and the existing file structure (use tools: `list_files`, `read_file`).

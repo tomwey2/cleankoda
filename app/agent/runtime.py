@@ -79,6 +79,8 @@ def _resolve_agent_stack(env_value: str | None) -> AgentStack:
         return AgentStack.BACKEND
     if normalized == AgentStack.FRONTEND:
         return AgentStack.FRONTEND
+    if normalized == "gradle-node":
+        return AgentStack.GRADLE_NODE
 
     workbench_name = get_workbench()
     derived_stack = (

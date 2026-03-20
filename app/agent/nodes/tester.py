@@ -88,7 +88,7 @@ def create_tester_node(llm, tools):
             tools=tools,
             system_prompt=system_message,
             human_prompt=human_message,
-            max_messages=10,
+            max_messages=20,
             fallback_tool_name="report_test_result",
             fallback_tool_args={
                 "result": "fail",
