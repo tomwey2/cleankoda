@@ -54,10 +54,10 @@ services:
     # workspace directory where commands are executed
     working_dir: /coding-agent-workspace
     volumes:
-      # Optional: Maven Cache (makes tests faster)
-      - ~/.m2:/root/.m2
-      # Optional: Gradle Cache (makes tests faster)
-      - ~/.gradle:/root/.gradle
+      # Maven Cache (makes tests faster)
+      - maven-cache:/root/.m2
+      # Gradle Cache (makes tests faster)
+      - gradle-cache:/root/.gradle
       # Workspace directory
       - workspace:/coding-agent-workspace
     tty: true
@@ -83,4 +83,8 @@ volumes:
   docker-data:
     driver: local
   workspace:
+    driver: local
+  maven-cache:
+    driver: local
+  gradle-cache:
     driver: local

@@ -75,7 +75,7 @@ class TestWriteToFileInWorkspace:
     """Tests for write_to_file_in_workspace function"""
 
     @patch("app.agent.tools.file_tools.get_workspace")
-    @patch("builtins.open", new_callable=mock_open, read_data="content")
+    @patch("builtins.open", new_callable=mock_open)
     @patch("os.makedirs")
     @patch("os.path.realpath")
     def test_write_to_file_success(self, mock_realpath, mock_makedirs, mock_file, mock_get_workspace):
@@ -86,9 +86,9 @@ class TestWriteToFileInWorkspace:
         result = write_to_file_in_workspace("test.txt", "content")
         
         assert "Successfully wrote" in result
-        # Called twice: once for write, once for read verification
-        assert mock_file.call_count == 2
-        mock_file.assert_called_with("/workspace/test.txt", "r", encoding="utf-8")  # Last call is read verification
+        # Called once: only for write (verification removed)
+        assert mock_file.call_count == 1
+        mock_file.assert_called_with("/workspace/test.txt", "w", encoding="utf-8")
 
     @patch("app.agent.tools.file_tools.get_workspace")
     @patch("builtins.open", side_effect=IOError("Permission denied"))
@@ -335,14 +335,18 @@ class TestListFilesContentPattern:
     @patch("app.agent.tools.file_tools.get_workspace")
     @patch("os.walk")
     @patch("os.path.realpath")
+    @patch("os.path.getsize")
     @patch("builtins.open", new_callable=mock_open)
-    def test_list_files_with_content_pattern(self, mock_file, mock_realpath, mock_walk, mock_get_workspace):
+    def test_list_files_with_content_pattern(self, mock_file, mock_getsize, mock_realpath, mock_walk, mock_get_workspace):
         """Test file listing with content pattern filter"""
         mock_get_workspace.return_value = "/workspace"
         mock_realpath.side_effect = lambda x: x
         mock_walk.return_value = [
             ("/workspace", [], ["file1.py", "file2.py", "file3.py"]),
         ]
+        
+        # Mock file sizes (all under 10MB)
+        mock_getsize.side_effect = lambda filepath: 1000
         
         # Mock file contents
         def open_side_effect(filepath, *args, **kwargs):
@@ -364,14 +368,18 @@ class TestListFilesContentPattern:
     @patch("app.agent.tools.file_tools.get_workspace")
     @patch("os.walk")
     @patch("os.path.realpath")
+    @patch("os.path.getsize")
     @patch("builtins.open", new_callable=mock_open)
-    def test_list_files_content_pattern_case_sensitive(self, mock_file, mock_realpath, mock_walk, mock_get_workspace):
+    def test_list_files_content_pattern_case_sensitive(self, mock_file, mock_getsize, mock_realpath, mock_walk, mock_get_workspace):
         """Test content pattern with case sensitivity"""
         mock_get_workspace.return_value = "/workspace"
         mock_realpath.side_effect = lambda x: x
         mock_walk.return_value = [
             ("/workspace", [], ["file1.txt", "file2.txt"]),
         ]
+        
+        # Mock file sizes (all under 10MB)
+        mock_getsize.side_effect = lambda filepath: 1000
         
         def open_side_effect(filepath, *args, **kwargs):
             content_map = {
@@ -395,14 +403,18 @@ class TestListFilesContentPattern:
     @patch("app.agent.tools.file_tools.get_workspace")
     @patch("os.walk")
     @patch("os.path.realpath")
+    @patch("os.path.getsize")
     @patch("builtins.open", new_callable=mock_open)
-    def test_list_files_combined_pattern_and_content(self, mock_file, mock_realpath, mock_walk, mock_get_workspace):
+    def test_list_files_combined_pattern_and_content(self, mock_file, mock_getsize, mock_realpath, mock_walk, mock_get_workspace):
         """Test combining filename pattern and content pattern"""
         mock_get_workspace.return_value = "/workspace"
         mock_realpath.side_effect = lambda x: x
         mock_walk.return_value = [
             ("/workspace", [], ["test.py", "main.py", "test.txt"]),
         ]
+        
+        # Mock file sizes (all under 10MB)
+        mock_getsize.side_effect = lambda filepath: 1000
         
         def open_side_effect(filepath, *args, **kwargs):
             content_map = {
@@ -427,14 +439,18 @@ class TestListFilesContentPattern:
     @patch("app.agent.tools.file_tools.get_workspace")
     @patch("os.walk")
     @patch("os.path.realpath")
+    @patch("os.path.getsize")
     @patch("builtins.open")
-    def test_list_files_content_pattern_unreadable_file(self, mock_file, mock_realpath, mock_walk, mock_get_workspace):
+    def test_list_files_content_pattern_unreadable_file(self, mock_file, mock_getsize, mock_realpath, mock_walk, mock_get_workspace):
         """Test that unreadable files are skipped gracefully"""
         mock_get_workspace.return_value = "/workspace"
         mock_realpath.side_effect = lambda x: x
         mock_walk.return_value = [
             ("/workspace", [], ["readable.txt", "unreadable.bin"]),
         ]
+        
+        # Mock file sizes (all under 10MB)
+        mock_getsize.side_effect = lambda filepath: 1000
         
         def open_side_effect(filepath, *args, **kwargs):
             if "unreadable" in filepath:
@@ -451,14 +467,18 @@ class TestListFilesContentPattern:
     @patch("app.agent.tools.file_tools.get_workspace")
     @patch("os.walk")
     @patch("os.path.realpath")
+    @patch("os.path.getsize")
     @patch("builtins.open", new_callable=mock_open)
-    def test_list_files_content_pattern_no_matches(self, mock_file, mock_realpath, mock_walk, mock_get_workspace):
+    def test_list_files_content_pattern_no_matches(self, mock_file, mock_getsize, mock_realpath, mock_walk, mock_get_workspace):
         """Test content pattern with no matching files"""
         mock_get_workspace.return_value = "/workspace"
         mock_realpath.side_effect = lambda x: x
         mock_walk.return_value = [
             ("/workspace", [], ["file1.txt", "file2.txt"]),
         ]
+        
+        # Mock file sizes (all under 10MB)
+        mock_getsize.side_effect = lambda filepath: 1000
         
         mock_file.return_value = mock_open(read_data="some other content")()
         
@@ -469,14 +489,18 @@ class TestListFilesContentPattern:
     @patch("app.agent.tools.file_tools.get_workspace")
     @patch("os.walk")
     @patch("os.path.realpath")
+    @patch("os.path.getsize")
     @patch("builtins.open", new_callable=mock_open)
-    def test_list_files_content_pattern_regex(self, mock_file, mock_realpath, mock_walk, mock_get_workspace):
+    def test_list_files_content_pattern_regex(self, mock_file, mock_getsize, mock_realpath, mock_walk, mock_get_workspace):
         """Test content pattern with regex patterns"""
         mock_get_workspace.return_value = "/workspace"
         mock_realpath.side_effect = lambda x: x
         mock_walk.return_value = [
             ("/workspace", [], ["file1.py", "file2.py"]),
         ]
+        
+        # Mock file sizes (all under 10MB)
+        mock_getsize.side_effect = lambda filepath: 1000
         
         def open_side_effect(filepath, *args, **kwargs):
             content_map = {

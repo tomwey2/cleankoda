@@ -35,7 +35,17 @@ MAX_CONSECUTIVE_EXPLORATION_CALLS = 8
 
 
 def _count_consecutive_exploration_calls(messages: list[BaseMessage]) -> int:
-    """Count consecutive exploration tool calls from the end of message history."""
+    """Count consecutive exploration tool calls from the end of message history.
+    
+    PURPOSE: Prevent endless exploration loops where agent keeps calling 
+    list_files/read_file without making progress. The streak continues ONLY
+    when AI messages contain exploration tools. Only non-exploration tools 
+    (write_to_file, thinking, finish_task) break the streak, indicating 
+    the agent is actually processing information and moving forward.
+    
+    Mixed tool calls (exploration + non-exploration) are considered progress
+    and break the streak since the agent is thinking/writing, not just exploring.
+    """
     count = 0
     for msg in reversed(messages):
         if isinstance(msg, AIMessage) and hasattr(msg, "tool_calls") and msg.tool_calls:
@@ -43,7 +53,7 @@ def _count_consecutive_exploration_calls(messages: list[BaseMessage]) -> int:
             if any(tc.get("name") in EXPLORATION_TOOLS for tc in msg.tool_calls):
                 count += 1
             else:
-                # Non-exploration tool breaks the streak
+                # Non-exploration tool breaks the streak (agent is making progress)
                 break
         elif not isinstance(msg, AIMessage):
             # ToolMessage or other message types don't break the streak

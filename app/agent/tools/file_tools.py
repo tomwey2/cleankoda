@@ -1,6 +1,5 @@
 """A collection of tools for the agent to interact with files"""
 
-import hashlib
 from dataclasses import dataclass
 import fnmatch
 import logging
@@ -83,7 +82,6 @@ def write_to_file_in_workspace(filepath: str, content: str):
         Success message or error message
     """
     try:
-        logger.info("write_to_file called with content length: %d", len(content))
         logger.debug("Writing to workspace file: %s", filepath)
         full_path = _get_full_workspace_path(filepath)
 
@@ -93,25 +91,9 @@ def write_to_file_in_workspace(filepath: str, content: str):
             os.makedirs(parent_dir, exist_ok=True)
             logger.debug("Ensured directory exists: %s", parent_dir)
 
-        # Calculate content hash for verification
-        content_hash = hashlib.md5(content.encode()).hexdigest()
-        logger.debug("Content hash before write: %s", content_hash)
-
         # Write content to file
         with open(full_path, "w", encoding="utf-8") as f:
             f.write(content)
-
-        # Verify content after write
-        with open(full_path, "r", encoding="utf-8") as f:
-            written_content = f.read()
-        written_hash = hashlib.md5(written_content.encode()).hexdigest()
-
-        if content_hash != written_hash:
-            logger.error("CONTENT MISMATCH! Expected %d bytes, got %d bytes",
-                        len(content), len(written_content))
-            return f"ERROR: Content verification failed for {full_path}"
-
-        logger.debug("Content verification passed: %d bytes", len(written_content))
 
         logger.debug("Successfully wrote %d bytes to %s", len(content), full_path)
         return f"Successfully wrote to {full_path}"
@@ -281,15 +263,41 @@ def _matches_content_pattern(
     Returns:
         True if pattern found in file content, False otherwise
     """
+    # Skip files larger than 10MB to avoid performance issues
+    max_file_size = 10 * 1024 * 1024  # 10MB
+    try:
+        file_size = os.path.getsize(filepath)
+        if file_size > max_file_size:
+            logger.debug(
+                "Skipping file %s (size: %d bytes) - exceeds 10MB limit",
+                filepath,
+                file_size
+            )
+            return False
+    except OSError as e:
+        logger.warning(
+            "Could not get file size for %s: %s",
+            filepath,
+            str(e)
+        )
+        return False
+
     try:
         with open(filepath, "r", encoding="utf-8", errors="ignore") as f:
             content = f.read()
 
         flags = 0 if case_sensitive else re.IGNORECASE
         return bool(re.search(pattern, content, flags))
-    except Exception as e:  # pylint: disable=broad-exception-caught
+    except (IOError, OSError, UnicodeDecodeError) as e:
         logger.debug(
             "Could not read file %s for content matching: %s",
+            filepath,
+            str(e)
+        )
+        return False
+    except Exception as e:  # pylint: disable=broad-exception-caught
+        logger.warning(
+            "Unexpected error reading file %s for content matching: %s",
             filepath,
             str(e)
         )

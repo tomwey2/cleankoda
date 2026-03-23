@@ -33,7 +33,8 @@ You are the **GATEKEEPER**: No broken code is allowed to enter the repository.
     - **If no changed test files found:** Run the full test suite directly with {{tech_stack['scripts']['test']}}.
     - Wait for the execution to finish.
     - Analyze the output. Look for "BUILD SUCCESS" or "BUILD FAILURE".
-If the test command {{tech_stack['scripts']['test']}} can't be executed, report the tests as failed.
+    - If the test command {{tech_stack['scripts']['test']}} can't be executed, report the tests as failed.
+
 2. **EXECUTE INTEGRATION TESTS:**
     - Use the tool `run_command` with `{{tech_stack['scripts']['integration_test']}}` (e.g. `mvn verify` or `mvn failsafe:integration-test`).
     - *Wait* for the execution to finish.
