@@ -136,6 +136,7 @@ def log_and_validate_env(logger, env_settings: EnvironmentSettings):
     logger.info("INSTANCE_DIR: %s", env_settings.instance_dir or "Not set")
     logger.info("WORKBENCH: %s", env_settings.workbench or "Not set")
     logger.info("WORKSPACE: %s", env_settings.workspace)
+    logger.info("AGENT_STACK: %s", env_settings.agent_stack or "Not set")
     logger.info("LLM_CALLS_PER_SECOND: %s", env_settings.llm_calls_per_second)
 
     encryption_key = Fernet(env_settings.encryption_key.encode())

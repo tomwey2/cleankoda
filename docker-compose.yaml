@@ -36,19 +36,55 @@ services:
   # CONTAINER 3: the workbench
   # ----------------------------------------
   workbench-backend:
-    image: maven:3.9-eclipse-temurin-21
+    build:
+      context: .
+      dockerfile: Dockerfile.java-node
     container_name: workbench-backend
-    # this command keeps the container alive
-    command: tail -f /dev/null
-    # in which workspace=working_dir the commands are executed
+    depends_on:
+      cleancoda-docker-host:
+        condition: service_healthy
+    network_mode: "service:cleancoda-docker-host"
+    environment:
+      DOCKER_HOST: tcp://localhost:2375
+      # needed, because localhost meets with localhost this container
+      # not the docker host
+      TESTCONTAINERS_HOST_OVERRIDE: cleancoda-docker-host
+      DOCKER_TLS_VERIFY: ""
+      DOCKER_CERT_PATH: ""
+    # workspace directory where commands are executed
     working_dir: /coding-agent-workspace
     volumes:
+      # Maven Cache (makes tests faster)
+      - maven-cache:/root/.m2
+      # Gradle Cache (makes tests faster)
+      - gradle-cache:/root/.gradle
+      # Workspace directory
       - workspace:/coding-agent-workspace
-      # Optional: Maven Cache (macht Tests schneller)
-      - ~/.m2:/root/.m2
-      # the socket to connect to the docker daemon
-      - /var/run/docker.sock:/var/run/docker.sock
+    tty: true
+
+  # ----------------------------------------
+  # CONTAINER 4: the docker host
+  # ----------------------------------------
+  cleancoda-docker-host:
+    image: docker:27-dind
+    container_name: cleancoda-docker-host
+    privileged: true
+    environment:
+      DOCKER_TLS_CERTDIR: ""
+    volumes:
+      - docker-data:/var/lib/docker
+    healthcheck:
+      test: ["CMD", "docker", "info"]
+      interval: 10s
+      timeout: 5s
+      retries: 6
 
 volumes:
+  docker-data:
+    driver: local
   workspace:
-  #instance:
+    driver: local
+  maven-cache:
+    driver: local
+  gradle-cache:
+    driver: local

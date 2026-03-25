@@ -29,6 +29,37 @@ logger = logging.getLogger(__name__)
 _RATE_LIMIT_LOCK: asyncio.Lock | None = None
 _LAST_LLM_CALL_TIME: float = 0.0
 
+# Tool call repetition tracking
+EXPLORATION_TOOLS = {"list_files", "read_file"}
+MAX_CONSECUTIVE_EXPLORATION_CALLS = 8
+
+
+def _count_consecutive_exploration_calls(messages: list[BaseMessage]) -> int:
+    """Count consecutive exploration tool calls from the end of message history.
+    
+    PURPOSE: Prevent endless exploration loops where agent keeps calling 
+    list_files/read_file without making progress. The streak continues ONLY
+    when AI messages contain exploration tools. Only non-exploration tools 
+    (write_to_file, thinking, finish_task) break the streak, indicating 
+    the agent is actually processing information and moving forward.
+    
+    Mixed tool calls (exploration + non-exploration) are considered progress
+    and break the streak since the agent is thinking/writing, not just exploring.
+    """
+    count = 0
+    for msg in reversed(messages):
+        if isinstance(msg, AIMessage) and hasattr(msg, "tool_calls") and msg.tool_calls:
+            # Check if any tool call is an exploration tool
+            if any(tc.get("name") in EXPLORATION_TOOLS for tc in msg.tool_calls):
+                count += 1
+            else:
+                # Non-exploration tool breaks the streak (agent is making progress)
+                break
+        elif not isinstance(msg, AIMessage):
+            # ToolMessage or other message types don't break the streak
+            continue
+    return count
+
 
 async def invoke_tool_node(  # pylint: disable=too-many-arguments,too-many-locals,duplicate-code
     *,
@@ -77,6 +108,25 @@ async def invoke_tool_node(  # pylint: disable=too-many-arguments,too-many-local
             existing_messages, max_messages=max_messages
         )
         current_messages.extend(filtered_messages)
+
+        # Check for excessive exploration tool calls
+        exploration_count = _count_consecutive_exploration_calls(existing_messages)
+        if exploration_count >= MAX_CONSECUTIVE_EXPLORATION_CALLS:
+            logger.warning(
+                "Detected %d consecutive exploration tool calls. Injecting intervention.",
+                exploration_count
+            )
+            current_messages.append(
+                HumanMessage(
+                    content=(
+                        f"STOP exploring! You've called exploration tools "
+                        f"{exploration_count} times in a row. "
+                        "You have enough information. Move to the next step: "
+                        "use 'thinking' to diagnose, then 'write_to_file' to fix, "
+                        "or 'finish_task' if done."
+                    )
+                )
+            )
 
     current_tool_choice = "auto"
 
