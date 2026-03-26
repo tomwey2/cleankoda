@@ -22,10 +22,13 @@
                         {% endif %}
                     </div>
                     <div class="card-body">
-                        <p class="card-text text-muted mb-0">{{ agent_task.task_description if
-                            agent_task and agent_task.task_description else
-                            'Waiting for task...'
-                            }}</p>
+                        <div class="task-description text-muted">
+                            {% if task_description_html %}
+                            {{ task_description_html | safe }}
+                            {% else %}
+                            <p class="mb-0">Waiting for task...</p>
+                            {% endif %}
+                        </div>
                     </div>
                 </div>
 
@@ -119,32 +122,47 @@
 </div>
 
 <style>
-    .plan-markdown h1 {
+    .plan-markdown h1,
+    .task-description h1 {
         font-size: 1.5rem;
     }
 
-    .plan-markdown h2 {
+    .plan-markdown h2,
+    .task-description h2 {
         font-size: 1.3rem;
     }
 
-    .plan-markdown h3 {
+    .plan-markdown h3,
+    .task-description h3 {
         font-size: 1.1rem;
     }
 
-    .plan-markdown h4 {
+    .plan-markdown h4,
+    .task-description h4 {
         font-size: 1.0rem;
     }
 
-    .plan-markdown code {
+    .plan-markdown code,
+    .task-description code {
         color: inherit;
         background-color: rgba(255, 255, 255, 0.1);
         padding: 0.2rem 0.4rem;
         border-radius: 0.25rem;
     }
 
-    .plan-markdown pre code {
+    .plan-markdown pre code,
+    .task-description pre code {
         background-color: transparent;
         padding: 0;
+    }
+
+    .task-description p:last-child {
+        margin-bottom: 0;
+    }
+
+    .task-description ul,
+    .task-description ol {
+        margin-bottom: 0.5rem;
     }
 </style>
 
