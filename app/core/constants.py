@@ -26,8 +26,14 @@ TECH_STACKS = {
         "other": ["Lombok"],
         "scripts": {
             "test": "mvn clean test",
+            "verify": "mvn verify",
             "build": "mvn clean package",
             "run": "mvn spring-boot:run",
+        },
+        "test_patterns": {
+            "unit": ["*Test.java"],
+            "integration": ["*IT.java"],
+            "all": ["*Test.java", "*IT.java"],
         },
     },
     "gradle-node": {
@@ -43,8 +49,14 @@ TECH_STACKS = {
         ],
         "scripts": {
             "test": "./gradlew clean test",
+            "verify": "./gradlew check",
             "build": "./gradlew build",
             "run": "cd server && ../gradlew bootRun",
+        },
+        "test_patterns": {
+            "unit": ["*Test.java"],
+            "integration": ["*IT.java"],
+            "all": ["*Test.java", "*IT.java"],
         },
     },
     "frontend": {
@@ -55,8 +67,14 @@ TECH_STACKS = {
         "other": ["Bootstrap 5 CSS"],
         "scripts": {
             "test": "npm test",
+            "verify": "npm test",
             "build": "npm run build",
             "run": "npm run dev",
+        },
+        "test_patterns": {
+            "unit": ["*.test.js", "*.test.jsx", "*.test.ts", "*.test.tsx"],
+            "integration": ["*.integration.test.js", "*.integration.test.ts"],
+            "all": ["*.test.js", "*.test.jsx", "*.test.ts", "*.test.tsx", "*.spec.js", "*.spec.ts"],
         },
     },
 }

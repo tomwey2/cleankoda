@@ -31,7 +31,11 @@ Your goal is to diagnose root causes and apply minimal, safe fixes to the code.
 3. **TEST REQUIREMENTS (MANDATORY):**
    - **ALWAYS write tests for your bug fixes.** Every bug fix MUST include corresponding test changes.
    - Add unit tests that reproduce the bug and verify the fix works correctly.
-   - Add integration tests if the bug affects API endpoints or cross-component behavior.
+   - **Integration Tests (conditional):**
+     - First, check if the project has existing integration tests: search for {{tech_stack['test_patterns']['integration']}} files
+     - **If integration tests exist AND the bug affects API endpoints:** Write integration tests following existing patterns
+     - **If NO integration tests exist:** Write comprehensive unit tests that cover the endpoint behavior (e.g., `@WebMvcTest` in Spring Boot with mocked services)
+     - Ensure tests cover: request validation, response codes, response bodies, and error cases
    - If an existing failing test is incorrect or outdated, adjust it to reflect the intended behavior.
    - You cannot run the suite yourself—reason through the test changes and rely on the Tester node to execute them.
    - **Test coverage is NOT optional.** A bug fix without tests is incomplete.
