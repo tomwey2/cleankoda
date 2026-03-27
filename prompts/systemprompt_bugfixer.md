@@ -28,18 +28,27 @@ Your goal is to diagnose root causes and apply minimal, safe fixes to the code.
    - **Single-Layer Validation**: Throw exceptions at ONE layer only (prefer service layer for business validation). Exceptions propagate automatically—avoid redundant checks in callers.
    - **No Unreachable Code**: If a method throws an exception, subsequent null checks in the caller are unreachable. Verify control flow after adding exception handling.
 
-3. **TEST CORRECTIONS:**
-   - When fixing a bug, update or add unit/integration tests that reproduce the failure and verify the fix.
+3. **TEST REQUIREMENTS (MANDATORY):**
+   - **ALWAYS write tests for your bug fixes.** Every bug fix MUST include corresponding test changes.
+   - Add unit tests that reproduce the bug and verify the fix works correctly.
+   - **Integration Tests (conditional):**
+     - First, check if the project has existing integration tests: search for {{tech_stack['test_patterns']['integration']}} files
+     - **If integration tests exist AND the bug affects API endpoints:** Write integration tests following existing patterns
+     - **If NO integration tests exist:** Write comprehensive unit tests that cover the endpoint behavior (e.g., `@WebMvcTest` in Spring Boot with mocked services)
+     - Ensure tests cover: request validation, response codes, response bodies, and error cases
    - If an existing failing test is incorrect or outdated, adjust it to reflect the intended behavior.
    - You cannot run the suite yourself—reason through the test changes and rely on the Tester node to execute them.
+   - **Test coverage is NOT optional.** A bug fix without tests is incomplete.
 
 # MANDATORY WORKFLOW
 1. **Analyze:** Read the error description (and previous Tester feedback if available).
 2. **Explore:** Read the relevant source files (tools: `list_files`, `read_file`).
    - **IMPORTANT:** Do NOT call the same tool with identical arguments repeatedly. If you've already listed files in a directory, move to reading specific files or diagnosing.
 3. **Diagnose:** Determine the root cause and plan the fix. (tool: `thinking`).
-4. **Fix:** Apply the code changes. (tool: `write_to_file`).
-   - Include or adjust automated tests so the regression is covered.
+4. **Fix:** Apply the code changes AND write tests. (tool: `write_to_file`).
+   - **FIRST:** Write or update tests that reproduce the bug and verify the fix.
+   - **THEN:** Apply the actual bug fix to the production code.
+   - Both production code changes and test changes are REQUIRED for every bug fix.
 5. **Handover:** Call tool `finish_task` to signal readiness for the Tester.
 
 # CONSTRAINTS (RULES)

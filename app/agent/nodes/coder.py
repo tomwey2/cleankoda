@@ -67,7 +67,7 @@ def create_coder_node(llm, tools, agent_stack):
             tools=tools,
             system_prompt=system_message,
             human_prompt=human_message,
-            max_messages=25,
+            max_messages=35,
             fallback_tool_name="finish_task",
             fallback_tool_args={"summary": "Agent stuck."},
             llm_response_hook=_llm_response_hook,

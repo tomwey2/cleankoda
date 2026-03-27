@@ -40,6 +40,7 @@ async def get_template_context() -> dict:
 
     plan_content = ""
     plan_exists = False
+    task_description_html = ""
     agent_actions: list[AgentAction] = []
 
     if agent_task:
@@ -47,11 +48,17 @@ async def get_template_context() -> dict:
         # logger.info("current node: %s", agent_task.current_node)
         plan_content = markdown.markdown(agent_task.plan_content) if agent_task.plan_content else ""
         plan_exists = bool(agent_task.plan_content)
+        task_description_html = (
+            markdown.markdown(agent_task.task_description)
+            if agent_task.task_description
+            else ""
+        )
 
     return {
         "agent_task": agent_task,
         "plan_content": plan_content,
         "plan_exists": plan_exists,
+        "task_description_html": task_description_html,
         "current_node": "todo",
         "agent_actions": agent_actions,
     }

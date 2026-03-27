@@ -46,6 +46,12 @@ def log_agent_response(  # pylint: disable=unused-argument
             logger.info("Tool Call: %s", _get_tool_call_info(tool_call))
             logger.debug("Tool Call: %s", name)
             args = tool_call.get("args", {}) or {}
+
+            # Log tool calls at INFO level
+            if name == "thinking":
+                thought = args.get("thought", "")
+                if thought:
+                    logger.info("Thinking: %s", thought)
             for key, value in args.items():
                 if name == "write_to_file" and key == "content":
                     out_value = safe_truncate(value, arg_limit)
