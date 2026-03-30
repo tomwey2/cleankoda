@@ -46,11 +46,13 @@ class EnvironmentSettings:  # pylint: disable=too-many-instance-attributes
         github_repo_url: Default GitHub repository URL.
         enable_mcp_servers: Whether to enable MCP servers.
         llm_calls_per_second: LLM calls per second.
+        deployment_mode: Deployment mode (ON_PREMISE or SERVERLESS).
     """
 
     # Required settings (needed for app startup)
     encryption_key: str
     workspace: str
+    deployment_mode: str
 
     # GitHub integration (optional, validated at use time)
     github_token: str | None = None
@@ -97,6 +99,10 @@ class EnvironmentSettings:  # pylint: disable=too-many-instance-attributes
         if not workspace:
             raise ValueError("WORKSPACE is not set.")
 
+        deployment_mode = os.environ.get("DEPLOYMENT_MODE")
+        if deployment_mode not in ["ON_PREMISE", "SERVERLESS"]:
+            raise ValueError("DEPLOYMENT_MODE is not set.")
+
         # Parse ENABLE_MCP_SERVERS boolean
         enable_mcp_str = os.environ.get("ENABLE_MCP_SERVERS", "true").lower()
         enable_mcp_servers = enable_mcp_str in {"true", "1", "yes", "on"}
@@ -117,9 +123,7 @@ class EnvironmentSettings:  # pylint: disable=too-many-instance-attributes
             openrouter_api_key=os.environ.get("OPENROUTER_API_KEY"),
             anthropic_api_key=os.environ.get("ANTHROPIC_API_KEY"),
             ollama_api_key=os.environ.get("OLLAMA_API_KEY"),
-            ollama_base_url=os.environ.get(
-                "OLLAMA_BASE_URL", "http://host.docker.internal:11434"
-            ),
+            ollama_base_url=os.environ.get("OLLAMA_BASE_URL", "http://host.docker.internal:11434"),
             secret_key=os.environ.get("SECRET_KEY", "a-default-secret-key-for-development"),
             database_url=os.environ.get("DATABASE_URL"),
             instance_dir=os.environ.get("INSTANCE_DIR", "/coding-agent/app/instance"),
@@ -128,6 +132,7 @@ class EnvironmentSettings:  # pylint: disable=too-many-instance-attributes
             github_repo_url=os.environ.get("GITHUB_REPO_URL", ""),
             enable_mcp_servers=enable_mcp_servers,
             llm_calls_per_second=llm_calls_per_second,
+            deployment_mode=deployment_mode,
         )
 
     def get_database_uri(self, base_dir: Path) -> str:
@@ -176,8 +181,7 @@ class EnvironmentSettings:  # pylint: disable=too-many-instance-attributes
         """
         if not self.encryption_key:
             raise ValueError(
-                "ENCRYPTION_KEY is required. "
-                "Set the ENCRYPTION_KEY environment variable."
+                "ENCRYPTION_KEY is required. Set the ENCRYPTION_KEY environment variable."
             )
         return self.encryption_key
 
@@ -212,8 +216,7 @@ class EnvironmentSettings:  # pylint: disable=too-many-instance-attributes
 
         if not api_key and not is_optional:
             raise ValueError(
-                f"{env_var} is required for {provider} LLM. "
-                f"Set the {env_var} environment variable."
+                f"{env_var} is required for {provider} LLM. Set the {env_var} environment variable."
             )
 
         return api_key or ""

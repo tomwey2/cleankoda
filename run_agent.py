@@ -56,11 +56,6 @@ async def main():
 
             await asyncio.sleep(polling_interval)
 
-    # ----- UNKNOWN MODE -----
-    else:
-        logger.error("Agent has unknown deployment mode: %s", deployment_mode)
-        sys.exit(0)
-
 
 async def run_cycle(app, logger) -> int:
     with app.app_context():
