@@ -1,7 +1,7 @@
 # .env Datei
 
 # workspace: shared storage for the local repository
-WORKSPACE=./workspace
+WORKSPACE=./local/workspace
 
 # Docker container name that hosts the runnable workbench (backend or frontend)
 WORKBENCH=workbench-backend
@@ -38,3 +38,7 @@ ENABLE_MCP_SERVERS=True
 
 # Logging config file
 LOGGING_CONFIG_FILE=logging.json
+
+# Deployment
+DEPLOYMENT_MODE=ON_PREMISE
+# DEPLOYMENT_MODE=SERVERLESS
