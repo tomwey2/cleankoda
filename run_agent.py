@@ -45,7 +45,7 @@ async def main():
         sys.exit(0)
 
     # ----- ON PREMISE MODE (LOCAL OR ON SERVER) -----
-    if deployment_mode == "ON_PREMISE":
+    elif deployment_mode == "ON_PREMISE":
         logger.info("Agent is running in ON_PREMISE mode, endless loop")
         while True:
             try:
@@ -57,8 +57,9 @@ async def main():
             await asyncio.sleep(polling_interval)
 
     # ----- UNKNOWN MODE -----
-    logger.error("Agent has unknown deployment mode: %s", deployment_mode)
-    sys.exit(1)
+    else:
+        logger.error("Agent has unknown deployment mode: %s", deployment_mode)
+        sys.exit(0)
 
 
 async def run_cycle(app, logger) -> int:
