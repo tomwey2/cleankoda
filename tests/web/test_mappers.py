@@ -24,6 +24,7 @@ class TestConfigMapperSchemaToModel:
             repo_type="GITHUB",
             github_repo_url="https://github.com/test/repo.git",
             is_active=True,
+            deployment_mode="ON_PREMISE",
         )
         settings = AgentSettings()
 
