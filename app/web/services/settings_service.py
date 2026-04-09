@@ -7,7 +7,7 @@ separating concerns from the route handlers and database operations.
 import logging
 from typing import Any, Dict, Optional, Tuple
 
-from app.core.taskprovider.github_client import get_project_id_sync
+from app.core.issueprovider.github_client import get_project_id_sync
 from app.core.config import get_env_settings
 from app.core.constants import LLM_PROVIDER_API_ENV
 from app.core.extensions import db
@@ -26,7 +26,7 @@ def get_or_create_settings() -> AgentSettings:
     """
     settings = AgentSettings.query.first()
     if not settings:
-        settings = AgentSettings(task_system_type="TRELLO")
+        settings = AgentSettings(issue_system_type="TRELLO")
     return settings
 
 
@@ -45,8 +45,8 @@ def save_settings(schema: SettingsFormSchema, settings: AgentSettings) -> AgentS
     """
     settings_mapper.schema_to_model(schema, settings)
 
-    is_github_task_system = schema.task_system_type == "GITHUB"
-    if is_github_task_system and schema.github_config:
+    is_github_issue_system = schema.issue_system_type == "GITHUB"
+    if is_github_issue_system and schema.github_config:
         _fetch_github_project_id(schema, settings)
 
     if not settings.id:
@@ -86,16 +86,16 @@ def _fetch_github_project_id(schema: SettingsFormSchema, setting: AgentSettings)
         project_number,
     )
 
-    github_task_system = setting.get_task_system("github")
-    if github_task_system:
+    github_issue_system = setting.get_issue_system("github")
+    if github_issue_system:
         # Reset the stored board id before attempting to fetch a new one
-        github_task_system.board_id = None
+        github_issue_system.board_id = None
 
     try:
         api_token = github_config.api_token
         project_id = get_project_id_sync(project_owner, project_number, base_url, api_token)
-        if github_task_system:
-            github_task_system.board_id = project_id
+        if github_issue_system:
+            github_issue_system.board_id = project_id
             logger.info("GitHub project ID fetched and stored: %s", project_id)
     except RuntimeError as e:
         logger.error("Failed to fetch GitHub project ID: %s", e)

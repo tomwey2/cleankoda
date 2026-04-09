@@ -33,9 +33,9 @@ def _get_github_token(agent_settings: Optional[AgentSettings] = None) -> str:
         ValueError: If no token is available.
     """
     if agent_settings:
-        task_system = agent_settings.get_task_system("github")
-        if task_system and task_system.token:
-            return task_system.token
+        issue_system = agent_settings.get_issue_system("github")
+        if issue_system and issue_system.token:
+            return issue_system.token
 
     token = get_env_settings().github_token
     if not token:
@@ -48,9 +48,9 @@ def _get_github_token(agent_settings: Optional[AgentSettings] = None) -> str:
 
 def _get_base_url(agent_settings: AgentSettings) -> str:
     """Get the GitHub API base URL from config or default."""
-    task_system = agent_settings.get_task_system("github")
-    if task_system and task_system.base_url:
-        return task_system.base_url.rstrip("/")
+    issue_system = agent_settings.get_issue_system("github")
+    if issue_system and issue_system.base_url:
+        return issue_system.base_url.rstrip("/")
     return "https://api.github.com"
 
 
@@ -166,8 +166,8 @@ async def get_project_columns(agent_settings: AgentSettings) -> list[dict[str, s
     Returns:
         List of dicts with 'id' and 'name' keys for each column.
     """
-    task_system = agent_settings.get_task_system("github")
-    project_id = task_system.board_id if task_system else None
+    issue_system = agent_settings.get_issue_system("github")
+    project_id = issue_system.board_id if issue_system else None
 
     query = """
     query($projectId: ID!) {
@@ -198,8 +198,8 @@ async def get_project_columns(agent_settings: AgentSettings) -> list[dict[str, s
 
 async def get_status_field_id(agent_settings: AgentSettings) -> str:
     """Get the ID of the Status field for the project."""
-    task_system = agent_settings.get_task_system("github")
-    project_id = task_system.board_id if task_system else None
+    issue_system = agent_settings.get_issue_system("github")
+    project_id = issue_system.board_id if issue_system else None
 
     query = """
     query($projectId: ID!) {
@@ -241,8 +241,8 @@ async def get_items_from_column(
     Returns:
         List of item dicts with id, title, body, url, and content info.
     """
-    task_system = agent_settings.get_task_system("github")
-    project_id = task_system.board_id if task_system else None
+    issue_system = agent_settings.get_issue_system("github")
+    project_id = issue_system.board_id if issue_system else None
 
     query = """
     query($projectId: ID!, $cursor: String) {
@@ -385,8 +385,8 @@ async def move_item_to_column(
         column_id: The target column/status option ID.
         agent_settings: Agent configuration.
     """
-    task_system = agent_settings.get_task_system("github")
-    project_id = task_system.board_id if task_system else None
+    issue_system = agent_settings.get_issue_system("github")
+    project_id = issue_system.board_id if issue_system else None
     field_id = await get_status_field_id(agent_settings)
 
     mutation = """
@@ -643,8 +643,8 @@ async def create_draft_issue(
     Returns:
         Dict with id, title, and column info.
     """
-    task_system = agent_settings.get_task_system("github")
-    project_id = task_system.board_id if task_system else None
+    issue_system = agent_settings.get_issue_system("github")
+    project_id = issue_system.board_id if issue_system else None
 
     mutation = """
     mutation($projectId: ID!, $title: String!, $body: String!) {

@@ -63,27 +63,27 @@ def settings():
     return render_template("settings.html", **context)
 
 
-@web_bp.route("/api/pr/<owner>/<repo>/<int:pr_number>", methods=["GET"])
-def get_pr_json(owner: str, repo: str, pr_number: int):
+@web_bp.route("/api/pr/<owner>/<repo>/<int:repo_pr_number>", methods=["GET"])
+def get_pr_json(owner: str, repo: str, repo_pr_number: int):
     """
     Fetch a GitHub PR with its reviews and review comments as JSON.
 
     Args:
         owner: Repository owner
         repo: Repository name
-        pr_number: Pull request number
+        repo_pr_number: Pull request number
 
     Returns:
         JSON response with PR details, reviews, and comments
     """
-    pr = fetch_pr_details(owner, repo, pr_number)
+    pr = fetch_pr_details(owner, repo, repo_pr_number)
     if not pr:
-        return jsonify({"error": f"PR #{pr_number} not found"}), 404
+        return jsonify({"error": f"PR #{repo_pr_number} not found"}), 404
 
-    reviews = fetch_pr_reviews(pr_number, owner, repo)
-    comments = fetch_pr_review_comments(pr_number, owner, repo)
+    reviews = fetch_pr_reviews(repo_pr_number, owner, repo)
+    comments = fetch_pr_review_comments(repo_pr_number, owner, repo)
 
-    is_approved, rejection_reviews, _ = get_latest_pr_review_status(pr_number, owner, repo)
+    is_approved, rejection_reviews, _ = get_latest_pr_review_status(repo_pr_number, owner, repo)
 
     response = {
         "pull_request": asdict(pr),
@@ -96,29 +96,29 @@ def get_pr_json(owner: str, repo: str, pr_number: int):
     return jsonify(response)
 
 
-@web_bp.route("/api/pr/<owner>/<repo>/<int:pr_number>/formatted", methods=["GET"])
-def get_pr_formatted(owner: str, repo: str, pr_number: int):
+@web_bp.route("/api/pr/<owner>/<repo>/<int:repo_pr_number>/formatted", methods=["GET"])
+def get_pr_formatted(owner: str, repo: str, repo_pr_number: int):
     """
     Fetch a GitHub PR with its reviews and comments as formatted text.
 
     Args:
         owner: Repository owner
         repo: Repository name
-        pr_number: Pull request number
+        repo_pr_number: Pull request number
 
     Returns:
         Plain text response with formatted PR review feedback
     """
-    pr = fetch_pr_details(owner, repo, pr_number)
+    pr = fetch_pr_details(owner, repo, repo_pr_number)
     if not pr:
-        return Response(f"PR #{pr_number} not found", status=404, mimetype="text/plain")
+        return Response(f"PR #{repo_pr_number} not found", status=404, mimetype="text/plain")
 
     is_approved, rejection_reviews, code_comments = get_latest_pr_review_status(
-        pr_number, owner, repo
+        repo_pr_number, owner, repo
     )
 
     lines = [
-        f"Pull Request #{pr_number}: {pr.title}",
+        f"Pull Request #{repo_pr_number}: {pr.title}",
         f"URL: {pr.html_url}",
         f"State: {pr.state}",
         f"Branch: {pr.head_branch} -> {pr.base_branch}",
@@ -137,9 +137,9 @@ def get_pr_formatted(owner: str, repo: str, pr_number: int):
     return Response("\n".join(lines), mimetype="text/plain")
 
 
-@web_bp.route("/task/review_plan", methods=["POST"])
+@web_bp.route("/issue/review_plan", methods=["POST"])
 async def review_plan():
-    """Updates the plan state of the current task."""
+    """Updates the plan state of the current issue."""
     data = request.json or {}
     new_state = data.get("plan_state")
     rejection_reason = data.get("rejection_reason")
@@ -151,4 +151,4 @@ async def review_plan():
         return jsonify({"error": str(exc)}), exc.status_code
     except Exception:  # pylint: disable=broad-exception-caught
         logger.exception("Unexpected error while updating plan state")
-        return jsonify({"error": "Failed to update task"}), 500
+        return jsonify({"error": "Failed to update issue"}), 500

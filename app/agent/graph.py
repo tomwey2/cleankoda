@@ -17,13 +17,13 @@ from app.agent.nodes.coder import create_coder_node
 from app.agent.nodes.explainer import create_explainer_node
 from app.agent.nodes.pull_request import create_pull_request_node
 from app.agent.nodes.router import create_router_node
-from app.agent.nodes.task_fetch_node import create_task_fetch_node
-from app.agent.nodes.task_update_node import create_task_update_node
+from app.agent.nodes.issue_fetch_node import create_issue_fetch_node
+from app.agent.nodes.issue_update_node import create_issue_update_node
 from app.agent.nodes.tester import create_tester_node
 from app.agent.runtime import RuntimeSetting
 from app.agent.services.summaries import has_finish_task_call
 from app.agent.state import AgentState
-from app.agent.tools.add_task_comment import add_task_comment
+from app.agent.tools.add_issue_comment import add_issue_comment
 from app.agent.tools.file_tools import (
     list_files,
     read_file,
@@ -99,7 +99,7 @@ def route_after_tools_coder(state: AgentState) -> str:
 def route_after_tools_analyst(state: AgentState) -> str:
     """
     Special router for Analyst:
-    - finish_task -> task_update (Not Tester!)
+    - finish_task -> issue_update (Not Tester!)
     - Otherwise -> Loop back to Analyst
     """
     messages = state["messages"]
@@ -107,7 +107,7 @@ def route_after_tools_analyst(state: AgentState) -> str:
     if len(messages) >= 2:
         ai_msg = messages[-2]
         if has_finish_task_call(ai_msg):
-            return "finish"  # Goes to task_update
+            return "finish"  # Goes to issue_update
 
     return "analyst"
 
@@ -120,7 +120,7 @@ def create_workflow(runtime: RuntimeSetting) -> StateGraph:
         read_file,
         write_plan,
         thinking,
-        add_task_comment,
+        add_issue_comment,
         finish_task,
     ]
     coder_tools = [
@@ -139,7 +139,7 @@ def create_workflow(runtime: RuntimeSetting) -> StateGraph:
     # --- Graph Nodes ---
     workflow = StateGraph(AgentState)
 
-    workflow.add_node("task_fetch", create_task_fetch_node(runtime.agent_settings))
+    workflow.add_node("issue_fetch", create_issue_fetch_node(runtime.agent_settings))
     workflow.add_node("checkout", create_checkout_node(runtime.agent_settings))
     workflow.add_node("router", create_router_node(runtime.llm_small))
 
@@ -163,20 +163,20 @@ def create_workflow(runtime: RuntimeSetting) -> StateGraph:
     workflow.add_node("tools_tester", ToolNode(tester_tools))
 
     workflow.add_node("pull_request", create_pull_request_node())
-    workflow.add_node("task_update", create_task_update_node(runtime.agent_settings))
+    workflow.add_node("issue_update", create_issue_update_node(runtime.agent_settings))
 
-    workflow.set_entry_point("task_fetch")
+    workflow.set_entry_point("issue_fetch")
 
     # --- Edges ---
 
     # 1. Start -> Router
     workflow.add_conditional_edges(
-        "task_fetch",
-        lambda state: "router" if state.get("provider_task") else END,
+        "issue_fetch",
+        lambda state: "router" if state.get("issue") else END,
         {END: END, "router": "router"},
     )
 
-    # 2. Router -> task_update (reject) or checkout (coder/analyst)
+    # 2. Router -> issue_update (reject) or checkout (coder/analyst)
     def _route_router(state: AgentState) -> str:
         return "reject" if state.get("next_step") == "reject" else "coding | analyzing"
 
@@ -185,7 +185,7 @@ def create_workflow(runtime: RuntimeSetting) -> StateGraph:
         _route_router,
         {
             "coding | analyzing": "checkout",
-            "reject": "task_update",
+            "reject": "issue_update",
         },
     )
 
@@ -226,7 +226,7 @@ def create_workflow(runtime: RuntimeSetting) -> StateGraph:
     workflow.add_conditional_edges(
         "tools_analyst",
         route_after_tools_analyst,
-        {"analyst": "analyst", "finish": "task_update"},
+        {"analyst": "analyst", "finish": "issue_update"},
     )
 
     # 7. Tester Logic
@@ -241,12 +241,12 @@ def create_workflow(runtime: RuntimeSetting) -> StateGraph:
             "tester": "tester",  # Loop (for git, mvn)
             "pass": "explainer",  # Success
             "failed": "coder",  # Tests failed back to coder
-            "error": "task_update",  # Environment issue -> surface to user
+            "error": "issue_update",  # Environment issue -> surface to user
         },
     )
 
     workflow.add_edge("explainer", "pull_request")
-    workflow.add_edge("pull_request", "task_update")
-    workflow.add_edge("task_update", END)
+    workflow.add_edge("pull_request", "issue_update")
+    workflow.add_edge("issue_update", END)
 
     return workflow

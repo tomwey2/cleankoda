@@ -120,10 +120,10 @@ def ensure_repository_exists(repo_url: str, work_dir: str) -> None:
         clean_and_clone()
 
 
-def checkout_branch(repo_url: str, branch_name: str, work_dir: str) -> None:
-    """Ensure branch_name exists locally, fetching or creating as needed."""
-    if not branch_name:
-        raise ValueError("branch_name is required to checkout a branch.")
+def checkout_branch(repo_url: str, repo_branch_name: str, work_dir: str) -> None:
+    """Ensure repo_branch_name exists locally, fetching or creating as needed."""
+    if not repo_branch_name:
+        raise ValueError("repo_branch_name is required to checkout a branch.")
 
     if not os.path.isdir(os.path.join(work_dir, ".git")):
         raise RuntimeError(
@@ -137,51 +137,51 @@ def checkout_branch(repo_url: str, branch_name: str, work_dir: str) -> None:
         raise
 
     try:
-        if branch_name in repo.heads:
-            logger.info("Checking out existing local branch '%s'.", branch_name)
-            repo.git.checkout(branch_name)
+        if repo_branch_name in repo.heads:
+            logger.info("Checking out existing local branch '%s'.", repo_branch_name)
+            repo.git.checkout(repo_branch_name)
             return
 
         logger.info(
             "Local branch '%s' not found. Fetching from origin for repository %s.",
-            branch_name,
+            repo_branch_name,
             repo_url,
         )
         try:
-            repo.remotes.origin.fetch(branch_name)
+            repo.remotes.origin.fetch(repo_branch_name)
         except GitCommandError as exc:
             logger.warning(
                 "Remote ref '%s' not found on origin. Creating new local branch from current HEAD.",
-                branch_name,
+                repo_branch_name,
             )
             try:
-                repo.git.checkout("-b", branch_name)
+                repo.git.checkout("-b", repo_branch_name)
                 # Verify the branch was created successfully
-                if branch_name not in repo.heads:
-                    raise GitCommandError(f"Failed to create local branch '{branch_name}'") from exc
-                logger.info("Created new local branch '%s'.", branch_name)
+                if repo_branch_name not in repo.heads:
+                    raise GitCommandError(f"Failed to create local branch '{repo_branch_name}'") from exc
+                logger.info("Created new local branch '%s'.", repo_branch_name)
                 return
             except GitCommandError as checkout_exc:
                 logger.error(
-                    "Failed to create local branch '%s': %s", branch_name, checkout_exc
+                    "Failed to create local branch '%s': %s", repo_branch_name, checkout_exc
                 )
                 raise checkout_exc from exc
 
-        remote_ref = f"origin/{branch_name}"
+        remote_ref = f"origin/{repo_branch_name}"
         if remote_ref in repo.refs:
-            repo.git.checkout("-b", branch_name, remote_ref)
-            logger.info("Checked out tracking branch '%s' from origin.", branch_name)
+            repo.git.checkout("-b", repo_branch_name, remote_ref)
+            logger.info("Checked out tracking branch '%s' from origin.", repo_branch_name)
             return
 
         logger.info(
             "Remote branch '%s' not found. Creating new local branch '%s' from current HEAD.",
             remote_ref,
-            branch_name,
+            repo_branch_name,
         )
-        repo.git.checkout("-b", branch_name)
-        logger.info("Created new local branch '%s'.", branch_name)
+        repo.git.checkout("-b", repo_branch_name)
+        logger.info("Created new local branch '%s'.", repo_branch_name)
     except GitCommandError as exc:
-        logger.error("Failed to checkout branch '%s': %s", branch_name, exc)
+        logger.error("Failed to checkout branch '%s': %s", repo_branch_name, exc)
         raise
 
 
@@ -272,14 +272,14 @@ def push(work_dir: str, token: str) -> tuple[bool, str]:
         return False, "ERROR: GITHUB_TOKEN missing"
 
     try:
-        current_branch_name = get_current_branch(work_dir)
-        if not current_branch_name:
+        current_repo_branch_name = get_current_branch(work_dir)
+        if not current_repo_branch_name:
             logger.error("Could not determine current branch")
             return False, "ERROR: Could not determine current branch"
 
-        if current_branch_name in ("main", "master"):
-            logger.warning("Attempted to push to default branch '%s'", current_branch_name)
-            return False, f"ERROR: Cannot push to default branch '{current_branch_name}'"
+        if current_repo_branch_name in ("main", "master"):
+            logger.warning("Attempted to push to default branch '%s'", current_repo_branch_name)
+            return False, f"ERROR: Cannot push to default branch '{current_repo_branch_name}'"
 
         repo = Repo(work_dir)
         current_url = repo.remotes.origin.url

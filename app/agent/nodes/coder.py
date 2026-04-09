@@ -3,7 +3,7 @@
 Defines the Coder agent node for the agent graph.
 
 The Coder is a specialist agent responsible for writing new code, creating
-files, and implementing features based on the task requirements.
+files, and implementing features based on the issue requirements.
 """
 
 import logging
@@ -36,7 +36,7 @@ def create_coder_node(llm, tools, agent_stack):
         result: dict[str, Any] = {}
 
         if has_finish_task_call(message=response):
-            role = "coder" if state["agent_task"].task_type == "coding" else "bugfixer"
+            role = "coder" if state["agent_issue"].issue_type == "coding" else "bugfixer"
 
             recorded, agent_summary = record_finish_task_summary(
                 state=state, role=role, ai_message=response
@@ -56,7 +56,7 @@ def create_coder_node(llm, tools, agent_stack):
             logger.info("--- CODER node ---")
         system_message = (
             load_prompt(f"systemprompt_coder_{agent_stack}.md", state)
-            if state["agent_task"].task_type == "coding"
+            if state["agent_issue"].issue_type == "coding"
             else load_prompt("systemprompt_bugfixer.md", state)
         )
         human_message = load_prompt("prompt_coding.md", state)

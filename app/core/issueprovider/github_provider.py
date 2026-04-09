@@ -1,22 +1,22 @@
 """
-GitHub Projects v2 implementation of the TaskProvider interface.
+GitHub Projects v2 implementation of the IssueProvider interface.
 
 This module provides a GitHubProvider class that wraps the GitHub Projects v2
-GraphQL API client and implements the TaskProvider interface for consistent
-task operations across different systems.
+GraphQL API client and implements the IssueProvider interface for consistent
+issue operations across different systems.
 """
 
 import logging
 from datetime import datetime, timezone
 from typing import Optional
 
-from app.core.taskprovider.task_provider import (
-    ProviderTaskComment,
-    TaskProvider,
-    ProviderTaskStateMove,
-    ProviderTask,
+from app.core.issueprovider.issue_provider import (
+    IssueComment,
+    IssueProvider,
+    IssueStateMove,
+    Issue,
 )
-from app.core.taskprovider.github_client import (
+from app.core.issueprovider.github_client import (
     add_comment_to_issue,
     create_draft_issue,
     get_issue_comments,
@@ -27,17 +27,17 @@ from app.core.taskprovider.github_client import (
     move_item_to_column,
     move_item_to_named_column,
 )
-from app.core.localdb.models import AgentSettings, TaskSystem
+from app.core.localdb.models import AgentSettings, IssueSystem
 
 logger = logging.getLogger(__name__)
 
 
-class GitHubProvider(TaskProvider):
+class GitHubProvider(IssueProvider):
     """
-    GitHub Projects v2 implementation of the TaskProvider interface.
+    GitHub Projects v2 implementation of the IssueProvider interface.
 
     This class wraps the GitHub GraphQL API client functions and provides
-    a consistent interface for task operations.
+    a consistent interface for issue operations.
     """
 
     def __init__(self, agent_settings: AgentSettings):
@@ -48,21 +48,21 @@ class GitHubProvider(TaskProvider):
             agent_settings: Agent settings containing GitHub project configuration.
         """
         self.agent_settings = agent_settings
-        self._task_system: TaskSystem | None = agent_settings.get_task_system("github")
+        self._issue_system: IssueSystem | None = agent_settings.get_issue_system("github")
 
     async def get_states(self) -> list[dict]:
         """Fetch all states (columns) from the GitHub Project."""
         return await get_project_columns(self.agent_settings)
 
-    async def get_task(self, task_id: str) -> Optional[ProviderTask]:
-        """Fetch a specific task (project item) by ID."""
-        item = await get_project_item(task_id, self.agent_settings)
+    async def get_issue(self, issue_id: str) -> Optional[Issue]:
+        """Fetch a specific issue (project item) by ID."""
+        item = await get_project_item(issue_id, self.agent_settings)
 
         if not item:
-            logger.warning("GitHub Issue %s not found", task_id)
+            logger.warning("GitHub Issue %s not found", issue_id)
             return None
 
-        return ProviderTask(
+        return Issue(
             id=item["id"],
             name=item.get("title", ""),
             description=item.get("body", ""),
@@ -71,9 +71,9 @@ class GitHubProvider(TaskProvider):
             url=item.get("url", ""),
         )
 
-    async def get_tasks_from_state(self, state_id: str) -> list[ProviderTask]:
+    async def get_issues_from_state(self, state_id: str) -> list[Issue]:
         """
-        Fetch all tasks from a specific state (column).
+        Fetch all issues from a specific state (column).
 
         Note: For GitHub Projects, we need to resolve the column name from ID
         first, then fetch items. The state_id here is the column option ID.
@@ -88,7 +88,7 @@ class GitHubProvider(TaskProvider):
         items = await get_items_from_column(target_column["name"], self.agent_settings)
 
         return [
-            ProviderTask(
+            Issue(
                 id=item["id"],
                 name=item["title"],
                 description=item["body"] or "",
@@ -99,30 +99,30 @@ class GitHubProvider(TaskProvider):
             for item in items
         ]
 
-    async def move_task_to_state(self, task_id: str, state_id: str) -> None:
-        """Move a task to a different state (column)."""
-        await move_item_to_column(task_id, state_id, self.agent_settings)
+    async def move_issue_to_state(self, issue_id: str, state_id: str) -> None:
+        """Move a issue to a different state (column)."""
+        await move_item_to_column(issue_id, state_id, self.agent_settings)
 
-    async def move_task_to_named_state(self, task_id: str, state_name: str) -> str:
-        """Move a task to a state (column) identified by name."""
-        return await move_item_to_named_column(task_id, state_name, self.agent_settings)
+    async def move_issue_to_named_state(self, issue_id: str, state_name: str) -> str:
+        """Move a issue to a state (column) identified by name."""
+        return await move_item_to_named_column(issue_id, state_name, self.agent_settings)
 
-    async def add_comment(self, task_id: str, comment: str) -> None:
+    async def add_comment(self, issue_id: str, comment: str) -> None:
         """
-        Add a comment to a GitHub task.
+        Add a comment to a GitHub issue.
 
         Note: For GitHub Projects, we need the issue ID (content_id), not the
-        project item ID. If the task_id is a project item ID, we need to
+        project item ID. If the issue_id is a project item ID, we need to
         extract the content ID first.
         """
-        await add_comment_to_issue(task_id, comment, self.agent_settings)
+        await add_comment_to_issue(issue_id, comment, self.agent_settings)
 
-    async def get_comments(self, task_id: str) -> list[ProviderTaskComment]:
-        """Fetch all comments for a GitHub task."""
-        comments = await get_issue_comments(task_id, self.agent_settings)
+    async def get_comments(self, issue_id: str) -> list[IssueComment]:
+        """Fetch all comments for a GitHub issue."""
+        comments = await get_issue_comments(issue_id, self.agent_settings)
 
         return [
-            ProviderTaskComment(
+            IssueComment(
                 id=comment["id"],
                 text=comment["text"],
                 author=comment["member_creator"],
@@ -131,17 +131,17 @@ class GitHubProvider(TaskProvider):
             for comment in comments
         ]
 
-    async def get_state_moves(self, task_id: str) -> list[ProviderTaskStateMove]:
+    async def get_state_moves(self, issue_id: str) -> list[IssueStateMove]:
         """
-        Fetch the history of state moves (column changes) for a task.
+        Fetch the history of state moves (column changes) for an issue.
 
         Note: GitHub Projects v2 doesn't provide direct access to field change
         history through the API. This returns an empty list.
         """
-        moves = await get_item_status_history(task_id, self.agent_settings)
+        moves = await get_item_status_history(issue_id, self.agent_settings)
 
         return [
-            ProviderTaskStateMove(
+            IssueStateMove(
                 id=move["id"],
                 date=self._parse_timestamp(move.get("date")),
                 state_before=move.get("state_before"),
@@ -150,8 +150,8 @@ class GitHubProvider(TaskProvider):
             for move in moves
         ]
 
-    async def create_task(self, name: str, description: str, state_name: str) -> ProviderTask:
-        """Create a new task (draft issue) in the specified state (column)."""
+    async def create_issue(self, name: str, description: str, state_name: str) -> Issue:
+        """Create a new issue (draft issue) in the specified state (column)."""
         result = await create_draft_issue(
             name,
             description,
@@ -159,7 +159,7 @@ class GitHubProvider(TaskProvider):
             self.agent_settings,
         )
 
-        return ProviderTask(
+        return Issue(
             id=result["id"],
             name=result["title"],
             description=description,
@@ -172,9 +172,9 @@ class GitHubProvider(TaskProvider):
         """Return the provider identifier."""
         return "github"
 
-    def get_task_system(self) -> TaskSystem | None:
-        """Return the configured GitHub TaskSystem if available."""
-        return self._task_system
+    def get_issue_system(self) -> IssueSystem | None:
+        """Return the configured GitHub IssueSystem if available."""
+        return self._issue_system
 
     def _parse_timestamp(self, value: str | None) -> datetime:
         """

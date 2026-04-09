@@ -8,7 +8,7 @@
                 <div class="list-group">
                     <a class="list-group-item list-group-item-action active" data-bs-toggle="list"
                         href="#agent-config">Agent Configuration</a>
-                    <a class="list-group-item list-group-item-action" data-bs-toggle="list" href="#task-system">Task
+                    <a class="list-group-item list-group-item-action" data-bs-toggle="list" href="#issue-system">Issue
                         System</a>
                     <a class="list-group-item list-group-item-action" data-bs-toggle="list" href="#source-code">Source
                         Code</a>
@@ -60,26 +60,26 @@
                             </div>
                         </div>
                     </div>
-                    <div class="tab-pane fade" id="task-system">
+                    <div class="tab-pane fade" id="issue-system">
                         <div class="card">
                             <div class="card-header">
-                                <h5>Task System</h5>
+                                <h5>Issue System</h5>
                             </div>
                             <div class="card-body">
                                 <div class="mb-3">
-                                    <label for="task_system_type" class="form-label">Active Task System</label>
-                                    <select class="form-select" id="task_system_type" name="task_system_type">
-                                        <option value="TRELLO" {% if settings.task_system_type=="TRELLO" %}selected{%
+                                    <label for="issue_system_type" class="form-label">Active Issue System</label>
+                                    <select class="form-select" id="issue_system_type" name="issue_system_type">
+                                        <option value="TRELLO" {% if settings.issue_system_type=="TRELLO" %}selected{%
                                             endif %}>
                                             Trello
                                         </option>
-                                        <option value="GITHUB" {% if settings.task_system_type=="GITHUB" %}selected{%
+                                        <option value="GITHUB" {% if settings.issue_system_type=="GITHUB" %}selected{%
                                             endif %}>
                                             GitHub Projects
                                         </option>
                                     </select>
                                 </div>
-                                <div id="task-system-configs">
+                                <div id="issue-system-configs">
                                     <div class="card" id="trello-settings-card">
                                         <div class="card-header">
                                             <h5>Trello Configuration</h5>
@@ -300,13 +300,13 @@
                                     </select>
                                 </div>
                                 <div class="mb-3">
-                                    <label for="llm_model_large" class="form-label">LLM for complex tasks</label>
+                                    <label for="llm_model_large" class="form-label">LLM for complex issues</label>
                                     <input type="text" class="form-control" id="llm_model_large" name="llm_model_large"
                                         placeholder="e.g. devstral-latest or gpt-4o"
                                         value="{{ form_data.llm_model_large or '' }}">
                                 </div>
                                 <div class="mb-3">
-                                    <label for="llm_model_small" class="form-label">LLM for simple tasks</label>
+                                    <label for="llm_model_small" class="form-label">LLM for simple issues</label>
                                     <input type="text" class="form-control" id="llm_model_small" name="llm_model_small"
                                         placeholder="e.g. mistral-small" value="{{ form_data.llm_model_small or '' }}">
                                 </div>
@@ -346,14 +346,14 @@
             }
         }
 
-        // Logic to show/hide task system cards based on dropdown
-        const taskSystemSelect = document.getElementById('task_system_type');
+        // Logic to show/hide issue tracking system cards based on dropdown
+        const issueSystemSelect = document.getElementById('issue_system_type');
         const trelloCard = document.getElementById('trello-settings-card');
         const githubCard = document.getElementById('github-settings-card');
 
-        function toggleTaskSystemCards() {
-            if (!taskSystemSelect) return;
-            const selectedSystem = taskSystemSelect.value;
+        function toggleIssueSystemCards() {
+            if (!issueSystemSelect) return;
+            const selectedSystem = issueSystemSelect.value;
             if (trelloCard) {
                 trelloCard.style.display = selectedSystem === 'TRELLO' ? 'block' : 'none';
             }
@@ -362,9 +362,9 @@
             }
         }
 
-        if (taskSystemSelect) {
-            toggleTaskSystemCards(); // Set initial state on page load
-            taskSystemSelect.addEventListener('change', toggleTaskSystemCards);
+        if (issueSystemSelect) {
+            toggleIssueSystemCards(); // Set initial state on page load
+            issueSystemSelect.addEventListener('change', toggleIssueSystemCards);
         }
     });
 

@@ -1,11 +1,11 @@
 """Defines constants for the application."""
 
-# Task States
-# Diese Werte entsprechen dem, was wir lesen und (vor der Formatierung) schreiben wollen.
-TASK_STATE_OPEN = "Open"
-TASK_STATE_IN_REVIEW = "In Review"
-TASK_STATE_IN_PROGRESS = "In Progress"
-TASK_STATE_DONE = "Done"
+# Issue States
+# These values correspond to what we read and want to write (before formatting).
+ISSUE_STATE_OPEN = "Open"
+ISSUE_STATE_IN_REVIEW = "In Review"
+ISSUE_STATE_IN_PROGRESS = "In Progress"
+ISSUE_STATE_DONE = "Done"
 
 LLM_PROVIDER_API_ENV = {
     "mistral": "MISTRAL_API_KEY",

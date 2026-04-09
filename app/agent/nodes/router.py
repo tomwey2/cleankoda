@@ -1,7 +1,7 @@
 """
 Defines the router node for the agent graph.
 
-This node is responsible for the initial analysis of a task. It uses a
+This node is responsible for the initial analysis of an issue. It uses a
 specialized LLM call to classify the user's request and decide which
 specialist agent (e.g., Coder, Analyst) should handle it next.
 """
@@ -13,7 +13,7 @@ from langchain_core.messages import SystemMessage, HumanMessage, BaseMessage
 from pydantic import BaseModel, Field
 
 from app.agent.services.message_processing import filter_messages_for_llm
-from app.agent.state import AgentState, PlanState, TaskType
+from app.agent.state import AgentState, PlanState, IssueType
 from app.agent.services.prompts import load_prompt
 
 logger = logging.getLogger(__name__)
@@ -21,12 +21,12 @@ logger = logging.getLogger(__name__)
 
 # pylint: disable=too-few-public-methods
 class RouterDecision(BaseModel):
-    """Classify the incoming task into the correct category and skill level."""
+    """Classify the incoming issue into the correct category and skill level."""
 
-    task_type: Literal["coding", "bugfixing", "analyzing"] = Field(
-        description="The specific type of the task."
+    issue_type: Literal["coding", "bugfixing", "analyzing"] = Field(
+        description="The specific type of the issue."
     )
-    task_skill_level: Literal["junior", "senior"] = Field(
+    issue_skill_level: Literal["junior", "senior"] = Field(
         description="Must be 'junior' or 'senior'"
     )
     reasoning: str = Field(description="Why this classification was chosen")
@@ -49,7 +49,7 @@ def create_router_node(llm):
             logger.info("--- ROUTER node ---")
         system_message = load_prompt("systemprompt_router.md", state)
         human_message = load_prompt("prompt_routing.md", state)
-        # Router only needs the original task to make routing decision
+        # Router only needs the original issue to make routing decision
         filtered_messages = filter_messages_for_llm(state["messages"], max_messages=3)
         current_messages: list[BaseMessage | SystemMessage | HumanMessage] = [
             SystemMessage(content=system_message),
@@ -58,33 +58,33 @@ def create_router_node(llm):
         current_messages += filtered_messages
 
         response = await structured_llm.ainvoke(current_messages)
-        logger.info("Task type: %s", response.task_type)
-        logger.info("Task skill level: %s", response.task_skill_level)
-        logger.info("Task reasoning: %s", response.reasoning)
+        logger.info("Issue type: %s", response.issue_type)
+        logger.info("Issue skill level: %s", response.issue_skill_level)
+        logger.info("Issue reasoning: %s", response.reasoning)
 
-        task_type = TaskType.UNKNOWN
-        if response.task_type in [t.value for t in TaskType]:
-            task_type = TaskType(response.task_type)
+        issue_type = IssueType.UNKNOWN
+        if response.issue_type in [t.value for t in IssueType]:
+            issue_type = IssueType(response.issue_type)
 
         next_step = "reject"
-        if task_type == TaskType.ANALYZING:
+        if issue_type == IssueType.ANALYZING:
             next_step = "analyst"
-        elif task_type == TaskType.BUGFIXING:
+        elif issue_type == IssueType.BUGFIXING:
             next_step = "coder"
-        elif task_type == TaskType.CODING:
+        elif issue_type == IssueType.CODING:
             next_step = route_to_coder_or_analyst(
-                state["agent_task"].plan_state,
+                state["agent_issue"].plan_state,
                 state["agent_skill_level"],
-                response.task_skill_level,
+                response.issue_skill_level,
             )
 
-        agent_task = state["agent_task"]
-        agent_task.task_type = response.task_type
-        agent_task.task_skill_level = response.task_skill_level
-        agent_task.task_skill_level_reasoning = response.reasoning
+        agent_issue = state["agent_issue"]
+        agent_issue.issue_type = response.issue_type
+        agent_issue.issue_skill_level = response.issue_skill_level
+        agent_issue.issue_skill_level_reasoning = response.reasoning
         return {
             "next_step": next_step,
-            "agent_task": agent_task,
+            "agent_issue": agent_issue,
             "current_node": "router",
         }
 
@@ -92,25 +92,25 @@ def create_router_node(llm):
 
 
 def route_to_coder_or_analyst(
-    plan_state: PlanState, agent_skill_level: str, task_skill_level: str
+    plan_state: PlanState, agent_skill_level: str, issue_skill_level: str
 ) -> str:
-    """Route the task to coder or analyst."""
+    """Route the issue to coder or analyst."""
     if plan_state == PlanState.APPROVED:
         logger.info("Plan is approved, routing to coder")
         return "coder"
 
-    # if the difficulty of the task is higher than the agent's skill level, reject it
-    if agent_skill_level == "junior" and task_skill_level == "senior":
-        logger.info("Task difficulty is higher than agent skill level, rejecting")
+    # if the difficulty of the issue is higher than the agent's skill level, reject it
+    if agent_skill_level == "junior" and issue_skill_level == "senior":
+        logger.info("Issue difficulty is higher than agent skill level, rejecting")
         return "reject"
 
-    # if the difficulty of the task is lower to the agent's skill level,
-    # and the task can be executed by the coder without a plan, then route to coder
-    if agent_skill_level == "senior" and task_skill_level == "junior":
-        logger.info("Task difficulty is lower than agent skill level, routing to coder")
+    # if the difficulty of the issue is lower to the agent's skill level,
+    # and the issue can be executed by the coder without a plan, then route to coder
+    if agent_skill_level == "senior" and issue_skill_level == "junior":
+        logger.info("Issue difficulty is lower than agent skill level, routing to coder")
         return "coder"
 
-    # if the difficulty of the task is equal to the agent's skill level,
-    # and the task must be planned by the analyst, then route to analyst
-    logger.info("Task difficulty is equal to agent skill level, routing to analyst")
+    # if the difficulty of the issue is equal to the agent's skill level,
+    # and the issue must be planned by the analyst, then route to analyst
+    logger.info("Issue difficulty is equal to agent skill level, routing to analyst")
     return "analyst"

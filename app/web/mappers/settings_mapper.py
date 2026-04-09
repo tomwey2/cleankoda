@@ -10,7 +10,7 @@ from typing import Any, Dict
 from flask import request
 
 from app.core.config import get_env_settings
-from app.core.localdb.models import AgentSettings, TaskSystem
+from app.core.localdb.models import AgentSettings, IssueSystem
 from app.web.schemas.settings_schema import (
     GitHubConfigSchema,
     JiraConfigSchema,
@@ -26,7 +26,7 @@ def form_to_schema() -> SettingsFormSchema:
     Returns:
         SettingsFormSchema with validated form data.
     """
-    task_system_type = request.form.get("task_system_type", "TRELLO")
+    issue_system_type = request.form.get("issue_system_type", "TRELLO")
 
     # Always parse all provider configs from form
     trello_config = TrelloConfigSchema(
@@ -64,7 +64,7 @@ def form_to_schema() -> SettingsFormSchema:
     )
 
     return SettingsFormSchema(
-        task_system_type=task_system_type,
+        issue_system_type=issue_system_type,
         agent_skill_level=request.form.get("agent_skill_level"),
         polling_interval_seconds=int(request.form.get("polling_interval_seconds", "60")),
         repo_type=request.form.get("repo_type", "GITHUB"),
@@ -87,7 +87,7 @@ def schema_to_model(schema: SettingsFormSchema, settings: AgentSettings) -> Agen
     Returns:
         Updated AgentSettings model (not yet committed).
     """
-    settings.task_system_type = schema.task_system_type
+    settings.issue_system_type = schema.issue_system_type
     settings.agent_skill_level = schema.agent_skill_level
     settings.polling_interval_seconds = schema.polling_interval_seconds
     settings.repo_type = schema.repo_type
@@ -115,44 +115,44 @@ def _apply_llm_config(llm_schema: LLMConfigSchema, settings: AgentSettings) -> N
 
 def _apply_trello_config(trello_schema: TrelloConfigSchema, settings: AgentSettings) -> None:
     """Apply Trello configuration from schema to model."""
-    task_system = _get_or_create_task_system(settings, "trello")
+    issue_system = _get_or_create_issue_system(settings, "trello")
 
-    task_system.board_id = trello_schema.board_id
-    task_system.api_key = trello_schema.api_key
-    task_system.token = trello_schema.api_token
-    task_system.base_url = trello_schema.base_url
-    task_system.state_backlog = trello_schema.backlog_list
-    task_system.state_todo = trello_schema.todo_list
-    task_system.state_in_progress = trello_schema.in_progress_list
-    task_system.state_in_review = trello_schema.in_review_list
+    issue_system.board_id = trello_schema.board_id
+    issue_system.api_key = trello_schema.api_key
+    issue_system.token = trello_schema.api_token
+    issue_system.base_url = trello_schema.base_url
+    issue_system.state_backlog = trello_schema.backlog_list
+    issue_system.state_todo = trello_schema.todo_list
+    issue_system.state_in_progress = trello_schema.in_progress_list
+    issue_system.state_in_review = trello_schema.in_review_list
 
 
 def _apply_github_config(github_schema: GitHubConfigSchema, settings: AgentSettings) -> None:
     """Apply GitHub Projects configuration from schema to model."""
-    task_system = _get_or_create_task_system(settings, "github")
+    issue_system = _get_or_create_issue_system(settings, "github")
 
-    task_system.token = github_schema.api_token
-    task_system.project_owner = github_schema.project_owner
-    task_system.project_number = github_schema.project_number
-    task_system.board_id = github_schema.board_id
-    task_system.base_url = github_schema.base_url
-    task_system.state_backlog = github_schema.backlog_list
-    task_system.state_todo = github_schema.todo_list
-    task_system.state_in_progress = github_schema.in_progress_list
-    task_system.state_in_review = github_schema.in_review_list
+    issue_system.token = github_schema.api_token
+    issue_system.project_owner = github_schema.project_owner
+    issue_system.project_number = github_schema.project_number
+    issue_system.board_id = github_schema.board_id
+    issue_system.base_url = github_schema.base_url
+    issue_system.state_backlog = github_schema.backlog_list
+    issue_system.state_todo = github_schema.todo_list
+    issue_system.state_in_progress = github_schema.in_progress_list
+    issue_system.state_in_review = github_schema.in_review_list
 
 
-def _get_or_create_task_system(settings: AgentSettings, provider: str) -> TaskSystem:
-    """Get existing TaskSystem for provider or create a new one."""
-    existing = settings.get_task_system(provider)
+def _get_or_create_issue_system(settings: AgentSettings, provider: str) -> IssueSystem:
+    """Get existing IssueSystem for provider or create a new one."""
+    existing = settings.get_issue_system(provider)
     if existing:
         return existing
 
-    task_system = TaskSystem()
-    task_system.task_provider = provider
-    task_system.task_system_type = provider.upper()
-    settings.task_systems.append(task_system)
-    return task_system
+    issue_system = IssueSystem()
+    issue_system.issue_provider = provider
+    issue_system.issue_system_type = provider.upper()
+    settings.issue_systems.append(issue_system)
+    return issue_system
 
 
 def model_to_form_data(settings: AgentSettings) -> Dict[str, Any]:
@@ -181,16 +181,16 @@ def model_to_form_data(settings: AgentSettings) -> Dict[str, Any]:
 
 def _add_trello_form_data(settings: AgentSettings, form_data: Dict[str, Any]) -> None:
     """Add Trello-specific fields to form data."""
-    task_system = settings.get_task_system("trello")
-    if task_system:
-        form_data["trello_api_key"] = task_system.api_key
-        form_data["trello_api_token"] = task_system.token
-        form_data["trello_board_id"] = task_system.board_id
-        form_data["trello_base_url"] = task_system.base_url
-        form_data["trello_backlog_list"] = task_system.state_backlog
-        form_data["trello_todo_list"] = task_system.state_todo
-        form_data["trello_in_progress_list"] = task_system.state_in_progress
-        form_data["trello_in_review_list"] = task_system.state_in_review
+    issue_system = settings.get_issue_system("trello")
+    if issue_system:
+        form_data["trello_api_key"] = issue_system.api_key
+        form_data["trello_api_token"] = issue_system.token
+        form_data["trello_board_id"] = issue_system.board_id
+        form_data["trello_base_url"] = issue_system.base_url
+        form_data["trello_backlog_list"] = issue_system.state_backlog
+        form_data["trello_todo_list"] = issue_system.state_todo
+        form_data["trello_in_progress_list"] = issue_system.state_in_progress
+        form_data["trello_in_review_list"] = issue_system.state_in_review
     else:
         form_data["trello_api_key"] = None
         form_data["trello_api_token"] = None
@@ -204,18 +204,18 @@ def _add_trello_form_data(settings: AgentSettings, form_data: Dict[str, Any]) ->
 
 def _add_github_form_data(settings: AgentSettings, form_data: Dict[str, Any]) -> None:
     """Add GitHub Projects-specific fields to form data."""
-    task_system = settings.get_task_system("github")
+    issue_system = settings.get_issue_system("github")
     env_token = get_env_settings().github_token
-    if task_system:
-        form_data["github_api_token"] = task_system.token or env_token
-        form_data["github_project_owner"] = task_system.project_owner
-        form_data["github_project_number"] = task_system.project_number
-        form_data["github_board_id"] = task_system.board_id
-        form_data["github_base_url"] = task_system.base_url
-        form_data["github_backlog_list"] = task_system.state_backlog
-        form_data["github_todo_list"] = task_system.state_todo
-        form_data["github_in_progress_list"] = task_system.state_in_progress
-        form_data["github_in_review_list"] = task_system.state_in_review
+    if issue_system:
+        form_data["github_api_token"] = issue_system.token or env_token
+        form_data["github_project_owner"] = issue_system.project_owner
+        form_data["github_project_number"] = issue_system.project_number
+        form_data["github_board_id"] = issue_system.board_id
+        form_data["github_base_url"] = issue_system.base_url
+        form_data["github_backlog_list"] = issue_system.state_backlog
+        form_data["github_todo_list"] = issue_system.state_todo
+        form_data["github_in_progress_list"] = issue_system.state_in_progress
+        form_data["github_in_review_list"] = issue_system.state_in_review
     else:
         form_data["github_api_token"] = env_token
         form_data["github_project_owner"] = None
