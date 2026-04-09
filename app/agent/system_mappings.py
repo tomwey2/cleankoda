@@ -1,5 +1,5 @@
 """
-This module defines the mappings for different task management systems.
+This module defines the mappings for different issue tracking systems.
 It provides a centralized way to configure the commands, tools, and parsers
 for each supported system.
 """
@@ -37,21 +37,21 @@ def parse_trello_response(data):
     if not raw_cards:
         return []
 
-    # Convert the raw card objects into our canonical task format
-    canonical_tasks = []
+    # Convert the raw card objects into our canonical issue format
+    canonical_issues = []
     for card in raw_cards:
         if isinstance(card, dict):
-            canonical_tasks.append(
+            canonical_issues.append(
                 {
                     "id": card.get("id"),
                     "title": card.get("name"),
                     "description": card.get("desc"),
                 }
             )
-    return canonical_tasks
+    return canonical_issues
 
 
-# A lambda function to parse the Trello card format into our canonical task format
+# A lambda function to parse the Trello card format into our canonical issue format
 trello_response_parser = parse_trello_response
 
 

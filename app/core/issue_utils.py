@@ -1,27 +1,25 @@
-"""Service functions to process task"""
+"""Service functions to process issues"""
 
 import logging
 from datetime import datetime
 from typing import Optional
 
 
-from app.core.taskprovider.task_provider import (  # pylint: disable=unused-import
-    TaskProvider,
-    ProviderTask,
+from app.core.issueprovider.issue_provider import (  # pylint: disable=unused-import
+    IssueProvider,
+    Issue,
 )
 from app.agent.services.pull_request import check_pr_exists_for_branch
-from app.core.localdb.agent_tasks_utils import read_db_task
+from app.core.localdb.agent_issues_utils import read_db_issue
 
 logger = logging.getLogger(__name__)
 
 
-async def fetch_task_from_state(
-    task_provider: TaskProvider, state_name: str
-) -> ProviderTask | None:
-    """Fetch a task from with a state."""
-    task_states = await task_provider.get_states()
+async def fetch_issue_from_state(issue_provider: IssueProvider, state_name: str) -> Issue | None:
+    """Fetch an issue from with a state."""
+    issue_states = await issue_provider.get_states()
     target_state = next(
-        (data for data in task_states if data["name"] == state_name),
+        (data for data in issue_states if data["name"] == state_name),
         None,
     )
 
@@ -32,79 +30,79 @@ async def fetch_task_from_state(
     state_id = target_state["id"]
     logger.info("Found %s state id: %s", state_name, state_id)
 
-    tasks = await task_provider.get_tasks_from_state(state_id)
-    if not tasks:
-        logger.info("No open tasks found in %s.", state_name)
+    issues = await issue_provider.get_issues_from_state(state_id)
+    if not issues:
+        logger.info("No open issues found in %s.", state_name)
         return None
 
-    return tasks[0]
+    return issues[0]
 
 
-async def move_task_to_state(
-    task_provider: TaskProvider,
-    task: ProviderTask,
-    task_state_name: str,
-) -> ProviderTask:
+async def move_issue_to_state(
+    issue_provider: IssueProvider,
+    issue: Issue,
+    issue_state_name: str,
+) -> Issue:
     """
-    Moves the task to the in-progress state before task processing begins.
+    Moves the issue to the in-progress state before issue processing begins.
     """
-    modified_task: Optional[ProviderTask] = task
-    if not task_state_name:
-        logger.warning("task_in_progress_state not configured, skipping move to in-progress state")
+    modified_issue: Optional[Issue] = issue
+    if not issue_state_name:
+        logger.warning("issue_in_progress_state not configured, skipping move to in-progress state")
     else:
         logger.info(
-            "Moving task %s to in-progress state: %s",
-            task.id,
-            task_state_name,
+            "Moving issue %s to in-progress state: %s",
+            issue.id,
+            issue_state_name,
         )
 
         try:
-            await task_provider.move_task_to_named_state(task.id, task_state_name)
-            modified_task = await task_provider.get_task(task.id)
+            await issue_provider.move_issue_to_named_state(issue.id, issue_state_name)
+            modified_issue = await issue_provider.get_issue(issue.id)
         except Exception as e:  # pylint: disable=broad-exception-caught
-            logger.error("Failed to move task to in-progress state: %s", e)
+            logger.error("Failed to move issue to in-progress state: %s", e)
 
-    match modified_task:
-        case ProviderTask():
-            return modified_task
+    match modified_issue:
+        case Issue():
+            return modified_issue
         case None:
-            raise RuntimeError("modified_task is none")
+            raise RuntimeError("modified_issue is none")
 
 
 async def fetch_review_comments(
-    task_provider: TaskProvider,
-    task_id: str,
+    issue_provider: IssueProvider,
+    issue_id: str,
     in_progress_state_name: str,
     in_review_state_name: str,
 ) -> list:
     """
-    Fetch comments from review if task was returned from review to in-progress.
+    Fetch comments from review if issue was returned from review to in-progress.
 
     Args:
-        task_provider: TaskProvider
-        task_id: id of task
-        original_state_name: name of state before task was moved to in-progress
-        task_in_progress_state_name: name of in-progress state
+        issue_provider: IssueProvider
+        issue_id: id of issue
+        original_state_name: name of state before issue was moved to in-progress
+        issue_in_progress_state_name: name of in-progress state
         review_state_name: name of review state
 
     Returns:
-        List of comments if task was in review and returned, empty list otherwise.
+        List of comments if issue was in review and returned, empty list otherwise.
     """
     comments = []
-    # if task was in review and returned to in-progress,
+    # if issue was in review and returned to in-progress,
     # fetch comments between review and move to in-progress
-    all_comments = await task_provider.get_comments(task_id)
+    all_comments = await issue_provider.get_comments(issue_id)
 
-    if task_provider.get_type() == "github":
+    if issue_provider.get_type() == "github":
         # For GitHub, only return last comment if a PR exists for the branch
-        db_task = read_db_task(task_id=task_id)
-        branch_name = db_task.branch_name
-        if branch_name and check_pr_exists_for_branch(branch_name):
+        db_issue = read_db_issue(issue_id=issue_id)
+        repo_branch_name = db_issue.repo_branch_name
+        if repo_branch_name and check_pr_exists_for_branch(repo_branch_name):
             return all_comments[-1:] if all_comments else []
         return []
 
     latest_move = await get_latest_move_to_in_progress(
-        task_provider, task_id, in_review_state_name, in_progress_state_name
+        issue_provider, issue_id, in_review_state_name, in_progress_state_name
     )
     logger.info("Latest move: %s", latest_move)
     if latest_move:
@@ -128,8 +126,8 @@ async def fetch_review_comments(
 
 
 async def get_latest_move_to_in_progress(
-    task_provider: TaskProvider,
-    task_id: str,
+    issue_provider: IssueProvider,
+    issue_id: str,
     review_state_name: str,
     in_progress_state_name: str,
 ) -> dict | None:
@@ -140,11 +138,11 @@ async def get_latest_move_to_in_progress(
         was from review to in-progress, None otherwise.
     """
     try:
-        state_moves = await task_provider.get_state_moves(task_id)
+        state_moves = await issue_provider.get_state_moves(issue_id)
     except Exception as e:  # pylint: disable=broad-exception-caught
         logger.warning(
-            "Failed to fetch state moves for task %s: %s.",
-            task_id,
+            "Failed to fetch state moves for issue %s: %s.",
+            issue_id,
             e,
         )
         return None
@@ -160,7 +158,7 @@ async def get_latest_move_to_in_progress(
     review_to_progress_moves = []
     for idx, move in enumerate(sorted_moves):
         if move.state_before == review_state_name and move.state_after == in_progress_state_name:
-            # Find when the task entered the review state
+            # Find when the issue entered the review state
             # Look backwards for the previous move that resulted in the review state
             review_timestamp = None
             for prev_move in reversed(sorted_moves[:idx]):
@@ -179,8 +177,8 @@ async def get_latest_move_to_in_progress(
 
     if not review_to_progress_moves:
         logger.info(
-            "Task %s has no moves from '%s' to '%s'.",
-            task_id,
+            "Issue %s has no moves from '%s' to '%s'.",
+            issue_id,
             review_state_name,
             in_progress_state_name,
         )
@@ -189,8 +187,8 @@ async def get_latest_move_to_in_progress(
     # Get the latest such move (most recent return to in-progress from review)
     latest_move = max(review_to_progress_moves, key=lambda x: x["return_timestamp"])
     logger.info(
-        "Task %s last moved from '%s' to '%s' at %s (review was at %s).",
-        task_id,
+        "Issue %s last moved from '%s' to '%s' at %s (review was at %s).",
+        issue_id,
         review_state_name,
         in_progress_state_name,
         latest_move["return_timestamp"].isoformat(),

@@ -48,13 +48,13 @@ def prepare_runtime() -> Optional[RuntimeSetting]:
     logger.info("Workspace: %s", get_workspace())
     ensure_repository_exists(settings.github_repo_url, get_workspace())
 
-    if settings.task_system_type not in MCP_SYSTEM_DEFINITIONS:
-        logger.error("Task system '%s' not defined.", settings.task_system_type)
+    if settings.issue_system_type not in MCP_SYSTEM_DEFINITIONS:
+        logger.error("Issue tracking system '%s' not defined.", settings.issue_system_type)
         return None
 
     env_settings = get_env_settings()
     agent_stack = _resolve_agent_stack(env_settings.agent_stack)
-    mcp_system_def = MCP_SYSTEM_DEFINITIONS[settings.task_system_type]
+    mcp_system_def = MCP_SYSTEM_DEFINITIONS[settings.issue_system_type]
 
     return RuntimeSetting(
         agent_settings=settings,

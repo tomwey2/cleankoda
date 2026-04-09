@@ -37,13 +37,13 @@ def get_safe_url(url: str, params: dict) -> str:
 
 
 async def get_all_trello_lists(agent_settings: AgentSettings) -> list[dict]:
-    """Fetches all lists for the configured Trello task system."""
-    task_system = agent_settings.get_task_system("trello")
-    board_id = task_system.board_id if task_system else None
+    """Fetches all lists for the configured Trello issue system."""
+    issue_system = agent_settings.get_issue_system("trello")
+    board_id = issue_system.board_id if issue_system else None
 
     url = f"https://api.trello.com/1/boards/{board_id}/lists"
     headers = {"Accept": "application/json"}
-    query = {"key": task_system.api_key, "token": task_system.token} if task_system else {}
+    query = {"key": issue_system.api_key, "token": issue_system.token} if issue_system else {}
 
     logger.debug("Trello GET: %s", get_safe_url(url, query))
     async with httpx.AsyncClient() as client:
@@ -58,11 +58,11 @@ async def get_all_trello_lists(agent_settings: AgentSettings) -> list[dict]:
 
 async def get_all_trello_cards(list_id: str, agent_settings: AgentSettings) -> list[dict]:
     """Fetches all cards from a specific Trello list."""
-    task_system = agent_settings.get_task_system("trello")
+    issue_system = agent_settings.get_issue_system("trello")
 
     url = f"https://api.trello.com/1/lists/{list_id}/cards"
     headers = {"Accept": "application/json"}
-    query = {"key": task_system.api_key, "token": task_system.token} if task_system else {}
+    query = {"key": issue_system.api_key, "token": issue_system.token} if issue_system else {}
 
     logger.debug("Trello GET: %s", get_safe_url(url, query))
     async with httpx.AsyncClient() as client:
@@ -77,17 +77,17 @@ async def get_all_trello_cards(list_id: str, agent_settings: AgentSettings) -> l
 
 async def get_trello_card(card_id: str, agent_settings: AgentSettings) -> dict:
     """Fetch details for a single Trello card including its list metadata."""
-    task_system = agent_settings.get_task_system("trello")
-    if not task_system:
-        raise RuntimeError("Trello task system is not configured")
+    issue_system = agent_settings.get_issue_system("trello")
+    if not issue_system:
+        raise RuntimeError("Trello issue system is not configured")
 
     url = f"https://api.trello.com/1/cards/{card_id}"
     headers = {"Accept": "application/json"}
     query = {
         "fields": "name,desc,idList,url",
         "list": "true",
-        "key": task_system.api_key,
-        "token": task_system.token,
+        "key": issue_system.api_key,
+        "token": issue_system.token,
     }
 
     logger.debug("Trello GET: %s", get_safe_url(url, query))
@@ -122,13 +122,13 @@ async def move_trello_card_to_list(card_id: str, list_id: str, agent_settings: A
         ValueError: If the environment is not found in agent_settings.
         RuntimeError: If the card move operation fails.
     """
-    task_system = agent_settings.get_task_system("trello")
+    issue_system = agent_settings.get_issue_system("trello")
     url = f"https://api.trello.com/1/cards/{card_id}"
     headers = {"Accept": "application/json"}
     query = {
         "idList": list_id,
-        "key": task_system.api_key if task_system else None,
-        "token": task_system.token if task_system else None,
+        "key": issue_system.api_key if issue_system else None,
+        "token": issue_system.token if issue_system else None,
     }
 
     logger.debug("Trello PUT: %s", get_safe_url(url, query))
@@ -161,13 +161,13 @@ async def move_trello_card_to_named_list(
 
 async def add_comment_to_trello_card(card_id: str, comment: str, agent_settings: AgentSettings):
     """Adds a comment to a specified Trello card."""
-    task_system = agent_settings.get_task_system("trello")
+    issue_system = agent_settings.get_issue_system("trello")
     url = f"https://api.trello.com/1/cards/{card_id}/actions/comments"
     headers = {"Accept": "application/json"}
     query = {
         "text": comment,
-        "key": task_system.api_key if task_system else None,
-        "token": task_system.token if task_system else None,
+        "key": issue_system.api_key if issue_system else None,
+        "token": issue_system.token if issue_system else None,
     }
 
     logger.debug("Trello POST: %s", get_safe_url(url, query))
@@ -182,13 +182,13 @@ async def get_trello_card_comments(card_id: str, agent_settings: AgentSettings) 
     """
     Fetches all comments for the provided Trello card ID.
     """
-    task_system = agent_settings.get_task_system("trello")
+    issue_system = agent_settings.get_issue_system("trello")
     url = f"https://api.trello.com/1/cards/{card_id}/actions"
     headers = {"Accept": "application/json"}
     query = {
         "filter": "commentCard",
-        "key": task_system.api_key if task_system else None,
-        "token": task_system.token if task_system else None,
+        "key": issue_system.api_key if issue_system else None,
+        "token": issue_system.token if issue_system else None,
     }
 
     logger.debug("Trello GET: %s", get_safe_url(url, query))
@@ -214,13 +214,13 @@ async def get_trello_card_list_moves(card_id: str, agent_settings: AgentSettings
     """
     Fetches all list move actions (updateCard:idList) for the provided Trello card ID.
     """
-    task_system = agent_settings.get_task_system("trello")
+    issue_system = agent_settings.get_issue_system("trello")
     url = f"https://api.trello.com/1/cards/{card_id}/actions"
     headers = {"Accept": "application/json"}
     query = {
         "filter": "updateCard:idList",
-        "key": task_system.api_key if task_system else None,
-        "token": task_system.token if task_system else None,
+        "key": issue_system.api_key if issue_system else None,
+        "token": issue_system.token if issue_system else None,
     }
 
     logger.debug("Trello GET: %s", get_safe_url(url, query))
@@ -270,15 +270,15 @@ async def create_trello_card(
     list_id = target_list["id"]
     logger.info("Creating card in list '%s' (id: %s)", list_name, list_id)
 
-    task_system = agent_settings.get_task_system("trello")
+    issue_system = agent_settings.get_issue_system("trello")
     url = "https://api.trello.com/1/cards"
     headers = {"Accept": "application/json"}
     query = {
         "idList": list_id,
         "name": name,
         "desc": description,
-        "key": task_system.api_key if task_system else None,
-        "token": task_system.token if task_system else None,
+        "key": issue_system.api_key if issue_system else None,
+        "token": issue_system.token if issue_system else None,
     }
 
     logger.info("Trello POST: %s", get_safe_url(url, query))

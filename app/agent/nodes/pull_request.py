@@ -14,20 +14,19 @@ from app.agent.services.summaries import (
     build_agent_summary_markdown,
 )
 from app.agent.services.pull_request import create_or_update_pr
-from app.agent.state import AgentState, AgentSummary, TaskType
+from app.agent.state import AgentState, AgentSummary, IssueType
 from app.agent.utils import get_workspace
 from app.core.config import get_env_settings
-from app.core.localdb.agent_tasks_utils import update_db_task
+from app.core.localdb.agent_issues_utils import update_db_issue
 
 logger = logging.getLogger(__name__)
 
 
-
 ROLE_PREFIX_MAP = {
-    TaskType.CODING: "feat",
-    TaskType.BUGFIXING: "fix",
-    TaskType.ANALYZING: "chore",
-    TaskType.UNKNOWN: "chore",
+    IssueType.CODING: "feat",
+    IssueType.BUGFIXING: "fix",
+    IssueType.ANALYZING: "chore",
+    IssueType.UNKNOWN: "chore",
 }
 
 
@@ -93,7 +92,7 @@ def _create_or_update_pr(state: AgentState):
         return False, summary_entries
 
     pr_title, pr_body = _build_pr_inputs(state)
-    pr_success, pr_msg, pr_url = create_or_update_pr(
+    pr_success, pr_msg, repo_pr_url = create_or_update_pr(
         title=pr_title,
         body=pr_body,
     )
@@ -108,7 +107,7 @@ def _create_or_update_pr(state: AgentState):
         return False, summary_entries
 
     logger.info("Git workflow completed successfully: %s", pr_msg)
-    if not pr_url:
+    if not repo_pr_url:
         logger.warning("PR creation succeeded but no URL was returned")
         summary_entries = _append_summary(
             summary_entries,
@@ -118,18 +117,20 @@ def _create_or_update_pr(state: AgentState):
         )
         return False, summary_entries
 
-    task_id = state.get("provider_task").id if state.get("provider_task") else None
-    if task_id and pr_url:
-        pr_number = _extract_pr_number_from_url(pr_url)
-        if pr_number:
-            update_db_task(task_id=task_id, pr_number=pr_number, pr_url=pr_url)
-            logger.info("Stored PR #%d for task %s", pr_number, task_id)
+    issue_id = state.get("issue").id if state.get("issue") else None
+    if issue_id and repo_pr_url:
+        repo_pr_number = _extract_repo_pr_number_from_url(repo_pr_url)
+        if repo_pr_number:
+            update_db_issue(
+                issue_id=issue_id, repo_pr_number=repo_pr_number, repo_pr_url=repo_pr_url
+            )
+            logger.info("Stored PR #%d for issue %s", repo_pr_number, issue_id)
 
     summary_entries = _append_summary(
         summary_entries,
         state,
         "PR",
-        f"Pull request available at\n\n {pr_url}",
+        f"Pull request available at\n\n {repo_pr_url}",
     )
     return True, summary_entries
 
@@ -151,20 +152,18 @@ def _generate_commit_message(state: AgentState) -> str:
     if not summary_text:
         return "fix: automated test-driven changes"
 
-    task_type = TaskType.from_string(
-        state.get("agent_task").task_type if state.get("agent_task") else ""
+    issue_type = IssueType.from_string(
+        state.get("agent_issue").issue_type if state.get("agent_issue") else ""
     )
-    prefix = ROLE_PREFIX_MAP.get(task_type, "chore")
+    prefix = ROLE_PREFIX_MAP.get(issue_type, "chore")
 
     first_line = f"{prefix}: {summary_text}"
     if len(first_line) > 75:
         first_line = first_line[:72].rstrip() + "..."
 
-    if task_type in {TaskType.CODING, TaskType.BUGFIXING} and summary_role:
+    if issue_type in {IssueType.CODING, IssueType.BUGFIXING} and summary_role:
         role_entries = [
-            entry.summary
-            for entry in summaries
-            if entry.role.lower() == summary_role.lower()
+            entry.summary for entry in summaries if entry.role.lower() == summary_role.lower()
         ]
         details = _build_role_details(role_entries)
         if details:
@@ -191,20 +190,18 @@ def _build_role_details(role_entries: list[str]) -> str | None:
     return "\n".join(f"- {text}" for text in filtered_entries)
 
 
-
-
-def _extract_pr_number_from_url(pr_url: str) -> int | None:
+def _extract_repo_pr_number_from_url(repo_pr_url: str) -> int | None:
     """
     Extract the PR number from a GitHub PR URL.
 
     Args:
-        pr_url: GitHub PR URL (e.g., https://github.com/owner/repo/pull/123)
+        repo_pr_url: GitHub PR URL (e.g., https://github.com/owner/repo/pull/123)
 
     Returns:
         The PR number, or None if extraction fails
     """
     try:
-        parts = pr_url.rstrip("/").split("/")
+        parts = repo_pr_url.rstrip("/").split("/")
         if len(parts) >= 2 and parts[-2] == "pull":
             return int(parts[-1])
     except (ValueError, IndexError):
@@ -214,7 +211,7 @@ def _extract_pr_number_from_url(pr_url: str) -> int | None:
 
 def _build_pr_inputs(state: AgentState) -> tuple[str, str]:
     """
-    Build the PR title and body using the task name and agent summaries.
+    Build the PR title and body using the issue name and agent summaries.
     """
     aggregated_summary = build_agent_summary_markdown(
         state,
@@ -224,9 +221,9 @@ def _build_pr_inputs(state: AgentState) -> tuple[str, str]:
     )
     pr_body_summary = aggregated_summary
 
-    task = state.get("provider_task")
-    task_title = task.name
-    pr_title = task_title or "Automated Fix"
+    issue = state.get("issue")
+    issue_title = issue.name
+    pr_title = issue_title or "Automated Fix"
     pr_description = (state.get("pr_description") or "").strip()
     if pr_description:
         pr_body = pr_description

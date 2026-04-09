@@ -2,7 +2,7 @@
 Defines the Explainer node for the agent graph.
 
 The Explainer node loads persisted thought/tool-action history from the
-SQLAlchemy database for the current task.
+SQLAlchemy database for the current issue.
 """
 
 import logging
@@ -15,7 +15,7 @@ from sqlalchemy import select
 from app.agent.services.prompts import load_prompt
 from app.agent.state import AgentState
 from app.core.extensions import db
-from app.core.localdb.models import AgentAction, AgentTask
+from app.core.localdb.models import AgentAction, AgentIssue
 
 logger = logging.getLogger(__name__)
 
@@ -38,13 +38,13 @@ def create_explainer_node(llm):
         if state["current_node"] != "explainer":
             logger.info("--- EXPLAINER node ---")
 
-        task_id = _resolve_task_id(state)
-        if not task_id:
-            logger.warning("Explainer skipped: missing task_id in state")
+        issue_id = _resolve_issue_id(state)
+        if not issue_id:
+            logger.warning("Explainer skipped: missing issue_id in state")
             return {"current_node": "explainer"}
 
-        thoughts, tool_actions = _read_task_thoughts_and_tool_actions(task_id)
-        plan = _resolve_plan(state, task_id)
+        thoughts, tool_actions = _read_issue_thoughts_and_tool_actions(issue_id)
+        plan = _resolve_plan(state, issue_id)
         formatted_thoughts = _format_thoughts_for_prompt(thoughts)
         formatted_tools_used = _format_tools_for_prompt(tool_actions)
 
@@ -60,10 +60,10 @@ def create_explainer_node(llm):
         response: AIMessage = await llm.ainvoke([SystemMessage(content=system_message)])
         pr_description = _coerce_message_content(response.content)
         logger.info(
-            "Loaded %d thoughts and %d tool actions for task %s",
+            "Loaded %d thoughts and %d tool actions for issue %s",
             len(thoughts),
             len(tool_actions),
-            task_id,
+            issue_id,
         )
 
         return {
@@ -76,40 +76,40 @@ def create_explainer_node(llm):
     return explainer_node
 
 
-def _resolve_task_id(state: AgentState) -> str | None:
+def _resolve_issue_id(state: AgentState) -> str | None:
     """
-    Resolve the current task_id from state.
-    Priority: provider_task.id, then agent_task.task_id.
+    Resolve the current issue_id from state.
+    Priority: issue.id, then agent_issue.issue_id.
     """
-    provider_task = state.get("provider_task")
-    if provider_task and provider_task.id:
-        return provider_task.id
+    issue = state.get("issue")
+    if issue and issue.id:
+        return issue.id
 
-    agent_task = state.get("agent_task")
-    if agent_task and agent_task.task_id:
-        return agent_task.task_id
+    agent_issue = state.get("agent_issue")
+    if agent_issue and agent_issue.issue_id:
+        return agent_issue.issue_id
 
     return None
 
 
-def _read_task_thoughts_and_tool_actions(
-    task_id: str,
+def _read_issue_thoughts_and_tool_actions(
+    issue_id: str,
 ) -> tuple[list[AgentAction], list[AgentAction]]:
     """
-    Query all thought and tool-action entries for a task_id.
+    Query all thought and tool-action entries for a issue_id.
 
     In this codebase, thoughts are represented by AgentAction rows where
     tool_name == "thinking". All other rows are treated as tool actions.
     """
-    task_stmt = select(AgentTask).where(AgentTask.task_id == task_id)
-    db_task = db.session.execute(task_stmt).scalar_one_or_none()
-    if not db_task:
-        logger.warning("No AgentTask found for task_id=%s", task_id)
+    issue_stmt = select(AgentIssue).where(AgentIssue.issue_id == issue_id)
+    db_issue = db.session.execute(issue_stmt).scalar_one_or_none()
+    if not db_issue:
+        logger.warning("No AgentIssue found for issue_id=%s", issue_id)
         return [], []
 
     actions_stmt = (
         select(AgentAction)
-        .where(AgentAction.task_id == db_task.id)
+        .where(AgentAction.issue_id == db_issue.id)
         .order_by(AgentAction.id.asc())
     )
     actions = db.session.execute(actions_stmt).scalars().all()
@@ -119,18 +119,18 @@ def _read_task_thoughts_and_tool_actions(
     return thoughts, tool_actions
 
 
-def _resolve_plan(state: AgentState, task_id: str) -> str:
+def _resolve_plan(state: AgentState, issue_id: str) -> str:
     """
     Resolve implementation plan for prompt input.
     """
-    agent_task = state.get("agent_task")
-    if agent_task and agent_task.plan_content:
-        return agent_task.plan_content
+    agent_issue = state.get("agent_issue")
+    if agent_issue and agent_issue.plan_content:
+        return agent_issue.plan_content
 
-    task_stmt = select(AgentTask).where(AgentTask.task_id == task_id)
-    db_task = db.session.execute(task_stmt).scalar_one_or_none()
-    if db_task and db_task.plan_content:
-        return db_task.plan_content
+    issue_stmt = select(AgentIssue).where(AgentIssue.issue_id == issue_id)
+    db_issue = db.session.execute(issue_stmt).scalar_one_or_none()
+    if db_issue and db_issue.plan_content:
+        return db_issue.plan_content
 
     return "No implementation plan was provided."
 

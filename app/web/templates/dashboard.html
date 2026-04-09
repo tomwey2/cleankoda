@@ -7,26 +7,26 @@
         <div class="row">
             <div class="col-12 col-lg-8 order-2 order-lg-1">
 
-                <!-- Task Card -->
+                <!-- Issue Card -->
                 <div class="card shadow-sm border-0 mb-4">
                     <div class="card-header d-flex justify-content-between align-items-center">
-                        <h5 class="card-title fw-bold mb-1">{{ agent_task.task_name if agent_task and
-                            agent_task.task_name else 'No
+                        <h5 class="card-title fw-bold mb-1">{{ agent_issue.issue_name if agent_issue and
+                            agent_issue.issue_name else 'No
                             Active
-                            Task' }}</h5>
-                        {% if agent_task and agent_task.task_skill_level %}
+                            Issue' }}</h5>
+                        {% if agent_issue and agent_issue.issue_skill_level %}
                         <div class="d-flex gap-2">
-                            <span class="badge bg-secondary">{{ agent_task.task_type }}</span>
-                            <span class="badge bg-secondary">{{ agent_task.task_skill_level }}</span>
+                            <span class="badge bg-secondary">{{ agent_issue.issue_type }}</span>
+                            <span class="badge bg-secondary">{{ agent_issue.issue_skill_level }}</span>
                         </div>
                         {% endif %}
                     </div>
                     <div class="card-body">
-                        <div class="task-description text-muted">
-                            {% if task_description_html %}
-                            {{ task_description_html | safe }}
+                        <div class="issue-description text-muted">
+                            {% if issue_description_html %}
+                            {{ issue_description_html | safe }}
                             {% else %}
-                            <p class="mb-0">Waiting for task...</p>
+                            <p class="mb-0">Waiting for issue...</p>
                             {% endif %}
                         </div>
                     </div>
@@ -37,7 +37,7 @@
                     <div class="card-header bg-transparent d-flex justify-content-between align-items-center py-3">
                         <h5 class="mb-0 fw-bold">Implementation Plan</h5>
                         <div class="d-flex gap-2">
-                            {% if plan_exists and agent_task and agent_task.plan_state in ('created', 'updated') %}
+                            {% if plan_exists and agent_issue and agent_issue.plan_state in ('created', 'updated') %}
                             <button id="btn-reject" class="btn btn-outline-danger">
                                 <i class="bi bi-x-circle me-1"></i>Reject
                             </button>
@@ -99,13 +99,14 @@
                         {% endif %}
                         {% endif %}
                         {% endfor %}
-                        <span>{{ agent_task.working_state if agent_task and agent_task.working_state else '' }}</span>
-                        {% if agent_task and agent_task.user_message %}
+                        <span>{{ agent_issue.working_state if agent_issue and agent_issue.working_state else ''
+                            }}</span>
+                        {% if agent_issue and agent_issue.user_message %}
                         <br><br>
-                        <span class="fw-bold">{{ agent_task.user_message }}</span>
+                        <span class="fw-bold">{{ agent_issue.user_message }}</span>
                         <br>
-                        {% if agent_task.pr_url %}
-                        <a href="{{ agent_task.pr_url }}" target="_blank">Pull Request</a>
+                        {% if agent_issue.repo_pr_url %}
+                        <a href="{{ agent_issue.repo_pr_url }}" target="_blank">Pull Request</a>
                         <br>
                         {% endif %}
                         <span>Waiting for user response...</span>
@@ -123,27 +124,27 @@
 
 <style>
     .plan-markdown h1,
-    .task-description h1 {
+    .issue-description h1 {
         font-size: 1.5rem;
     }
 
     .plan-markdown h2,
-    .task-description h2 {
+    .issue-description h2 {
         font-size: 1.3rem;
     }
 
     .plan-markdown h3,
-    .task-description h3 {
+    .issue-description h3 {
         font-size: 1.1rem;
     }
 
     .plan-markdown h4,
-    .task-description h4 {
+    .issue-description h4 {
         font-size: 1.0rem;
     }
 
     .plan-markdown code,
-    .task-description code {
+    .issue-description code {
         color: inherit;
         background-color: rgba(255, 255, 255, 0.1);
         padding: 0.2rem 0.4rem;
@@ -151,17 +152,17 @@
     }
 
     .plan-markdown pre code,
-    .task-description pre code {
+    .issue-description pre code {
         background-color: transparent;
         padding: 0;
     }
 
-    .task-description p:last-child {
+    .issue-description p:last-child {
         margin-bottom: 0;
     }
 
-    .task-description ul,
-    .task-description ol {
+    .issue-description ul,
+    .issue-description ol {
         margin-bottom: 0.5rem;
     }
 </style>
@@ -181,7 +182,7 @@
             }
             // Send plan review action to the backend. HTMX refreshes every second, so the
             // promise handlers also toggle the reopen flag/state accordingly.
-            fetch('/task/review_plan', {
+            fetch('/issue/review_plan', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',

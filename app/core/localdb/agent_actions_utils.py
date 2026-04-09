@@ -2,24 +2,24 @@ import logging
 from sqlalchemy.exc import IntegrityError
 
 from app.core.extensions import db
-from app.core.localdb.models import AgentAction, AgentTask
+from app.core.localdb.models import AgentAction, AgentIssue
 from sqlalchemy import select
 
 logger = logging.getLogger(__name__)
 
 
-def read_db_agent_actions(agent_task: AgentTask) -> list[AgentAction]:
-    """Get the last task from the database."""
+def read_db_agent_actions(agent_issue: AgentIssue) -> list[AgentAction]:
+    """Get the actions from the database for a given issue."""
     stmt = (
         select(AgentAction)
-        .where(AgentAction.task_id == agent_task.id)
+        .where(AgentAction.issue_id == agent_issue.id)
         .order_by(AgentAction.id.asc())
     )
     return db.session.execute(stmt).scalars().all()
 
 
 def create_db_agent_action(
-    agent_task: AgentTask, current_node: str | None, tool_calls: list[dict] | None
+    agent_issue: AgentIssue, current_node: str | None, tool_calls: list[dict] | None
 ):
     """insert agent state into sqlalchemy database"""
     if current_node is None or not tool_calls:
@@ -49,7 +49,7 @@ def create_db_agent_action(
             ):
                 return
             new_agent_action = AgentAction(
-                task_id=agent_task.id,
+                issue_id=agent_issue.id,
                 current_node=current_node,
                 tool_name=name,
                 tool_arg0_name=arg0_name,
@@ -60,7 +60,7 @@ def create_db_agent_action(
         return
 
     except IntegrityError as e:
-        # Happens if task_id (unique=True) is already assigned
+        # Happens if issue_id (unique=True) is already assigned
         db.session.rollback()
         logging.error("Error creating agent action: %s", e)
         return None
@@ -71,6 +71,6 @@ def create_db_agent_action(
 
 
 def get_last_agent_action() -> AgentAction | None:
-    """Get the last task from the database."""
+    """Get the last action from the database."""
     stmt = select(AgentAction).order_by(AgentAction.id.desc())
     return db.session.execute(stmt).scalar()

@@ -67,12 +67,12 @@ class PRReviewComment:
     created_at: str
 
 
-def get_latest_open_pr_for_branch(branch_name: str) -> Optional[PullRequest]:
+def get_latest_open_pr_for_branch(repo_branch_name: str) -> Optional[PullRequest]:
     """
     Get the latest open pull request for the given branch.
 
     Args:
-        branch_name: The name of the branch to check
+        repo_branch_name: The name of the branch to check
 
     Returns:
         PullRequest object if an open PR exists, None otherwise
@@ -94,7 +94,7 @@ def get_latest_open_pr_for_branch(branch_name: str) -> Optional[PullRequest]:
         }
 
         url = f"https://api.github.com/repos/{owner}/{repo}/pulls"
-        params = {"head": f"{owner}:{branch_name}", "state": "open"}
+        params = {"head": f"{owner}:{repo_branch_name}", "state": "open"}
 
         response = requests.get(url, headers=headers, params=params, timeout=10)
 
@@ -116,12 +116,12 @@ def get_latest_open_pr_for_branch(branch_name: str) -> Optional[PullRequest]:
                 logger.info(
                     "Found PR #%d for branch '%s': %s",
                     pr.number,
-                    branch_name,
+                    repo_branch_name,
                     pr.title
                 )
                 return pr
 
-            logger.info("No open PR found for branch '%s'", branch_name)
+            logger.info("No open PR found for branch '%s'", repo_branch_name)
             return None
 
         logger.warning(
@@ -132,21 +132,21 @@ def get_latest_open_pr_for_branch(branch_name: str) -> Optional[PullRequest]:
         return None
 
     except Exception as e:  # pylint: disable=broad-exception-caught
-        logger.error("Error fetching PR for branch '%s': %s", branch_name, e)
+        logger.error("Error fetching PR for branch '%s': %s", repo_branch_name, e)
         return None
 
 
-def check_pr_exists_for_branch(branch_name: str) -> bool:
+def check_pr_exists_for_branch(repo_branch_name: str) -> bool:
     """
     Check if a pull request exists for the given branch.
 
     Args:
-        branch_name: The name of the branch to check
+        repo_branch_name: The name of the branch to check
 
     Returns:
         True if a PR exists for this branch, False otherwise
     """
-    return get_latest_open_pr_for_branch(branch_name) is not None
+    return get_latest_open_pr_for_branch(repo_branch_name) is not None
 
 
 def create_or_update_pr(title: str, body: str) -> tuple[bool, str, Optional[str]]:
@@ -158,7 +158,7 @@ def create_or_update_pr(title: str, body: str) -> tuple[bool, str, Optional[str]
         body: PR body/description
 
     Returns:
-        Tuple of (success, message, pr_url)
+        Tuple of (success, message, repo_pr_url)
     """
     token = get_env_settings().github_token
     if not token:
@@ -206,13 +206,13 @@ def update_existing_pr(
         body: Comment body to add
 
     Returns:
-        Tuple of (success, message, pr_url)
+        Tuple of (success, message, repo_pr_url)
     """
-    pr_number = pr_data.get("number")
-    pr_url = pr_data.get("html_url")
+    repo_pr_number = pr_data.get("number")
+    repo_pr_url = pr_data.get("html_url")
     comment_url = (
         f"https://api.github.com/repos/{context.owner}/{context.repo}/issues/"
-        f"{pr_number}/comments"
+        f"{repo_pr_number}/comments"
     )
     comment_payload = {"body": f"**Automated Update:**\n\n{body}"}
 
@@ -224,9 +224,9 @@ def update_existing_pr(
     )
 
     if response.status_code == 201:
-        logger.info("Added comment to existing PR: %s", pr_url)
-        return True, f"SUCCESS: Added comment to existing PR: {pr_url}", pr_url
-    return False, f"ERROR adding comment: {response.status_code}", pr_url
+        logger.info("Added comment to existing PR: %s", repo_pr_url)
+        return True, f"SUCCESS: Added comment to existing PR: {repo_pr_url}", repo_pr_url
+    return False, f"ERROR adding comment: {response.status_code}", repo_pr_url
 
 
 def create_new_pr(
@@ -243,7 +243,7 @@ def create_new_pr(
         body: PR description
 
     Returns:
-        Tuple of (success, message, pr_url)
+        Tuple of (success, message, repo_pr_url)
     """
     url = f"https://api.github.com/repos/{context.owner}/{context.repo}/pulls"
     payload = {"title": title, "body": body, "head": context.branch, "base": "main"}
@@ -255,9 +255,9 @@ def create_new_pr(
         response = requests.post(url, json=payload, headers=context.headers, timeout=10)
 
     if response.status_code == 201:
-        pr_url = response.json().get("html_url")
-        logger.info("Pull Request created: %s", pr_url)
-        return True, f"SUCCESS: Pull Request created: {pr_url}", pr_url
+        repo_pr_url = response.json().get("html_url")
+        logger.info("Pull Request created: %s", repo_pr_url)
+        return True, f"SUCCESS: Pull Request created: {repo_pr_url}", repo_pr_url
 
     return False, f"ERROR creating PR: {response.status_code} - {response.text}", None
 
@@ -326,7 +326,7 @@ def get_github_repo_info_with_branch() -> tuple[Optional[str], Optional[str], Op
 
 
 def fetch_pr_reviews(
-    pr_number: int,
+    repo_pr_number: int,
     owner: Optional[str] = None,
     repo: Optional[str] = None,
     token: Optional[str] = None,
@@ -335,7 +335,7 @@ def fetch_pr_reviews(
     Fetch all reviews for a pull request.
 
     Args:
-        pr_number: The PR number to fetch reviews for
+        repo_pr_number: The PR number to fetch reviews for
         owner: Repository owner (optional, derived from git if not provided)
         repo: Repository name (optional, derived from git if not provided)
         token: GitHub token (optional, uses GITHUB_TOKEN env var if not provided)
@@ -360,7 +360,7 @@ def fetch_pr_reviews(
             "Accept": "application/vnd.github.v3+json",
         }
 
-        url = f"https://api.github.com/repos/{owner}/{repo}/pulls/{pr_number}/reviews"
+        url = f"https://api.github.com/repos/{owner}/{repo}/pulls/{repo_pr_number}/reviews"
         response = requests.get(url, headers=headers, timeout=10)
 
         if response.status_code == 200:
@@ -375,7 +375,7 @@ def fetch_pr_reviews(
                 )
                 for r in reviews_data
             ]
-            logger.info("Fetched %d reviews for PR #%d", len(reviews), pr_number)
+            logger.info("Fetched %d reviews for PR #%d", len(reviews), repo_pr_number)
             return reviews
 
         logger.warning(
@@ -386,12 +386,12 @@ def fetch_pr_reviews(
         return []
 
     except Exception as e:  # pylint: disable=broad-exception-caught
-        logger.error("Error fetching PR reviews for #%d: %s", pr_number, e)
+        logger.error("Error fetching PR reviews for #%d: %s", repo_pr_number, e)
         return []
 
 
 def fetch_pr_review_comments(
-    pr_number: int,
+    repo_pr_number: int,
     owner: Optional[str] = None,
     repo: Optional[str] = None,
     token: Optional[str] = None,
@@ -400,7 +400,7 @@ def fetch_pr_review_comments(
     Fetch line-level code review comments for a pull request.
 
     Args:
-        pr_number: The PR number to fetch comments for
+        repo_pr_number: The PR number to fetch comments for
         owner: Repository owner (optional, derived from git if not provided)
         repo: Repository name (optional, derived from git if not provided)
         token: GitHub token (optional, uses GITHUB_TOKEN env var if not provided)
@@ -425,7 +425,7 @@ def fetch_pr_review_comments(
             "Accept": "application/vnd.github.v3+json",
         }
 
-        url = f"https://api.github.com/repos/{owner}/{repo}/pulls/{pr_number}/comments"
+        url = f"https://api.github.com/repos/{owner}/{repo}/pulls/{repo_pr_number}/comments"
         response = requests.get(url, headers=headers, timeout=10)
 
         if response.status_code == 200:
@@ -447,7 +447,7 @@ def fetch_pr_review_comments(
                 for c in comments_data
             ]
             logger.info(
-                "Fetched %d review comments for PR #%d", len(comments), pr_number
+                "Fetched %d review comments for PR #%d", len(comments), repo_pr_number
             )
             return comments
 
@@ -459,12 +459,12 @@ def fetch_pr_review_comments(
         return []
 
     except Exception as e:  # pylint: disable=broad-exception-caught
-        logger.error("Error fetching PR review comments for #%d: %s", pr_number, e)
+        logger.error("Error fetching PR review comments for #%d: %s", repo_pr_number, e)
         return []
 
 
 def get_latest_pr_review_status(
-    pr_number: int,
+    repo_pr_number: int,
     owner: Optional[str] = None,
     repo: Optional[str] = None,
     token: Optional[str] = None,
@@ -476,7 +476,7 @@ def get_latest_pr_review_status(
     the latest review from each reviewer.
 
     Args:
-        pr_number: The PR number to check
+        repo_pr_number: The PR number to check
         owner: Repository owner (optional, derived from git if not provided)
         repo: Repository name (optional, derived from git if not provided)
         token: GitHub token (optional, uses GITHUB_TOKEN env var if not provided)
@@ -487,8 +487,8 @@ def get_latest_pr_review_status(
         - rejection_reviews: List of reviews with CHANGES_REQUESTED state
         - code_comments: List of line-level code review comments
     """
-    reviews = fetch_pr_reviews(pr_number, owner, repo, token)
-    comments = fetch_pr_review_comments(pr_number, owner, repo, token)
+    reviews = fetch_pr_reviews(repo_pr_number, owner, repo, token)
+    comments = fetch_pr_review_comments(repo_pr_number, owner, repo, token)
 
     if not reviews:
         return True, [], comments
@@ -510,7 +510,7 @@ def get_latest_pr_review_status(
 
     logger.info(
         "PR #%d review status: approved=%s, rejections=%d, comments=%d",
-        pr_number,
+        repo_pr_number,
         is_approved,
         len(rejection_reviews),
         len(comments),
@@ -522,7 +522,7 @@ def get_latest_pr_review_status(
 def fetch_pr_details(
     owner: str,
     repo: str,
-    pr_number: int,
+    repo_pr_number: int,
     token: Optional[str] = None,
 ) -> Optional[PullRequest]:
     """
@@ -531,7 +531,7 @@ def fetch_pr_details(
     Args:
         owner: Repository owner
         repo: Repository name
-        pr_number: The PR number to fetch
+        repo_pr_number: The PR number to fetch
         token: GitHub token (optional, uses GITHUB_TOKEN env var if not provided)
 
     Returns:
@@ -548,7 +548,7 @@ def fetch_pr_details(
             "Accept": "application/vnd.github.v3+json",
         }
 
-        url = f"https://api.github.com/repos/{owner}/{repo}/pulls/{pr_number}"
+        url = f"https://api.github.com/repos/{owner}/{repo}/pulls/{repo_pr_number}"
         response = requests.get(url, headers=headers, timeout=10)
 
         if response.status_code == 200:
@@ -573,12 +573,12 @@ def fetch_pr_details(
         return None
 
     except Exception as e:  # pylint: disable=broad-exception-caught
-        logger.error("Error fetching PR #%d: %s", pr_number, e)
+        logger.error("Error fetching PR #%d: %s", repo_pr_number, e)
         return None
 
 
 def format_pr_review_message(
-    pr_url: str,
+    repo_pr_url: str,
     rejection_reviews: List[PRReview],
     code_comments: List[PRReviewComment],
 ) -> str:
@@ -586,7 +586,7 @@ def format_pr_review_message(
     Format PR review feedback as a human-readable message.
 
     Args:
-        pr_url: URL of the pull request
+        repo_pr_url: URL of the pull request
         rejection_reviews: List of reviews with CHANGES_REQUESTED state
         code_comments: List of line-level code review comments
 
@@ -598,7 +598,7 @@ def format_pr_review_message(
         "=" * 60,
         "PULL REQUEST REVIEW FEEDBACK",
         "=" * 60,
-        f"PR: {pr_url}",
+        f"PR: {repo_pr_url}",
         "",
     ]
 

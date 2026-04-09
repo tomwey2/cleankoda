@@ -4,7 +4,7 @@ Defines the state structure for the LangGraph agent.
 This module contains the `AgentState` TypedDict, which represents the shared
 state that is passed between nodes in the agent's workflow graph. It holds
 all the necessary information for the agent to function, such as message history,
-task details, and internal counters.
+issue details, and internal counters.
 """
 
 from dataclasses import dataclass
@@ -15,8 +15,8 @@ from typing import Annotated, TypedDict
 from langchain_core.messages import BaseMessage
 from langgraph.graph.message import add_messages
 
-from app.core.taskprovider.task_provider import ProviderTask, ProviderTaskComment
-from app.core.localdb.models import AgentTask
+from app.core.issueprovider.issue_provider import Issue, IssueComment
+from app.core.localdb.models import AgentIssue
 
 
 @dataclass
@@ -52,8 +52,8 @@ class PlanState(StrEnum):
     REJECTED = "rejected"
 
 
-class TaskType(StrEnum):
-    """Defines the types of tasks."""
+class IssueType(StrEnum):
+    """Defines the types of issues."""
 
     UNKNOWN = "unknown"
     CODING = "coding"
@@ -61,8 +61,8 @@ class TaskType(StrEnum):
     ANALYZING = "analyzing"
 
     @classmethod
-    def from_string(cls, value: str) -> "TaskType":
-        """Convert a string to a TaskType, normalizing whitespace and case."""
+    def from_string(cls, value: str) -> "IssueType":
+        """Convert a string to a IssueType, normalizing whitespace and case."""
         normalized = value.strip().lower() if value else ""
         try:
             return cls(normalized)
@@ -70,8 +70,8 @@ class TaskType(StrEnum):
             return cls.UNKNOWN
 
 
-class TaskStateType(StrEnum):
-    """Defines the states of tasks."""
+class IssueStateType(StrEnum):
+    """Defines the states of issues."""
 
     TODO = "todo"
     IN_PROGRESS = "in progress"
@@ -98,11 +98,11 @@ class AgentState(TypedDict):
     messages: Annotated[list[BaseMessage], add_messages]
     message_history: Annotated[list[BaseMessage], add_messages]
     next_step: str
-    # information from the external task system
-    provider_task: ProviderTask | None
-    provider_task_comments: list[ProviderTaskComment]
-    # information from the table agent_tasks of the local database
-    agent_task: AgentTask | None
+    # information from the external issue tracking system
+    issue: Issue | None
+    issue_comments: list[IssueComment]
+    # information from the table agent_issues of the local database
+    agent_issue: AgentIssue | None
     # agent information from settings
     agent_stack: AgentStack
     tech_stack: dict | None

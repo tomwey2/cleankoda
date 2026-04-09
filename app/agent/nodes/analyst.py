@@ -88,10 +88,10 @@ def create_analyst_node(llm: BaseChatModel, tools):
                 if recorded:
                     result["agent_summary"] = agent_summary
 
-                agent_task = state["agent_task"]
-                agent_task.plan_content = plan_content
-                agent_task.plan_state = plan_state
-                result["agent_task"] = agent_task
+                agent_issue = state["agent_issue"]
+                agent_issue.plan_content = plan_content
+                agent_issue.plan_state = plan_state
+                result["agent_issue"] = agent_issue
 
             return result
 

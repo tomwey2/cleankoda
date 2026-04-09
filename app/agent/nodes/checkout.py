@@ -7,18 +7,18 @@ from typing import Any, Dict
 from flask import current_app
 from git import Repo
 
-from app.core.taskprovider.task_provider import ProviderTask
+from app.core.issueprovider.issue_provider import Issue
 from app.agent.services.git_workspace import checkout_branch, get_current_branch
-from app.agent.state import AgentState, TaskType
+from app.agent.state import AgentState, IssueType
 from app.agent.utils import get_workspace
 from app.core.localdb.models import AgentSettings
-from app.core.localdb.agent_tasks_utils import read_db_task, update_db_task
+from app.core.localdb.agent_issues_utils import read_db_issue, update_db_issue
 
 logger = logging.getLogger(__name__)
 
 ROLE_PREFIXES = {
-    TaskType.CODING: "feature",
-    TaskType.BUGFIXING: "bugfix",
+    IssueType.CODING: "feature",
+    IssueType.BUGFIXING: "bugfix",
 }
 
 
@@ -28,22 +28,22 @@ def create_checkout_node(agent_settings: AgentSettings):
     async def checkout_node(state: AgentState) -> Dict[str, Any]:  # pylint: disable=unused-argument
         if state["current_node"] != "checkout":
             logger.info("--- CHECKOUT node ---")
-        provider_task: ProviderTask | None = state["provider_task"]
+        issue: Issue | None = state["issue"]
 
-        task_type = TaskType.from_string(
-            state.get("agent_task").task_type
-            if state.get("agent_task") and state.get("agent_task").task_type
+        issue_type = IssueType.from_string(
+            state.get("agent_issue").issue_type
+            if state.get("agent_issue") and state.get("agent_issue").issue_type
             else "coding"
         )
-        if provider_task:
+        if issue:
             await checkout_task_branch(
-                provider_task.id,
-                provider_task.name,
-                task_type,
+                issue.id,
+                issue.name,
+                issue_type,
                 agent_settings,
             )
         else:
-            raise ValueError("Missing task_id or task_name in AgentState")
+            raise ValueError("Missing issue_id or issue_name in AgentState")
 
         return {"current_node": "checkout"}
 
@@ -51,29 +51,29 @@ def create_checkout_node(agent_settings: AgentSettings):
 
 
 async def checkout_task_branch(
-    task_id: str, task_name: str, task_type: TaskType, agent_settings: AgentSettings
+    issue_id: str, issue_name: str, issue_type: IssueType, agent_settings: AgentSettings
 ):
     """
     Checks out the existing git branch for a task from the database.
     """
 
-    if task_type not in [TaskType.CODING, TaskType.BUGFIXING]:
+    if issue_type not in [IssueType.CODING, IssueType.BUGFIXING]:
         repo = Repo(get_workspace())
         repo.git.fetch()
         repo.git.reset("--hard")
         return
 
-    git_branch = await get_existing_branch_for_task(task_id)
+    git_branch = await get_existing_branch_for_task(issue_id)
 
     if not git_branch:
-        logger.info("No git branch found for task %s", task_id)
-        await checkout_branch_for_task(task_id, task_name, task_type, agent_settings)
+        logger.info("No git branch found for task %s", issue_id)
+        await checkout_branch_for_task(issue_id, issue_name, issue_type, agent_settings)
     else:
         logger.info(
             "Checking out existing git branch: %s for task %s - %s",
             git_branch,
-            task_id,
-            task_name,
+            issue_id,
+            issue_name,
         )
 
         github_repo_url = agent_settings.github_repo_url
@@ -86,17 +86,17 @@ async def checkout_task_branch(
         logger.info("Current branch: %s", real_git_branch)
 
 
-async def get_existing_branch_for_task(task_id: str):
+async def get_existing_branch_for_task(issue_id: str):
     """
     Retrieves the existing git branch for a task from the database.
     Returns None if no branch exists for this task.
     """
     try:
         with current_app.app_context():
-            db_task = read_db_task(task_id=task_id)
-            return db_task.branch_name
+            db_issue = read_db_issue(issue_id=issue_id)
+            return db_issue.repo_branch_name
     except Exception as e:  # pylint: disable=broad-exception-caught
-        logger.warning("Failed to retrieve branch for task %s: %s", task_id, e)
+        logger.warning("Failed to retrieve branch for task %s: %s", issue_id, e)
         return None
 
 
@@ -112,16 +112,16 @@ def _slugify(value: str | None) -> str:
     return value.strip("-")
 
 
-def _build_base_branch_name(task_id: str, task_name: str, task_type: TaskType) -> str:
-    slug = _slugify(task_name)
-    sanitized_task_id = re.sub(r"[^a-z0-9]", "", task_id.lower())
-    short_id = sanitized_task_id[:8] if sanitized_task_id else "task"
+def _build_base_repo_branch_name(issue_id: str, issue_name: str, issue_type: IssueType) -> str:
+    slug = _slugify(issue_name)
+    sanitized_issue_id = re.sub(r"[^a-z0-9]", "", issue_id.lower())
+    short_id = sanitized_issue_id[:8] if sanitized_issue_id else "task"
     branch_suffix = slug[:48] if slug else "update"
-    role_prefix = ROLE_PREFIXES.get(task_type, "feature")
+    role_prefix = ROLE_PREFIXES.get(issue_type, "feature")
     return f"agent/{role_prefix}/{short_id}-{branch_suffix}"
 
 
-def _collect_branch_names(repo: Repo) -> set[str]:
+def _collect_repo_branch_names(repo: Repo) -> set[str]:
     names = {head.name for head in repo.heads}
     for remote in repo.remotes:
         for ref in remote.refs:
@@ -133,7 +133,7 @@ def _collect_branch_names(repo: Repo) -> set[str]:
     return names
 
 
-def _resolve_unique_branch_name(base_name: str, existing_names: set[str]) -> str:
+def _resolve_unique_repo_branch_name(base_name: str, existing_names: set[str]) -> str:
     candidate = base_name
     suffix_counter = 1
     while candidate in existing_names:
@@ -149,43 +149,43 @@ def _resolve_unique_branch_name(base_name: str, existing_names: set[str]) -> str
 
 
 async def checkout_branch_for_task(
-    task_id: str, task_name: str, task_type: TaskType, agent_settings: AgentSettings
+    issue_id: str, issue_name: str, issue_type: IssueType, agent_settings: AgentSettings
 ):
     """
     Checks out a new git branch for a task.
     The branch name is derived from the task name and guaranteed to be unique.
     Includes role-specific prefixes for clarity.
     """
-    if not task_id or not task_name:
-        raise ValueError("task_id and task_name are required to create a git branch.")
+    if not issue_id or not issue_name:
+        raise ValueError("issue_id and issue_name are required to create a git branch.")
 
     repo = Repo(get_workspace())
     repo.git.reset("--hard")
     repo.git.fetch("--prune")
 
-    base_branch_name = _build_base_branch_name(task_id, task_name, task_type)
-    existing_branches = _collect_branch_names(repo)
-    branch_name = _resolve_unique_branch_name(base_branch_name, existing_branches)
+    base_repo_branch_name = _build_base_repo_branch_name(issue_id, issue_name, issue_type)
+    existing_branches = _collect_repo_branch_names(repo)
+    repo_branch_name = _resolve_unique_repo_branch_name(base_repo_branch_name, existing_branches)
 
     github_repo_url = agent_settings.github_repo_url
     if not github_repo_url:
         logger.warning(
             "github_repo_url missing in agent settings; cannot checkout branch for task %s",
-            task_id,
+            issue_id,
         )
         return
 
     logger.info(
         "Creating git branch '%s' for task %s - %s",
-        branch_name,
-        task_id,
-        task_name,
+        repo_branch_name,
+        issue_id,
+        issue_name,
     )
 
     repo.git.reset("--hard")
-    repo.git.checkout("-b", branch_name)
+    repo.git.checkout("-b", repo_branch_name)
 
-    update_db_task(task_id, branch_name=branch_name, github_repo_url=github_repo_url)
+    update_db_issue(issue_id, repo_branch_name=repo_branch_name, github_repo_url=github_repo_url)
 
     real_git_branch = get_current_branch(get_workspace())
     logger.info("Current branch after checkout: %s", real_git_branch)
