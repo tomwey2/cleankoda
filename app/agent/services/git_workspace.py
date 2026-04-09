@@ -87,9 +87,7 @@ def ensure_repository_exists(repo_url: str, work_dir: str) -> None:
             clean_and_clone()
             return
 
-        logger.info(
-            "Repository %s already exists in %s, updating...", repo_url, work_dir
-        )
+        logger.info("Repository %s already exists in %s, updating...", repo_url, work_dir)
 
         if repo.is_dirty(untracked_files=True):
             logger.info("Committing local changes...")
@@ -100,23 +98,17 @@ def ensure_repository_exists(repo_url: str, work_dir: str) -> None:
         repo.remotes.origin.fetch()
 
         try:
-            default_branch = repo.remotes.origin.refs.HEAD.ref.name.replace(
-                "origin/", ""
-            )
+            default_branch = repo.remotes.origin.refs.HEAD.ref.name.replace("origin/", "")
             logger.info("Checking out default branch: %s", default_branch)
             repo.git.checkout(default_branch)
             repo.git.reset("--hard", f"origin/{default_branch}")
         except Exception as exc:  # pylint: disable=broad-exception-caught
-            logger.warning(
-                "Could not checkout default branch: %s, staying on current branch", exc
-            )
+            logger.warning("Could not checkout default branch: %s, staying on current branch", exc)
 
         logger.info("Repository is ready with clean checkout")
 
     except Exception as exc:  # pylint: disable=broad-exception-caught
-        logger.error(
-            "Error managing repository in %s: %s, re-cloning...", work_dir, exc
-        )
+        logger.error("Error managing repository in %s: %s, re-cloning...", work_dir, exc)
         clean_and_clone()
 
 
@@ -158,7 +150,9 @@ def checkout_branch(repo_url: str, repo_branch_name: str, work_dir: str) -> None
                 repo.git.checkout("-b", repo_branch_name)
                 # Verify the branch was created successfully
                 if repo_branch_name not in repo.heads:
-                    raise GitCommandError(f"Failed to create local branch '{repo_branch_name}'") from exc
+                    raise GitCommandError(
+                        f"Failed to create local branch '{repo_branch_name}'"
+                    ) from exc
                 logger.info("Created new local branch '%s'.", repo_branch_name)
                 return
             except GitCommandError as checkout_exc:

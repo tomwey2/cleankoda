@@ -48,7 +48,10 @@ async def add_issue_comment(
             comment[:100] + "..." if len(comment) > 100 else comment,
         )
 
-        return f"Successfully added comment to issue '{issue_name}' (ID: {issue_id})\nComment: {comment}"
+        return (
+            f"Successfully added comment to issue '{issue_name}' (ID: {issue_id})"
+            + f"\nComment: {comment}"
+        )
 
     except ValueError as e:
         logger.error("Failed to add comment: %s", str(e))
