@@ -15,7 +15,7 @@ from typing import Annotated, TypedDict
 from langchain_core.messages import BaseMessage
 from langgraph.graph.message import add_messages
 
-from app.core.issueprovider.issue_provider import Issue, IssueComment
+from app.core.issueprovider.issue_tracking_system import Issue, IssueComment
 from app.core.localdb.models import AgentStatesDb
 
 

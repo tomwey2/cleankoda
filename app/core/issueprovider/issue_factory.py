@@ -8,7 +8,7 @@ different issue systems (Trello, GitHub, Jira, etc.).
 
 import logging
 
-from app.core.issueprovider.issue_provider import IssueProvider
+from app.core.issueprovider.issue_tracking_system import IssueTrackingSystem
 from app.core.issueprovider.github_provider import GitHubProvider
 from app.core.issueprovider.trello_provider import TrelloProvider
 from app.core.localdb.models import AgentSettingsDb
@@ -17,7 +17,7 @@ from app.core.types import IssueSystemType
 logger = logging.getLogger(__name__)
 
 
-def create_issue_provider(agent_settings: AgentSettingsDb) -> IssueProvider:
+def create_issue_provider(agent_settings: AgentSettingsDb) -> IssueTrackingSystem:
     """
     Factory function to create the appropriate issue provider.
 

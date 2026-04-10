@@ -8,7 +8,7 @@ preparing them for processing by the agent.
 import logging
 
 from app.core.issueprovider.issue_factory import create_issue_provider
-from app.core.issueprovider.issue_provider import IssueProvider, Issue
+from app.core.issueprovider.issue_tracking_system import IssueTrackingSystem, Issue
 from app.agent.services.pull_request import (
     format_pr_review_message,
     get_latest_open_pr_for_branch,
@@ -80,7 +80,7 @@ def create_issue_fetch_node(agent_settings: AgentSettingsDb):
     return issue_fetch
 
 
-async def _cleanup_new_issue(issue: Issue, its: IssueProvider) -> Issue:
+async def _cleanup_new_issue(issue: Issue, its: IssueTrackingSystem) -> Issue:
     """
     Process the issue and prepare the return value.
     """
@@ -94,7 +94,7 @@ async def _cleanup_new_issue(issue: Issue, its: IssueProvider) -> Issue:
 
 
 async def _resolve_issue(
-    agent_issue: AgentStatesDb | None, its: IssueProvider
+    agent_issue: AgentStatesDb | None, its: IssueTrackingSystem
 ) -> tuple[Issue | None, AgentStatesDb | None, bool]:
     """
     Get the last issue (with issue_id) or create a new issue.

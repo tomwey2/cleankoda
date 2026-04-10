@@ -5,8 +5,8 @@ from datetime import datetime
 from typing import Optional
 
 
-from app.core.issueprovider.issue_provider import (  # pylint: disable=unused-import
-    IssueProvider,
+from app.core.issueprovider.issue_tracking_system import (  # pylint: disable=unused-import
+    IssueTrackingSystem,
     Issue,
 )
 from app.agent.services.pull_request import check_pr_exists_for_branch
@@ -15,7 +15,7 @@ from app.core.localdb.agent_issues_utils import read_db_issue
 logger = logging.getLogger(__name__)
 
 
-async def fetch_issue_from_state(its: IssueProvider, state_name: str) -> Issue | None:
+async def fetch_issue_from_state(its: IssueTrackingSystem, state_name: str) -> Issue | None:
     """Fetch an issue from with a state."""
     issue_states = await its.get_states()
     target_state = next(
@@ -39,7 +39,7 @@ async def fetch_issue_from_state(its: IssueProvider, state_name: str) -> Issue |
 
 
 async def move_issue_to_state(
-    its: IssueProvider,
+    its: IssueTrackingSystem,
     issue: Issue,
     issue_state_name: str,
 ) -> Issue:
@@ -70,7 +70,7 @@ async def move_issue_to_state(
 
 
 async def fetch_review_comments(
-    its: IssueProvider,
+    its: IssueTrackingSystem,
     issue_id: str,
     in_progress_state_name: str,
     in_review_state_name: str,
@@ -126,7 +126,7 @@ async def fetch_review_comments(
 
 
 async def get_latest_move_to_in_progress(
-    its: IssueProvider,
+    its: IssueTrackingSystem,
     issue_id: str,
     review_state_name: str,
     in_progress_state_name: str,

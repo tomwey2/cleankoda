@@ -10,8 +10,8 @@ import logging
 from datetime import datetime, timezone
 from typing import Optional
 
-from app.core.issueprovider.issue_provider import (
-    IssueProvider,
+from app.core.issueprovider.issue_tracking_system import (
+    IssueTrackingSystem,
     Issue,
     IssueComment,
     IssueStateMove,
@@ -33,7 +33,7 @@ from app.core.types import IssueSystemType
 logger = logging.getLogger(__name__)
 
 
-class TrelloProvider(IssueProvider):
+class TrelloProvider(IssueTrackingSystem):
     """
     Trello implementation of the IssueProvider interface.
 

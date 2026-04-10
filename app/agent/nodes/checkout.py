@@ -7,7 +7,7 @@ from typing import Any, Dict
 from flask import current_app
 from git import Repo
 
-from app.core.issueprovider.issue_provider import Issue
+from app.core.issueprovider.issue_tracking_system import Issue
 from app.agent.services.git_workspace import checkout_branch, get_current_branch
 from app.agent.state import AgentState, IssueType
 from app.agent.utils import get_workspace

@@ -12,7 +12,7 @@ from time import sleep
 from langchain_core.messages import AIMessage, ToolMessage
 
 from app.core.issueprovider.issue_factory import create_issue_provider
-from app.core.issueprovider.issue_provider import IssueProvider, Issue
+from app.core.issueprovider.issue_tracking_system import IssueTrackingSystem, Issue
 from app.agent.services.summaries import get_agent_summary_entries
 from app.agent.state import AgentState
 from app.core.localdb.models import AgentSettingsDb
@@ -47,7 +47,7 @@ def create_issue_update_node(agent_settings: AgentSettingsDb):
 
         logger.info("Updating issue in issue tracking system %s", issue)
 
-        its: IssueProvider = create_issue_provider(agent_settings)
+        its: IssueTrackingSystem = create_issue_provider(agent_settings)
 
         try:
             final_comments = _build_agent_comments(state)

@@ -10,9 +10,9 @@ import logging
 from datetime import datetime, timezone
 from typing import Optional
 
-from app.core.issueprovider.issue_provider import (
+from app.core.issueprovider.issue_tracking_system import (
     IssueComment,
-    IssueProvider,
+    IssueTrackingSystem,
     IssueStateMove,
     Issue,
 )
@@ -32,7 +32,7 @@ from app.core.localdb.models import AgentSettingsDb
 logger = logging.getLogger(__name__)
 
 
-class GitHubProvider(IssueProvider):
+class GitHubProvider(IssueTrackingSystem):
     """
     GitHub Projects v2 implementation of the IssueProvider interface.
 

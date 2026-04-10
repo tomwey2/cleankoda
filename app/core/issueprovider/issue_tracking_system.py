@@ -1,9 +1,9 @@
 """
-Abstract interface for external issue system integrations.
+Abstract interface for external issue tracking system integrations.
 
-This module defines the contract that all issue providers (Trello, GitHub, Jira, etc.)
+This module defines the contract that all issue tracking system (Trello, GitHub Issues, Jira, etc.)
 must implement. It provides domain models that are independent of any specific
-issue system implementation.
+issue tracking system implementation.
 """
 
 from abc import ABC, abstractmethod
@@ -15,7 +15,7 @@ from typing import Optional
 @dataclass
 class Issue:
     """
-    Domain model for a issue, independent of the issue system.
+    Domain model for a issue, independent of the issue tracking system.
 
     Attributes:
         id: Unique identifier for the issue
@@ -73,11 +73,11 @@ class IssueStateMove:
     state_after: str | None
 
 
-class IssueProvider(ABC):
+class IssueTrackingSystem(ABC):
     """
-    Abstract interface for external issue system operations.
+    Abstract interface for external issue tracking system operations.
 
-    All issue providers (Trello, GitHub Projects, Jira, etc.) must implement
+    All issue tracking systems (Trello, GitHub Issues, Jira, etc.) must implement
     this interface to ensure consistent behavior across different systems.
     """
 
