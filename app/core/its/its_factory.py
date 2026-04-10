@@ -9,19 +9,19 @@ different issue systems (Trello, GitHub, Jira, etc.).
 import logging
 
 from app.core.its.issue_tracking_system import IssueTrackingSystem
-from app.core.its.github_provider import GitHubProvider
-from app.core.its.trello_provider import TrelloProvider
+from app.core.its.github_its import GitHubIts
+from app.core.its.trello_its import TrelloIts
 from app.core.localdb.models import AgentSettingsDb
-from app.core.types import IssueSystemType
+from app.core.types import IssueTrackingSystemType
 
 logger = logging.getLogger(__name__)
 
 
-def create_issue_provider(agent_settings: AgentSettingsDb) -> IssueTrackingSystem:
+def create_issue_tracking_system(agent_settings: AgentSettingsDb) -> IssueTrackingSystem:
     """
     Factory function to create the appropriate issue provider.
 
-    The provider type is determined by the 'issue_system_type' key inside
+    The provider type is determined by the 'its_type' key inside
     AgentSettings.
     If not specified, defaults to 'trello' for backward compatibility.
 
@@ -29,7 +29,7 @@ def create_issue_provider(agent_settings: AgentSettingsDb) -> IssueTrackingSyste
         agent_settings: Agent settings containing system configuration details
 
     Returns:
-        An instance of an IssueProvider implementation
+        An instance of an IssueTrackingSystem implementation
 
     Raises:
         ValueError: If an unknown provider type is specified
@@ -42,12 +42,12 @@ def create_issue_provider(agent_settings: AgentSettingsDb) -> IssueTrackingSyste
 
     logger.info("Creating issue provider: %s", its_type)
 
-    if its_type == IssueSystemType.TRELLO:
-        return TrelloProvider(agent_settings)
+    if its_type == IssueTrackingSystemType.TRELLO:
+        return TrelloIts(agent_settings)
 
-    if its_type == IssueSystemType.GITHUB:
-        return GitHubProvider(agent_settings)
+    if its_type == IssueTrackingSystemType.GITHUB:
+        return GitHubIts(agent_settings)
 
     raise ValueError(
-        f"Unknown issue provider: {its_type}. Supported providers: {IssueSystemType.TRELLO}, {IssueSystemType.GITHUB}"
+        f"Unknown issue provider: {its_type}. Supported providers: {IssueTrackingSystemType.TRELLO}, {IssueTrackingSystemType.GITHUB}"
     )

@@ -39,8 +39,8 @@ class GenderType(StrEnum):
             return cls.UNKNOWN
 
 
-class IssueSystemType(StrEnum):
-    """Defines the types of issue systems."""
+class IssueTrackingSystemType(StrEnum):
+    """Defines the types of issue tracking systems."""
 
     UNKNOWN = "UNKNOWN"
     TRELLO = "TRELLO"
@@ -48,8 +48,8 @@ class IssueSystemType(StrEnum):
     JIRA = "JIRA"
 
     @classmethod
-    def from_string(cls, value: str) -> "IssueSystemType":
-        """Convert a string to an IssueSystemType, normalizing whitespace and case."""
+    def from_string(cls, value: str) -> "IssueTrackingSystemType":
+        """Convert a string to an IssueTrackingSystemType, normalizing whitespace and case."""
         normalized = value.strip().upper() if value else ""
         try:
             return cls(normalized)

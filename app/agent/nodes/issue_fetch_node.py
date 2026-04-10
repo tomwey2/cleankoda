@@ -7,7 +7,7 @@ preparing them for processing by the agent.
 
 import logging
 
-from app.core.its.issue_factory import create_issue_provider
+from app.core.its.its_factory import create_issue_tracking_system
 from app.core.its.issue_tracking_system import IssueTrackingSystem, Issue
 from app.agent.services.pull_request import (
     format_pr_review_message,
@@ -32,7 +32,7 @@ logger = logging.getLogger(__name__)
 
 def create_issue_fetch_node(agent_settings: AgentSettingsDb):
     """Creates an issue fetch node for the agent graph."""
-    its = create_issue_provider(agent_settings)
+    its = create_issue_tracking_system(agent_settings)
 
     async def issue_fetch(state: AgentState) -> dict:  # pylint: disable=unused-argument
         """

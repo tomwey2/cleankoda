@@ -32,9 +32,9 @@ from app.core.localdb.models import AgentSettingsDb
 logger = logging.getLogger(__name__)
 
 
-class GitHubProvider(IssueTrackingSystem):
+class GitHubIts(IssueTrackingSystem):
     """
-    GitHub Projects v2 implementation of the IssueProvider interface.
+    GitHub Projects v2 implementation of the IssueTrackingSystem interface.
 
     This class wraps the GitHub GraphQL API client functions and provides
     a consistent interface for issue operations.

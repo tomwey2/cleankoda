@@ -8,7 +8,7 @@ from typing import Optional
 
 from pydantic import BaseModel, Field, field_validator
 
-from app.core.types import IssueSystemType
+from app.core.types import IssueTrackingSystemType
 
 
 class ItsConfigSchema(BaseModel):
@@ -62,7 +62,7 @@ class LLMConfigSchema(BaseModel):
 class SettingsFormSchema(BaseModel):
     """Schema for the complete settings form submission."""
 
-    its_type: str = Field(default=IssueSystemType.TRELLO, description="Its type")
+    its_type: str = Field(default=IssueTrackingSystemType.TRELLO, description="Its type")
     polling_interval_seconds: int = Field(
         default=60, ge=10, le=3600, description="Polling interval in seconds"
     )
@@ -84,7 +84,7 @@ class SettingsFormSchema(BaseModel):
     def default_issue_system(cls, v: Optional[str]) -> str:
         """Default to TRELLO if empty."""
         if not v or v == "":
-            return IssueSystemType.TRELLO
+            return IssueTrackingSystemType.TRELLO
         return v
 
     @field_validator("polling_interval_seconds", mode="before")

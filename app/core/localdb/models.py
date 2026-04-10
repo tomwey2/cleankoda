@@ -8,7 +8,7 @@ from typing import Any, Dict
 
 from app.core.extensions import db
 from app.core.security import EncryptedString
-from app.core.types import IssueSystemType
+from app.core.types import IssueTrackingSystemType
 
 # pylint: disable=too-few-public-methods
 DEFAULT_TRELLO_BASE_URL = "https://api.trello.com/1"
@@ -33,7 +33,7 @@ class AgentSettingsDb(db.Model):
     agent_gender = db.Column(db.String(20), nullable=True)
 
     # Issue tracking system: e.g., "TRELLO", "JIRA", "GITHUB ISSUES"
-    its_type = db.Column(db.String(50), nullable=False, default=IssueSystemType.TRELLO)
+    its_type = db.Column(db.String(50), nullable=False, default=IssueTrackingSystemType.TRELLO)
     its_api_key = db.Column(EncryptedString, nullable=True)
     its_token = db.Column(EncryptedString, nullable=True)
     its_base_url = db.Column(db.String(200), nullable=True)

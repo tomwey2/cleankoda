@@ -14,7 +14,7 @@ from app.core.extensions import db
 from app.core.localdb.models import AgentSettingsDb
 from app.web.mappers import settings_mapper
 from app.web.schemas.settings_schema import SettingsFormSchema
-from app.core.types import IssueSystemType
+from app.core.types import IssueTrackingSystemType
 
 logger = logging.getLogger(__name__)
 
@@ -46,7 +46,7 @@ def save_settings(schema: SettingsFormSchema, settings: AgentSettingsDb) -> Agen
     """
     settings_mapper.schema_to_model(schema, settings)
 
-    is_github_issue_system = schema.its_type == IssueSystemType.GITHUB
+    is_github_issue_system = schema.its_type == IssueTrackingSystemType.GITHUB
     if is_github_issue_system and schema.its_config:
         _fetch_github_project_id(schema, settings)
 
@@ -87,7 +87,7 @@ def _fetch_github_project_id(schema: SettingsFormSchema, setting: AgentSettingsD
         project_number,
     )
 
-    github_issue_system = setting.get_its_type(IssueSystemType.GITHUB)
+    github_issue_system = setting.get_its_type(IssueTrackingSystemType.GITHUB)
     if github_issue_system:
         # Reset the stored board id before attempting to fetch a new one
         github_issue_system.board_id = None

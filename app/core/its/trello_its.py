@@ -28,14 +28,14 @@ from app.core.its.trello_client import (
     move_trello_card_to_named_list,
 )
 from app.core.localdb.models import AgentSettingsDb
-from app.core.types import IssueSystemType
+from app.core.types import IssueTrackingSystemType
 
 logger = logging.getLogger(__name__)
 
 
-class TrelloProvider(IssueTrackingSystem):
+class TrelloIts(IssueTrackingSystem):
     """
-    Trello implementation of the IssueProvider interface.
+    Trello implementation of the IssueTrackingSystem interface.
 
     This class wraps the existing Trello client functions and provides
     a consistent interface for issue operations.
@@ -167,7 +167,7 @@ class TrelloProvider(IssueTrackingSystem):
 
     def get_type(self) -> str:
         """Return the provider identifier."""
-        return IssueSystemType.TRELLO
+        return IssueTrackingSystemType.TRELLO
 
     def _parse_timestamp(self, value: str | None) -> datetime:
         """

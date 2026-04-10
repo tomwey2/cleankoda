@@ -16,7 +16,7 @@ from app.web.schemas.settings_schema import (
     SettingsFormSchema,
     ItsConfigSchema,
 )
-from app.core.types import IssueSystemType, SkillLevelType, GenderType
+from app.core.types import IssueTrackingSystemType, SkillLevelType, GenderType
 
 
 def form_to_schema() -> SettingsFormSchema:
@@ -25,7 +25,7 @@ def form_to_schema() -> SettingsFormSchema:
     Returns:
         SettingsFormSchema with validated form data.
     """
-    its_type = request.form.get("its_type", IssueSystemType.TRELLO)
+    its_type = request.form.get("its_type", IssueTrackingSystemType.TRELLO)
 
     # Always parse all provider configs from form
     its_config = ItsConfigSchema(

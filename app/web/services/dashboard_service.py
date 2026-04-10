@@ -10,7 +10,7 @@ import markdown
 from app.core.localdb.agent_actions_utils import read_db_agent_actions
 from app.core.localdb.agent_issues_utils import read_db_issue, update_db_issue
 from app.core.localdb.models import AgentActionDb, AgentSettingsDb, AgentStatesDb
-from app.core.its.issue_factory import create_issue_provider
+from app.core.its.its_factory import create_issue_tracking_system
 from app.web.services import settings_service
 
 logger = logging.getLogger(__name__)
@@ -69,7 +69,7 @@ async def get_template_context() -> dict:
 def _get_its():
     """Creates and returns a issue provider from the current agent settings."""
     agent_settings: AgentSettingsDb = settings_service.get_or_create_settings()
-    return create_issue_provider(agent_settings)
+    return create_issue_tracking_system(agent_settings)
 
 
 async def add_plan_rejection_comment(issue_id: str, rejection_reason: str) -> None:
