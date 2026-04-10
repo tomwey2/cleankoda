@@ -7,7 +7,7 @@ separating concerns from the route handlers and database operations.
 import logging
 from typing import Any, Dict, Optional, Tuple
 
-from app.core.issueprovider.github_client import get_project_id_sync
+from app.core.its.github_client import get_project_id_sync
 from app.core.config import get_env_settings
 from app.core.constants import LLM_PROVIDER_API_ENV
 from app.core.extensions import db

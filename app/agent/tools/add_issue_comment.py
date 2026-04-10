@@ -5,7 +5,7 @@ import logging
 from langchain.tools import ToolRuntime, tool
 
 from app.core.localdb.models import AgentSettingsDb
-from app.core.issueprovider.issue_factory import create_issue_provider
+from app.core.its.issue_factory import create_issue_provider
 
 logger = logging.getLogger(__name__)
 

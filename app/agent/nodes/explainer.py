@@ -109,7 +109,7 @@ def _read_issue_thoughts_and_tool_actions(
 
     actions_stmt = (
         select(AgentActionDb)
-        .where(AgentActionDb.issue_id == db_issue.id)
+        .where(AgentActionDb.state_id == db_issue.id)
         .order_by(AgentActionDb.id.asc())
     )
     actions = db.session.execute(actions_stmt).scalars().all()

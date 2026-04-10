@@ -7,8 +7,8 @@ preparing them for processing by the agent.
 
 import logging
 
-from app.core.issueprovider.issue_factory import create_issue_provider
-from app.core.issueprovider.issue_tracking_system import IssueTrackingSystem, Issue
+from app.core.its.issue_factory import create_issue_provider
+from app.core.its.issue_tracking_system import IssueTrackingSystem, Issue
 from app.agent.services.pull_request import (
     format_pr_review_message,
     get_latest_open_pr_for_branch,

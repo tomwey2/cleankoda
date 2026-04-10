@@ -10,13 +10,13 @@ import logging
 from datetime import datetime, timezone
 from typing import Optional
 
-from app.core.issueprovider.issue_tracking_system import (
+from app.core.its.issue_tracking_system import (
     IssueTrackingSystem,
     Issue,
     IssueComment,
     IssueStateMove,
 )
-from app.core.issueprovider.trello_client import (
+from app.core.its.trello_client import (
     add_comment_to_trello_card,
     create_trello_card,
     get_all_trello_cards,

@@ -12,7 +12,7 @@ def read_db_agent_actions(agent_issue: AgentStatesDb) -> list[AgentActionDb]:
     """Get the actions from the database for a given issue."""
     stmt = (
         select(AgentActionDb)
-        .where(AgentActionDb.issue_id == agent_issue.id)
+        .where(AgentActionDb.state_id == agent_issue.id)
         .order_by(AgentActionDb.id.asc())
     )
     return db.session.execute(stmt).scalars().all()
@@ -21,7 +21,7 @@ def read_db_agent_actions(agent_issue: AgentStatesDb) -> list[AgentActionDb]:
 def create_db_agent_action(state: dict):
     """insert agent state into sqlalchemy database"""
 
-    tool_calls: list[dict] = state.get("tool_calls", [])
+    tool_calls: list[dict] = state.get("current_tool_calls", [])
     current_node: str | None = state.get("current_node", None)
     agent_issue: AgentStatesDb = state.get("agent_issue", None)
 

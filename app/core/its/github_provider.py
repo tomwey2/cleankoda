@@ -10,13 +10,13 @@ import logging
 from datetime import datetime, timezone
 from typing import Optional
 
-from app.core.issueprovider.issue_tracking_system import (
+from app.core.its.issue_tracking_system import (
     IssueComment,
     IssueTrackingSystem,
     IssueStateMove,
     Issue,
 )
-from app.core.issueprovider.github_client import (
+from app.core.its.github_client import (
     add_comment_to_issue,
     create_draft_issue,
     get_issue_comments,

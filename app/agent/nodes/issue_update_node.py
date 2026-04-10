@@ -11,8 +11,8 @@ from time import sleep
 
 from langchain_core.messages import AIMessage, ToolMessage
 
-from app.core.issueprovider.issue_factory import create_issue_provider
-from app.core.issueprovider.issue_tracking_system import IssueTrackingSystem, Issue
+from app.core.its.issue_factory import create_issue_provider
+from app.core.its.issue_tracking_system import IssueTrackingSystem, Issue
 from app.agent.services.summaries import get_agent_summary_entries
 from app.agent.state import AgentState
 from app.core.localdb.models import AgentSettingsDb

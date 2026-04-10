@@ -8,9 +8,9 @@ different issue systems (Trello, GitHub, Jira, etc.).
 
 import logging
 
-from app.core.issueprovider.issue_tracking_system import IssueTrackingSystem
-from app.core.issueprovider.github_provider import GitHubProvider
-from app.core.issueprovider.trello_provider import TrelloProvider
+from app.core.its.issue_tracking_system import IssueTrackingSystem
+from app.core.its.github_provider import GitHubProvider
+from app.core.its.trello_provider import TrelloProvider
 from app.core.localdb.models import AgentSettingsDb
 from app.core.types import IssueSystemType
 

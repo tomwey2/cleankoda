@@ -5,7 +5,7 @@ from datetime import datetime
 from typing import Optional
 
 
-from app.core.issueprovider.issue_tracking_system import (  # pylint: disable=unused-import
+from app.core.its.issue_tracking_system import (  # pylint: disable=unused-import
     IssueTrackingSystem,
     Issue,
 )

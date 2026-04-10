@@ -10,7 +10,7 @@ import markdown
 from app.core.localdb.agent_actions_utils import read_db_agent_actions
 from app.core.localdb.agent_issues_utils import read_db_issue, update_db_issue
 from app.core.localdb.models import AgentActionDb, AgentSettingsDb, AgentStatesDb
-from app.core.issueprovider.issue_factory import create_issue_provider
+from app.core.its.issue_factory import create_issue_provider
 from app.web.services import settings_service
 
 logger = logging.getLogger(__name__)
@@ -66,7 +66,7 @@ async def get_template_context() -> dict:
     }
 
 
-def _get_issue_provider():
+def _get_its():
     """Creates and returns a issue provider from the current agent settings."""
     agent_settings: AgentSettingsDb = settings_service.get_or_create_settings()
     return create_issue_provider(agent_settings)
@@ -79,17 +79,15 @@ async def add_plan_rejection_comment(issue_id: str, rejection_reason: str) -> No
         Exception: If adding the comment fails.
     """
     logger.info("Adding rejection comment to issue %s", issue_id)
-    issue_provider = _get_issue_provider()
-    await issue_provider.add_comment(issue_id, rejection_reason)
+    its = _get_its()
+    await its.add_comment(issue_id, rejection_reason)
 
 
 async def move_issue_to_in_progress(issue_id: str) -> bool:
     """Moves the issue to the state in progress."""
     logger.info("Moving issue %s to in progress", issue_id)
-    issue_provider = _get_issue_provider()
-    await issue_provider.move_issue_to_named_state(
-        issue_id, state_name=issue_provider.state_in_progress
-    )
+    its = _get_its()
+    await its.move_issue_to_named_state(issue_id, state_name=its.get_state_in_progress())
     return True
 
 
