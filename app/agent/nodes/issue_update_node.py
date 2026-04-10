@@ -15,14 +15,14 @@ from app.core.issueprovider.issue_factory import create_issue_provider
 from app.core.issueprovider.issue_provider import IssueProvider, Issue
 from app.agent.services.summaries import get_agent_summary_entries
 from app.agent.state import AgentState
-from app.core.localdb.models import AgentSettings
+from app.core.localdb.models import AgentSettingsDb
 
 AGENT_DEFAULT_COMMENT = "Issue completed by AI Agent."
 
 logger = logging.getLogger(__name__)
 
 
-def create_issue_update_node(agent_settings: AgentSettings):
+def create_issue_update_node(agent_settings: AgentSettingsDb):
     """
     Factory function that creates the issue update node.
 
@@ -47,24 +47,19 @@ def create_issue_update_node(agent_settings: AgentSettings):
 
         logger.info("Updating issue in issue tracking system %s", issue)
 
-        issue_provider: IssueProvider = create_issue_provider(agent_settings)
+        its: IssueProvider = create_issue_provider(agent_settings)
 
         try:
             final_comments = _build_agent_comments(state)
             for comment in final_comments:
-                await issue_provider.add_comment(issue.id, comment)
+                await its.add_comment(issue.id, comment)
                 sleep(0.1)
         except Exception as e:  # pylint: disable=broad-exception-caught
             logger.error("Failed to add comment to issue: %s", e)
 
         try:
-            issue_moveto_state = issue_provider.get_issue_system().state_in_review
-            if not issue_moveto_state:
-                logger.warning("state_in_review not configured for provider %s", issue_provider)
-                return
-
-            await issue_provider.move_issue_to_named_state(
-                issue_id=issue.id, state_name=issue_moveto_state
+            await its.move_issue_to_named_state(
+                issue_id=issue.id, state_name=its.get_state_in_review()
             )
 
             return {

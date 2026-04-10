@@ -8,27 +8,27 @@ from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 
 from app.core.extensions import db
-from app.core.localdb.models import AgentIssue
+from app.core.localdb.models import AgentStatesDb
 
 logger = logging.getLogger(__name__)
 
 
-def read_db_issue(id: int | None = None, issue_id: str | None = None) -> AgentIssue | None:  # pylint: disable=redefined-builtin
+def read_db_issue(id: int | None = None, issue_id: str | None = None) -> AgentStatesDb | None:  # pylint: disable=redefined-builtin
     """Load the saved issue from the database."""
     logger.debug("Reading issue from database with id: %s, issue_id: %s", id, issue_id)
     issue = None
     if id is not None:
-        issue = db.session.get(AgentIssue, id)
+        issue = db.session.get(AgentStatesDb, id)
 
     # Priority 2: search by issue_id
     elif issue_id is not None:
-        stmt = select(AgentIssue).where(AgentIssue.issue_id == issue_id)
+        stmt = select(AgentStatesDb).where(AgentStatesDb.issue_id == issue_id)
         issue = db.session.execute(stmt).scalar_one_or_none()
 
     # Priority 3 (Fallback): get the first issue
     # We sort by ID, so "the first" is uniquely defined.
     else:
-        stmt = select(AgentIssue).order_by(AgentIssue.id.asc()).limit(1)
+        stmt = select(AgentStatesDb).order_by(AgentStatesDb.id.asc()).limit(1)
         issue = db.session.execute(stmt).scalar_one_or_none()
 
     if issue is None:
@@ -38,11 +38,11 @@ def read_db_issue(id: int | None = None, issue_id: str | None = None) -> AgentIs
     return issue
 
 
-def create_db_issue(issue_id: str, issue_name: str) -> AgentIssue:
+def create_db_issue(issue_id: str, issue_name: str) -> AgentStatesDb:
     """insert issue into sqlalchemy database"""
     logger.debug("Creating issue in database: %s (%s)", issue_id, issue_name)
     try:
-        new_issue = AgentIssue(
+        new_issue = AgentStatesDb(
             issue_id=issue_id,
             issue_name=issue_name,
         )
@@ -61,7 +61,7 @@ def create_db_issue(issue_id: str, issue_name: str) -> AgentIssue:
         return None
 
 
-def update_db_issue(issue_id: str, **kwargs: Any) -> AgentIssue | None:
+def update_db_issue(issue_id: str, **kwargs: Any) -> AgentStatesDb | None:
     """
     Updates any fields of an issue.
     Call e.g.: update_issue(1, issue_name="New", status="Done", priority=5)

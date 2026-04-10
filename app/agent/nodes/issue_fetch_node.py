@@ -20,7 +20,7 @@ from app.core.issue_utils import (
     move_issue_to_state,
 )
 from app.agent.state import AgentState
-from app.core.localdb.models import AgentSettings, AgentIssue
+from app.core.localdb.models import AgentSettingsDb, AgentStatesDb
 from app.core.localdb.agent_issues_utils import (
     create_db_issue,
     read_db_issue,
@@ -30,9 +30,9 @@ from app.core.localdb.agent_issues_utils import (
 logger = logging.getLogger(__name__)
 
 
-def create_issue_fetch_node(agent_settings: AgentSettings):
+def create_issue_fetch_node(agent_settings: AgentSettingsDb):
     """Creates an issue fetch node for the agent graph."""
-    issue_provider = create_issue_provider(agent_settings)
+    its = create_issue_provider(agent_settings)
 
     async def issue_fetch(state: AgentState) -> dict:  # pylint: disable=unused-argument
         """
@@ -42,9 +42,7 @@ def create_issue_fetch_node(agent_settings: AgentSettings):
             logger.info("--- ISSUE FETCH node ---")
 
         try:
-            issue, agent_issue, issue_is_new = await _resolve_issue(
-                state["agent_issue"], issue_provider
-            )
+            issue, agent_issue, issue_is_new = await _resolve_issue(state["agent_issue"], its)
 
             if not issue:
                 logger.info("There is no current issue to work on.")
@@ -54,16 +52,16 @@ def create_issue_fetch_node(agent_settings: AgentSettings):
             pr_review_message = ""
             if issue_is_new:
                 # if the issue is new and has the state "todo" then clean up the workspace
-                issue = await _cleanup_new_issue(issue, issue_provider)
-                issue = await _cleanup_new_issue(issue, issue_provider)
+                issue = await _cleanup_new_issue(issue, its)
+                issue = await _cleanup_new_issue(issue, its)
             else:
                 # otherwise fetch review comments from issue tracking system and pr, in order
                 # to give further information from user
                 comments = await fetch_review_comments(
-                    issue_provider,
+                    its,
                     issue.id,
-                    issue_provider.get_issue_system().state_in_progress,
-                    issue_provider.get_issue_system().state_in_review,
+                    its.get_state_in_progress(),
+                    its.get_state_in_review(),
                 )
                 pr_review_message = _fetch_pr_review_info(issue.id)
 
@@ -82,22 +80,22 @@ def create_issue_fetch_node(agent_settings: AgentSettings):
     return issue_fetch
 
 
-async def _cleanup_new_issue(issue: Issue, issue_provider: IssueProvider) -> Issue:
+async def _cleanup_new_issue(issue: Issue, its: IssueProvider) -> Issue:
     """
     Process the issue and prepare the return value.
     """
     logger.info("Processing issue ID: %s - %s", issue.id, issue.name)
     issue = await move_issue_to_state(
-        issue_provider=issue_provider,
+        its=its,
         issue=issue,
-        issue_state_name=issue_provider.get_issue_system().state_in_progress,
+        issue_state_name=its.get_state_in_progress(),
     )
     return issue
 
 
 async def _resolve_issue(
-    agent_issue: AgentIssue | None, issue_provider: IssueProvider
-) -> tuple[Issue | None, AgentIssue | None, bool]:
+    agent_issue: AgentStatesDb | None, its: IssueProvider
+) -> tuple[Issue | None, AgentStatesDb | None, bool]:
     """
     Get the last issue (with issue_id) or create a new issue.
     See specification in issue-management.md.
@@ -110,17 +108,17 @@ async def _resolve_issue(
         logger.info("Fetching issue from issue tracking system: %s", agent_issue.issue_id)
 
         try:
-            issue = await issue_provider.get_issue(agent_issue.issue_id)
+            issue = await its.get_issue(agent_issue.issue_id)
         except Exception:  # pylint: disable=broad-exception-caught
             issue = None
 
         if issue:
             # check if issue in review or in progress
-            if issue.state_name == issue_provider.get_issue_system().state_in_review:
+            if issue.state_name == its.get_state_in_review():
                 logger.info("Issue is in review. Wait for user action.")
                 return None, agent_issue, False
 
-            if issue.state_name == issue_provider.get_issue_system().state_in_progress:
+            if issue.state_name == its.get_state_in_progress():
                 logger.info("Issue is in progress. Add review comments.")
                 return issue, agent_issue, False
 
@@ -128,9 +126,7 @@ async def _resolve_issue(
 
     # Get a new issue from todo
     logger.info("Fetching new issue from todo.")
-    issue = await fetch_issue_from_state(
-        issue_provider, issue_provider.get_issue_system().state_todo
-    )
+    issue = await fetch_issue_from_state(its, its.get_state_todo())
     # update local db: remove the old issue and insert the new issue
     if issue:
         if agent_issue:

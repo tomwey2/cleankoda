@@ -27,7 +27,8 @@ from app.core.issueprovider.trello_client import (
     move_trello_card_to_list,
     move_trello_card_to_named_list,
 )
-from app.core.localdb.models import AgentSettings, IssueSystem
+from app.core.localdb.models import AgentSettingsDb
+from app.core.types import IssueSystemType
 
 logger = logging.getLogger(__name__)
 
@@ -40,7 +41,7 @@ class TrelloProvider(IssueProvider):
     a consistent interface for issue operations.
     """
 
-    def __init__(self, agent_settings: AgentSettings):
+    def __init__(self, agent_settings: AgentSettingsDb):
         """
         Initialize the Trello provider.
 
@@ -48,7 +49,6 @@ class TrelloProvider(IssueProvider):
             agent_settings: Agent settings containing Trello credentials and settings
         """
         self.agent_settings = agent_settings
-        self._issue_system: IssueSystem | None = agent_settings.get_issue_system("trello")
 
     async def get_states(self) -> list[dict]:
         """Fetch all states (Trello lists) from the board."""
@@ -167,11 +167,7 @@ class TrelloProvider(IssueProvider):
 
     def get_type(self) -> str:
         """Return the provider identifier."""
-        return "trello"
-
-    def get_issue_system(self) -> IssueSystem | None:
-        """Return the configured Trello IssueSystem if available."""
-        return self._issue_system
+        return IssueSystemType.TRELLO
 
     def _parse_timestamp(self, value: str | None) -> datetime:
         """
@@ -197,3 +193,15 @@ class TrelloProvider(IssueProvider):
             parsed = parsed.replace(tzinfo=timezone.utc)
 
         return parsed
+
+    def get_state_todo(self) -> str:
+        return self.agent_settings.its_state_todo
+
+    def get_state_in_progress(self) -> str:
+        return self.agent_settings.its_state_in_progress
+
+    def get_state_in_review(self) -> str:
+        return self.agent_settings.its_state_in_review
+
+    def get_state_done(self) -> str:
+        return self.agent_settings.its_state_done

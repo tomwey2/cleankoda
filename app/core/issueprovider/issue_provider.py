@@ -11,8 +11,6 @@ from dataclasses import dataclass
 from datetime import datetime
 from typing import Optional
 
-from app.core.localdb.models import IssueSystem
-
 
 @dataclass
 class Issue:
@@ -212,8 +210,20 @@ class IssueProvider(ABC):
 
     @abstractmethod
     def get_type(self) -> str:
-        """Return provider identifier (e.g., 'trello', 'github')."""
+        """Return provider identifier (e.g., 'TRELLO', 'GITHUB')."""
 
     @abstractmethod
-    def get_issue_system(self) -> IssueSystem:
-        """Return the issueSystem configuration backing this provider."""
+    def get_state_todo(self) -> str:
+        """Return the state name for todo."""
+
+    @abstractmethod
+    def get_state_in_progress(self) -> str:
+        """Return the state name for in progress."""
+
+    @abstractmethod
+    def get_state_in_review(self) -> str:
+        """Return the state name for in review."""
+
+    @abstractmethod
+    def get_state_done(self) -> str:
+        """Return the state name for done."""

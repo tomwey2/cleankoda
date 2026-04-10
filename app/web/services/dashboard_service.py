@@ -9,7 +9,7 @@ import markdown
 
 from app.core.localdb.agent_actions_utils import read_db_agent_actions
 from app.core.localdb.agent_issues_utils import read_db_issue, update_db_issue
-from app.core.localdb.models import AgentAction, AgentSettings, AgentIssue
+from app.core.localdb.models import AgentActionDb, AgentSettingsDb, AgentStatesDb
 from app.core.issueprovider.issue_factory import create_issue_provider
 from app.web.services import settings_service
 
@@ -36,12 +36,12 @@ async def get_template_context() -> dict:
     Returns:
         Dictionary with all template variables.
     """
-    agent_issue: AgentIssue | None = read_db_issue()
+    agent_issue: AgentStatesDb | None = read_db_issue()
 
     plan_content = ""
     plan_exists = False
     issue_description_html = ""
-    agent_actions: list[AgentAction] = []
+    agent_actions: list[AgentActionDb] = []
 
     if agent_issue:
         agent_actions = read_db_agent_actions(agent_issue)
@@ -68,7 +68,7 @@ async def get_template_context() -> dict:
 
 def _get_issue_provider():
     """Creates and returns a issue provider from the current agent settings."""
-    agent_settings: AgentSettings = settings_service.get_or_create_settings()
+    agent_settings: AgentSettingsDb = settings_service.get_or_create_settings()
     return create_issue_provider(agent_settings)
 
 
@@ -88,7 +88,7 @@ async def move_issue_to_in_progress(issue_id: str) -> bool:
     logger.info("Moving issue %s to in progress", issue_id)
     issue_provider = _get_issue_provider()
     await issue_provider.move_issue_to_named_state(
-        issue_id, state_name=issue_provider.get_issue_system().state_in_progress
+        issue_id, state_name=issue_provider.state_in_progress
     )
     return True
 

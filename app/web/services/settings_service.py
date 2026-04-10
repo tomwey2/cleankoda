@@ -11,26 +11,27 @@ from app.core.issueprovider.github_client import get_project_id_sync
 from app.core.config import get_env_settings
 from app.core.constants import LLM_PROVIDER_API_ENV
 from app.core.extensions import db
-from app.core.localdb.models import AgentSettings
+from app.core.localdb.models import AgentSettingsDb
 from app.web.mappers import settings_mapper
 from app.web.schemas.settings_schema import SettingsFormSchema
+from app.core.types import IssueSystemType
 
 logger = logging.getLogger(__name__)
 
 
-def get_or_create_settings() -> AgentSettings:
+def get_or_create_settings() -> AgentSettingsDb:
     """Retrieve existing settings or create a new one with defaults.
 
     Returns:
         AgentSettings instance (may be transient if newly created).
     """
-    settings = AgentSettings.query.first()
+    settings = AgentSettingsDb.query.first()
     if not settings:
-        settings = AgentSettings(issue_system_type="TRELLO")
+        settings = AgentSettingsDb()
     return settings
 
 
-def save_settings(schema: SettingsFormSchema, settings: AgentSettings) -> AgentSettings:
+def save_settings(schema: SettingsFormSchema, settings: AgentSettingsDb) -> AgentSettingsDb:
     """Save settings from validated schema to database.
 
     Args:
@@ -45,8 +46,8 @@ def save_settings(schema: SettingsFormSchema, settings: AgentSettings) -> AgentS
     """
     settings_mapper.schema_to_model(schema, settings)
 
-    is_github_issue_system = schema.issue_system_type == "GITHUB"
-    if is_github_issue_system and schema.github_config:
+    is_github_issue_system = schema.its_type == IssueSystemType.GITHUB
+    if is_github_issue_system and schema.its_config:
         _fetch_github_project_id(schema, settings)
 
     if not settings.id:
@@ -57,7 +58,7 @@ def save_settings(schema: SettingsFormSchema, settings: AgentSettings) -> AgentS
     return settings
 
 
-def _fetch_github_project_id(schema: SettingsFormSchema, setting: AgentSettings) -> None:
+def _fetch_github_project_id(schema: SettingsFormSchema, setting: AgentSettingsDb) -> None:
     """Fetch and store GitHub project ID if owner and number are provided.
 
     Args:
@@ -86,7 +87,7 @@ def _fetch_github_project_id(schema: SettingsFormSchema, setting: AgentSettings)
         project_number,
     )
 
-    github_issue_system = setting.get_issue_system("github")
+    github_issue_system = setting.get_its_type(IssueSystemType.GITHUB)
     if github_issue_system:
         # Reset the stored board id before attempting to fetch a new one
         github_issue_system.board_id = None
@@ -106,7 +107,7 @@ def _fetch_github_project_id(schema: SettingsFormSchema, setting: AgentSettings)
         ) from e
 
 
-def get_form_data(setting: AgentSettings) -> Dict[str, Any]:
+def get_form_data(setting: AgentSettingsDb) -> Dict[str, Any]:
     """Get form data dictionary for template rendering.
 
     Args:
@@ -118,7 +119,7 @@ def get_form_data(setting: AgentSettings) -> Dict[str, Any]:
     return settings_mapper.model_to_form_data(setting)
 
 
-def get_template_context(settings: AgentSettings) -> Dict[str, Any]:
+def get_template_context(settings: AgentSettingsDb) -> Dict[str, Any]:
     """Build complete template context for settings page.
 
     Args:
@@ -133,8 +134,8 @@ def get_template_context(settings: AgentSettings) -> Dict[str, Any]:
     missing_env = _check_missing_provider_env(selected_provider)
     show_ollama_warning = selected_provider == "ollama" and not get_env_settings().ollama_api_key
 
-    if not settings.github_repo_url:
-        settings.github_repo_url = get_env_settings().github_repo_url
+    if not settings.repo_url:
+        settings.repo_url = get_env_settings().github_repo_url
 
     return {
         "settings": settings,
@@ -167,7 +168,7 @@ def _check_missing_provider_env(provider: str) -> Optional[str]:
     return env_name
 
 
-def validate_and_save(setting: AgentSettings) -> Tuple[bool, Optional[str]]:
+def validate_and_save(setting: AgentSettingsDb) -> Tuple[bool, Optional[str]]:
     """Validate form data and save settings.
 
     Args:

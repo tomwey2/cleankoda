@@ -11,12 +11,13 @@ import logging
 from app.core.issueprovider.issue_provider import IssueProvider
 from app.core.issueprovider.github_provider import GitHubProvider
 from app.core.issueprovider.trello_provider import TrelloProvider
-from app.core.localdb.models import AgentSettings
+from app.core.localdb.models import AgentSettingsDb
+from app.core.types import IssueSystemType
 
 logger = logging.getLogger(__name__)
 
 
-def create_issue_provider(agent_settings: AgentSettings) -> IssueProvider:
+def create_issue_provider(agent_settings: AgentSettingsDb) -> IssueProvider:
     """
     Factory function to create the appropriate issue provider.
 
@@ -34,17 +35,19 @@ def create_issue_provider(agent_settings: AgentSettings) -> IssueProvider:
         ValueError: If an unknown provider type is specified
 
     Example:
-        >>> agent_settings = AgentSettings(issue_system_type="TRELLO", ...)
+        >>> agent_settings = AgentSettingsDb(its_type="TRELLO", ...)
         >>> provider = create_issue_provider(agent_settings)
     """
-    provider_type = agent_settings.issue_system_type.lower()
+    its_type = agent_settings.its_type
 
-    logger.info("Creating issue provider: %s", provider_type)
+    logger.info("Creating issue provider: %s", its_type)
 
-    if provider_type == "trello":
+    if its_type == IssueSystemType.TRELLO:
         return TrelloProvider(agent_settings)
 
-    if provider_type == "github":
+    if its_type == IssueSystemType.GITHUB:
         return GitHubProvider(agent_settings)
 
-    raise ValueError(f"Unknown issue provider: {provider_type}. Supported providers: trello, github")
+    raise ValueError(
+        f"Unknown issue provider: {its_type}. Supported providers: {IssueSystemType.TRELLO}, {IssueSystemType.GITHUB}"
+    )

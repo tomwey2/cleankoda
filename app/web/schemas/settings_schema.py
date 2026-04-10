@@ -8,71 +8,24 @@ from typing import Optional
 
 from pydantic import BaseModel, Field, field_validator
 
+from app.core.types import IssueSystemType
 
-class TrelloConfigSchema(BaseModel):
+
+class ItsConfigSchema(BaseModel):
     """Schema for Trello configuration form data."""
 
-    api_key: Optional[str] = Field(default=None, description="Trello API key")
-    api_token: Optional[str] = Field(default=None, description="Trello API token")
-    base_url: str = Field(default="https://api.trello.com/1", description="Trello API base URL")
-    board_id: Optional[str] = Field(default=None, description="Trello board ID")
-    backlog_list: Optional[str] = Field(default=None, description="List ID for backlog issues")
-    todo_list: Optional[str] = Field(default=None, description="List ID for todo issues")
-    in_progress_list: Optional[str] = Field(
-        default=None, description="List ID for in-progress issues"
-    )
-    in_review_list: Optional[str] = Field(default=None, description="List ID for in-review issues")
+    its_api_key: Optional[str] = Field(default=None, description="API key")
+    its_api_token: Optional[str] = Field(default=None, description="API token")
+    its_base_url: Optional[str] = Field(default=None, description="Base URL")
+    its_container_id: Optional[str] = Field(default=None, description="Container ID")
+    its_parent_id: Optional[str] = Field(default=None, description="Parent ID")
+    its_state_backlog: Optional[str] = Field(default=None, description="Backlog state")
+    its_state_todo: Optional[str] = Field(default=None, description="Todo state")
+    its_state_in_progress: Optional[str] = Field(default=None, description="In-progress state")
+    its_state_in_review: Optional[str] = Field(default=None, description="In-review state")
+    its_state_done: Optional[str] = Field(default=None, description="Done state")
 
-    @field_validator("api_key", "api_token", "board_id", mode="before")
-    @classmethod
-    def empty_str_to_none(cls, v: Optional[str]) -> Optional[str]:
-        """Convert empty strings to None."""
-        if v == "":
-            return None
-        return v
-
-
-class GitHubConfigSchema(BaseModel):
-    """Schema for GitHub Projects configuration form data."""
-
-    base_url: str = Field(default="https://api.github.com", description="GitHub API base URL")
-    api_token: Optional[str] = Field(
-        default=None,
-        description="GitHub PAT for board operations (falls back to GITHUB_TOKEN env)",
-    )
-    project_owner: Optional[str] = Field(
-        default=None, description="GitHub project owner (user or organization)"
-    )
-    project_number: Optional[str] = Field(default=None, description="GitHub project number")
-    board_id: Optional[str] = Field(
-        default=None, description="GitHub project node ID (fetched automatically)"
-    )
-    backlog_list: Optional[str] = Field(default=None, description="Column name for backlog issues")
-    todo_list: Optional[str] = Field(default=None, description="Column name for todo issues")
-    in_progress_list: Optional[str] = Field(
-        default=None, description="Column name for in-progress issues"
-    )
-    in_review_list: Optional[str] = Field(
-        default=None, description="Column name for in-review issues"
-    )
-
-    @field_validator("project_owner", "board_id", "api_token", mode="before")
-    @classmethod
-    def empty_str_to_none(cls, v: Optional[str]) -> Optional[str]:
-        """Convert empty strings to None."""
-        if v == "":
-            return None
-        return v
-
-
-class JiraConfigSchema(BaseModel):
-    """Schema for Jira configuration form data."""
-
-    username: Optional[str] = Field(default=None, description="Jira username")
-    api_token: Optional[str] = Field(default=None, description="Jira API token")
-    jql_query: Optional[str] = Field(default=None, description="JQL query for issues")
-
-    @field_validator("username", "api_token", "jql_query", mode="before")
+    @field_validator("its_api_key", "its_api_token", "its_container_id", mode="before")
     @classmethod
     def empty_str_to_none(cls, v: Optional[str]) -> Optional[str]:
         """Convert empty strings to None."""
@@ -84,12 +37,12 @@ class JiraConfigSchema(BaseModel):
 class LLMConfigSchema(BaseModel):
     """Schema for LLM configuration form data."""
 
-    provider: str = Field(default="mistral", description="LLM provider name")
-    model_large: Optional[str] = Field(default=None, description="Large model name")
-    model_small: Optional[str] = Field(default=None, description="Small model name")
-    temperature: Optional[str] = Field(default=None, description="LLM temperature")
+    llm_provider: str = Field(default="mistral", description="LLM provider name")
+    llm_model_large: Optional[str] = Field(default=None, description="Large model name")
+    llm_model_small: Optional[str] = Field(default=None, description="Small model name")
+    llm_temperature: Optional[str] = Field(default=None, description="LLM temperature")
 
-    @field_validator("provider", mode="before")
+    @field_validator("llm_provider", mode="before")
     @classmethod
     def default_provider(cls, v: Optional[str]) -> str:
         """Default to mistral if empty."""
@@ -97,7 +50,7 @@ class LLMConfigSchema(BaseModel):
             return "mistral"
         return v
 
-    @field_validator("model_large", "model_small", "temperature", mode="before")
+    @field_validator("llm_model_large", "llm_model_small", "llm_temperature", mode="before")
     @classmethod
     def empty_str_to_none(cls, v: Optional[str]) -> Optional[str]:
         """Convert empty strings to None."""
@@ -109,32 +62,29 @@ class LLMConfigSchema(BaseModel):
 class SettingsFormSchema(BaseModel):
     """Schema for the complete settings form submission."""
 
-    issue_system_type: str = Field(default="TRELLO", description="Issue system type")
-    agent_skill_level: Optional[str] = Field(default=None, description="Agent skill level")
+    its_type: str = Field(default=IssueSystemType.TRELLO, description="Its type")
     polling_interval_seconds: int = Field(
         default=60, ge=10, le=3600, description="Polling interval in seconds"
     )
-    repo_type: str = Field(default="GITHUB", description="Repository type")
-    github_repo_url: Optional[str] = Field(default=None, description="GitHub repository URL")
     is_active: bool = Field(default=False, description="Whether agent is active")
+    agent_skill_level: Optional[str] = Field(default=None, description="Agent skill level")
+    agent_gender: Optional[str] = Field(default=None, description="Agent gender")
+    repo_type: str = Field(default="GITHUB", description="Repository type")
+    repo_url: Optional[str] = Field(default=None, description="GitHub repository URL")
 
-    trello_config: Optional[TrelloConfigSchema] = Field(
-        default=None, description="Trello configuration"
+    its_config: ItsConfigSchema = Field(
+        default_factory=ItsConfigSchema, description="Issue tracking system configuration"
     )
-    github_config: Optional[GitHubConfigSchema] = Field(
-        default=None, description="GitHub Projects configuration"
-    )
-    jira_config: Optional[JiraConfigSchema] = Field(default=None, description="Jira configuration")
     llm_config: LLMConfigSchema = Field(
         default_factory=LLMConfigSchema, description="LLM configuration"
     )
 
-    @field_validator("issue_system_type", mode="before")
+    @field_validator("its_type", mode="before")
     @classmethod
     def default_issue_system(cls, v: Optional[str]) -> str:
         """Default to TRELLO if empty."""
         if not v or v == "":
-            return "TRELLO"
+            return IssueSystemType.TRELLO
         return v
 
     @field_validator("polling_interval_seconds", mode="before")

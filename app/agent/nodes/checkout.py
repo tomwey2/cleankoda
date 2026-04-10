@@ -11,7 +11,7 @@ from app.core.issueprovider.issue_provider import Issue
 from app.agent.services.git_workspace import checkout_branch, get_current_branch
 from app.agent.state import AgentState, IssueType
 from app.agent.utils import get_workspace
-from app.core.localdb.models import AgentSettings
+from app.core.localdb.models import AgentSettingsDb
 from app.core.localdb.agent_issues_utils import read_db_issue, update_db_issue
 
 logger = logging.getLogger(__name__)
@@ -22,7 +22,7 @@ ROLE_PREFIXES = {
 }
 
 
-def create_checkout_node(agent_settings: AgentSettings):
+def create_checkout_node(agent_settings: AgentSettingsDb):
     """Create a checkout node"""
 
     async def checkout_node(state: AgentState) -> Dict[str, Any]:  # pylint: disable=unused-argument
@@ -51,7 +51,7 @@ def create_checkout_node(agent_settings: AgentSettings):
 
 
 async def checkout_task_branch(
-    issue_id: str, issue_name: str, issue_type: IssueType, agent_settings: AgentSettings
+    issue_id: str, issue_name: str, issue_type: IssueType, agent_settings: AgentSettingsDb
 ):
     """
     Checks out the existing git branch for a task from the database.
@@ -76,7 +76,7 @@ async def checkout_task_branch(
             issue_name,
         )
 
-        github_repo_url = agent_settings.github_repo_url
+        github_repo_url = agent_settings.repo_url
         if github_repo_url:
             checkout_branch(github_repo_url, git_branch, get_workspace())
         else:
@@ -149,7 +149,7 @@ def _resolve_unique_repo_branch_name(base_name: str, existing_names: set[str]) -
 
 
 async def checkout_branch_for_task(
-    issue_id: str, issue_name: str, issue_type: IssueType, agent_settings: AgentSettings
+    issue_id: str, issue_name: str, issue_type: IssueType, agent_settings: AgentSettingsDb
 ):
     """
     Checks out a new git branch for a task.
@@ -167,7 +167,7 @@ async def checkout_branch_for_task(
     existing_branches = _collect_repo_branch_names(repo)
     repo_branch_name = _resolve_unique_repo_branch_name(base_repo_branch_name, existing_branches)
 
-    github_repo_url = agent_settings.github_repo_url
+    github_repo_url = agent_settings.repo_url
     if not github_repo_url:
         logger.warning(
             "github_repo_url missing in agent settings; cannot checkout branch for task %s",

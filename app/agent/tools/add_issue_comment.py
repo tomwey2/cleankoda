@@ -4,7 +4,7 @@ import logging
 
 from langchain.tools import ToolRuntime, tool
 
-from app.core.localdb.models import AgentSettings
+from app.core.localdb.models import AgentSettingsDb
 from app.core.issueprovider.issue_factory import create_issue_provider
 
 logger = logging.getLogger(__name__)
@@ -13,7 +13,7 @@ logger = logging.getLogger(__name__)
 @tool
 async def add_issue_comment(
     comment: str,
-    runtime: ToolRuntime[AgentSettings, dict],
+    runtime: ToolRuntime[AgentSettingsDb, dict],
 ) -> str:
     """
     Adds a comment to the current issue in the issue tracking system.

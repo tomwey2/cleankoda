@@ -15,9 +15,9 @@ from app.core.localdb.agent_issues_utils import read_db_issue
 logger = logging.getLogger(__name__)
 
 
-async def fetch_issue_from_state(issue_provider: IssueProvider, state_name: str) -> Issue | None:
+async def fetch_issue_from_state(its: IssueProvider, state_name: str) -> Issue | None:
     """Fetch an issue from with a state."""
-    issue_states = await issue_provider.get_states()
+    issue_states = await its.get_states()
     target_state = next(
         (data for data in issue_states if data["name"] == state_name),
         None,
@@ -30,7 +30,7 @@ async def fetch_issue_from_state(issue_provider: IssueProvider, state_name: str)
     state_id = target_state["id"]
     logger.info("Found %s state id: %s", state_name, state_id)
 
-    issues = await issue_provider.get_issues_from_state(state_id)
+    issues = await its.get_issues_from_state(state_id)
     if not issues:
         logger.info("No open issues found in %s.", state_name)
         return None
@@ -39,7 +39,7 @@ async def fetch_issue_from_state(issue_provider: IssueProvider, state_name: str)
 
 
 async def move_issue_to_state(
-    issue_provider: IssueProvider,
+    its: IssueProvider,
     issue: Issue,
     issue_state_name: str,
 ) -> Issue:
@@ -57,8 +57,8 @@ async def move_issue_to_state(
         )
 
         try:
-            await issue_provider.move_issue_to_named_state(issue.id, issue_state_name)
-            modified_issue = await issue_provider.get_issue(issue.id)
+            await its.move_issue_to_named_state(issue.id, issue_state_name)
+            modified_issue = await its.get_issue(issue.id)
         except Exception as e:  # pylint: disable=broad-exception-caught
             logger.error("Failed to move issue to in-progress state: %s", e)
 
@@ -70,7 +70,7 @@ async def move_issue_to_state(
 
 
 async def fetch_review_comments(
-    issue_provider: IssueProvider,
+    its: IssueProvider,
     issue_id: str,
     in_progress_state_name: str,
     in_review_state_name: str,
@@ -91,9 +91,9 @@ async def fetch_review_comments(
     comments = []
     # if issue was in review and returned to in-progress,
     # fetch comments between review and move to in-progress
-    all_comments = await issue_provider.get_comments(issue_id)
+    all_comments = await its.get_comments(issue_id)
 
-    if issue_provider.get_type() == "github":
+    if its.get_type() == "github":
         # For GitHub, only return last comment if a PR exists for the branch
         db_issue = read_db_issue(issue_id=issue_id)
         repo_branch_name = db_issue.repo_branch_name
@@ -102,7 +102,7 @@ async def fetch_review_comments(
         return []
 
     latest_move = await get_latest_move_to_in_progress(
-        issue_provider, issue_id, in_review_state_name, in_progress_state_name
+        its, issue_id, in_review_state_name, in_progress_state_name
     )
     logger.info("Latest move: %s", latest_move)
     if latest_move:
@@ -126,7 +126,7 @@ async def fetch_review_comments(
 
 
 async def get_latest_move_to_in_progress(
-    issue_provider: IssueProvider,
+    its: IssueProvider,
     issue_id: str,
     review_state_name: str,
     in_progress_state_name: str,
@@ -138,7 +138,7 @@ async def get_latest_move_to_in_progress(
         was from review to in-progress, None otherwise.
     """
     try:
-        state_moves = await issue_provider.get_state_moves(issue_id)
+        state_moves = await its.get_state_moves(issue_id)
     except Exception as e:  # pylint: disable=broad-exception-caught
         logger.warning(
             "Failed to fetch state moves for issue %s: %s.",

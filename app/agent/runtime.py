@@ -15,7 +15,7 @@ from app.agent.state import AgentStack
 from app.agent.system_mappings import MCP_SYSTEM_DEFINITIONS
 from app.agent.utils import get_workbench, get_workspace
 from app.core.config import get_env_settings
-from app.core.localdb.models import AgentSettings
+from app.core.localdb.models import AgentSettingsDb
 
 logger = logging.getLogger(__name__)
 
@@ -24,7 +24,7 @@ logger = logging.getLogger(__name__)
 class RuntimeSetting:
     """Aggregated runtime inputs required to execute one agent cycle."""
 
-    agent_settings: AgentSettings
+    agent_settings: AgentSettingsDb
     agent_stack: AgentStack
     mcp_system_def: Dict[str, Any]
     llm_large: BaseChatModel
@@ -33,7 +33,7 @@ class RuntimeSetting:
 
 def prepare_runtime() -> Optional[RuntimeSetting]:
     """Build the runtime context needed by the agent worker."""
-    settings: AgentSettings | None = _get_agent_settings()
+    settings: AgentSettingsDb | None = _get_agent_settings()
     if not settings:
         return None
 
@@ -41,20 +41,20 @@ def prepare_runtime() -> Optional[RuntimeSetting]:
         "Agent settings:\n%s",
         json.dumps(settings.as_dict(), indent=2, default=str),
     )
-    if not settings.github_repo_url:
+    if not settings.repo_url:
         logger.error("GitHub repository URL not provided.")
         return None
 
     logger.info("Workspace: %s", get_workspace())
-    ensure_repository_exists(settings.github_repo_url, get_workspace())
+    ensure_repository_exists(settings.repo_url, get_workspace())
 
-    if settings.issue_system_type not in MCP_SYSTEM_DEFINITIONS:
-        logger.error("Issue tracking system '%s' not defined.", settings.issue_system_type)
+    if settings.its_type not in MCP_SYSTEM_DEFINITIONS:
+        logger.error("Issue tracking system '%s' not defined.", settings.its_type)
         return None
 
     env_settings = get_env_settings()
     agent_stack = _resolve_agent_stack(env_settings.agent_stack)
-    mcp_system_def = MCP_SYSTEM_DEFINITIONS[settings.issue_system_type]
+    mcp_system_def = MCP_SYSTEM_DEFINITIONS[settings.its_type]
 
     return RuntimeSetting(
         agent_settings=settings,
@@ -65,9 +65,9 @@ def prepare_runtime() -> Optional[RuntimeSetting]:
     )
 
 
-def _get_agent_settings() -> Optional[AgentSettings]:
+def _get_agent_settings() -> Optional[AgentSettingsDb]:
     """Load the active agent settings from the database."""
-    settings = AgentSettings.query.first()
+    settings = AgentSettingsDb.query.first()
     return settings
 
 

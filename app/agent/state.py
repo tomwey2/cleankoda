@@ -16,7 +16,7 @@ from langchain_core.messages import BaseMessage
 from langgraph.graph.message import add_messages
 
 from app.core.issueprovider.issue_provider import Issue, IssueComment
-from app.core.localdb.models import AgentIssue
+from app.core.localdb.models import AgentStatesDb
 
 
 @dataclass
@@ -102,7 +102,7 @@ class AgentState(TypedDict):
     issue: Issue | None
     issue_comments: list[IssueComment]
     # information from the table agent_issues of the local database
-    agent_issue: AgentIssue | None
+    agent_issue: AgentStatesDb | None
     # agent information from settings
     agent_stack: AgentStack
     tech_stack: dict | None

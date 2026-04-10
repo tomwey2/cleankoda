@@ -15,7 +15,7 @@ from sqlalchemy import select
 from app.agent.services.prompts import load_prompt
 from app.agent.state import AgentState
 from app.core.extensions import db
-from app.core.localdb.models import AgentAction, AgentIssue
+from app.core.localdb.models import AgentActionDb, AgentStatesDb
 
 logger = logging.getLogger(__name__)
 
@@ -94,23 +94,23 @@ def _resolve_issue_id(state: AgentState) -> str | None:
 
 def _read_issue_thoughts_and_tool_actions(
     issue_id: str,
-) -> tuple[list[AgentAction], list[AgentAction]]:
+) -> tuple[list[AgentActionDb], list[AgentActionDb]]:
     """
     Query all thought and tool-action entries for a issue_id.
 
     In this codebase, thoughts are represented by AgentAction rows where
     tool_name == "thinking". All other rows are treated as tool actions.
     """
-    issue_stmt = select(AgentIssue).where(AgentIssue.issue_id == issue_id)
+    issue_stmt = select(AgentStatesDb).where(AgentStatesDb.issue_id == issue_id)
     db_issue = db.session.execute(issue_stmt).scalar_one_or_none()
     if not db_issue:
         logger.warning("No AgentIssue found for issue_id=%s", issue_id)
         return [], []
 
     actions_stmt = (
-        select(AgentAction)
-        .where(AgentAction.issue_id == db_issue.id)
-        .order_by(AgentAction.id.asc())
+        select(AgentActionDb)
+        .where(AgentActionDb.issue_id == db_issue.id)
+        .order_by(AgentActionDb.id.asc())
     )
     actions = db.session.execute(actions_stmt).scalars().all()
 
@@ -127,7 +127,7 @@ def _resolve_plan(state: AgentState, issue_id: str) -> str:
     if agent_issue and agent_issue.plan_content:
         return agent_issue.plan_content
 
-    issue_stmt = select(AgentIssue).where(AgentIssue.issue_id == issue_id)
+    issue_stmt = select(AgentStatesDb).where(AgentStatesDb.issue_id == issue_id)
     db_issue = db.session.execute(issue_stmt).scalar_one_or_none()
     if db_issue and db_issue.plan_content:
         return db_issue.plan_content
@@ -135,7 +135,7 @@ def _resolve_plan(state: AgentState, issue_id: str) -> str:
     return "No implementation plan was provided."
 
 
-def _format_thoughts_for_prompt(thoughts: list[AgentAction]) -> str:
+def _format_thoughts_for_prompt(thoughts: list[AgentActionDb]) -> str:
     """
     Build compact chronological thought history.
     """
@@ -148,7 +148,7 @@ def _format_thoughts_for_prompt(thoughts: list[AgentAction]) -> str:
     )
 
 
-def _format_tools_for_prompt(tool_actions: list[AgentAction]) -> str:
+def _format_tools_for_prompt(tool_actions: list[AgentActionDb]) -> str:
     """
     Build compact chronological tool usage history.
     """
@@ -163,7 +163,7 @@ def _format_tools_for_prompt(tool_actions: list[AgentAction]) -> str:
 
 def _format_action_list_for_prompt(
     title: str,
-    actions: list[AgentAction],
+    actions: list[AgentActionDb],
     kind: str,
     max_events: int,
     max_chars: int,
@@ -210,7 +210,7 @@ def _enforce_char_budget(lines: list[str], max_chars: int) -> tuple[list[str], i
     return trimmed, removed
 
 
-def _format_event_line(kind: str, action: AgentAction) -> str:
+def _format_event_line(kind: str, action: AgentActionDb) -> str:
     timestamp = _format_timestamp(action.created_at)
     node = (action.current_node or "?").strip()
     tool_name = (action.tool_name or "unknown").strip()
@@ -232,7 +232,7 @@ def _format_timestamp(value: datetime | None) -> str:
     return value.isoformat(timespec="seconds")
 
 
-def _timestamp_key(action: AgentAction) -> datetime:
+def _timestamp_key(action: AgentActionDb) -> datetime:
     return action.created_at or datetime.min
 
 

@@ -45,9 +45,9 @@ async def run_agent_cycle(runtime: RuntimeSetting) -> None:
                         runtime.mcp_system_def["command"][0],
                         runtime.mcp_system_def["command"][1:],
                         env={
-                            "TRELLO_API_KEY": active_issue_system.api_key,
-                            "TRELLO_TOKEN": active_issue_system.token,
-                            "TRELLO_BASE_URL": active_issue_system.base_url,
+                            "TRELLO_API_KEY": active_issue_system.its_api_key,
+                            "TRELLO_TOKEN": active_issue_system.its_token,
+                            "TRELLO_BASE_URL": active_issue_system.its_base_url,
                         },
                     )
                     await stack.enter_async_context(issue_mcp)
@@ -107,10 +107,6 @@ async def run_agent_cycle(runtime: RuntimeSetting) -> None:
                     if current_state["current_node"] == "issue_update"
                     else "",
                 )
-                create_db_agent_action(
-                    agent_issue=current_state["agent_issue"],
-                    current_node=current_state["current_node"],
-                    tool_calls=current_state["current_tool_calls"],
-                )
+                create_db_agent_action(current_state)
 
         logger.info("Finish graph cycle.")
