@@ -2,7 +2,7 @@
 
 import logging
 
-from app.core.localdb.agent_issues_utils import read_db_issue, update_db_issue
+from app.core.localdb.agent_issues_utils import read_db_agent_state, update_db_agent_state
 
 logger = logging.getLogger(__name__)
 
@@ -16,10 +16,10 @@ def save_plan_to_db(content: str) -> bool:
     Returns:
         True if the implementation plan was saved successfully, False otherwise.
     """
-    issue = read_db_issue()
-    if not issue:
+    agent_state = read_db_agent_state()
+    if not agent_state:
         return False
-    update_db_issue(issue_id=issue.issue_id, plan_content=content)
+    update_db_agent_state(issue_id=agent_state.issue_id, plan_content=content)
     return True
 
 
@@ -29,10 +29,10 @@ def exist_plan() -> bool:
     Returns:
         True if implementation plan exists, False otherwise.
     """
-    issue = read_db_issue()
-    if not issue:
+    agent_state = read_db_agent_state()
+    if not agent_state:
         return False
-    return bool(issue.plan_content)
+    return bool(agent_state.plan_content)
 
 
 def get_plan() -> str:
@@ -41,7 +41,7 @@ def get_plan() -> str:
     Returns:
         Content of implementation plan or a default message if not found.
     """
-    issue = read_db_issue()
-    if not issue or not issue.plan_content:
+    agent_state = read_db_agent_state()
+    if not agent_state or not agent_state.plan_content:
         return "No implementation plan found in database."
-    return issue.plan_content
+    return agent_state.plan_content

@@ -17,7 +17,7 @@ from app.agent.services.pull_request import create_or_update_pr
 from app.agent.state import AgentState, AgentSummary, IssueType
 from app.agent.utils import get_workspace
 from app.core.config import get_env_settings
-from app.core.localdb.agent_issues_utils import update_db_issue
+from app.core.localdb.agent_issues_utils import update_db_agent_state
 
 logger = logging.getLogger(__name__)
 
@@ -121,7 +121,7 @@ def _create_or_update_pr(state: AgentState):
     if issue_id and repo_pr_url:
         repo_pr_number = _extract_repo_pr_number_from_url(repo_pr_url)
         if repo_pr_number:
-            update_db_issue(
+            update_db_agent_state(
                 issue_id=issue_id, repo_pr_number=repo_pr_number, repo_pr_url=repo_pr_url
             )
             logger.info("Stored PR #%d for issue %s", repo_pr_number, issue_id)

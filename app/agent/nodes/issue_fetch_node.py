@@ -23,7 +23,6 @@ from app.agent.state import AgentState
 from app.core.localdb.models import AgentSettingsDb, AgentStatesDb
 from app.core.localdb.agent_issues_utils import (
     create_db_issue,
-    read_db_issue,
     delete_db_issue,
 )
 
@@ -53,7 +52,6 @@ def create_issue_fetch_node(agent_settings: AgentSettingsDb):
             if issue_is_new:
                 # if the issue is new and has the state "todo" then clean up the workspace
                 issue = await _cleanup_new_issue(issue, its)
-                issue = await _cleanup_new_issue(issue, its)
             else:
                 # otherwise fetch review comments from issue tracking system and pr, in order
                 # to give further information from user
@@ -62,8 +60,9 @@ def create_issue_fetch_node(agent_settings: AgentSettingsDb):
                     issue.id,
                     its.get_state_in_progress(),
                     its.get_state_in_review(),
+                    agent_issue.repo_branch_name,
                 )
-                pr_review_message = _fetch_pr_review_info(issue.id)
+                pr_review_message = _fetch_pr_review_info(state, issue.id)
 
             return {
                 "issue": issue,
@@ -135,7 +134,7 @@ async def _resolve_issue(
     return issue, agent_issue, True
 
 
-def _fetch_pr_review_info(issue_id: str) -> str:
+def _fetch_pr_review_info(state: AgentState, issue_id: str) -> str:
     """
     Fetch PR review info if a PR exists for the issue.
 
@@ -147,12 +146,11 @@ def _fetch_pr_review_info(issue_id: str) -> str:
         - is_approved: True if PR is approved or no PR exists
         - formatted_review_message: Formatted message for SystemMessage, empty if approved
     """
-    db_issue = read_db_issue(issue_id=issue_id)
-    repo_pr_number = db_issue.repo_pr_number
-    repo_pr_url = db_issue.repo_pr_url
+    repo_pr_number = state["agent_issue"].repo_pr_number
+    repo_pr_url = state["agent_issue"].repo_pr_url
 
     if not repo_pr_number:
-        repo_branch_name = db_issue.repo_branch_name
+        repo_branch_name = state["agent_issue"].repo_branch_name
         if repo_branch_name:
             pr = get_latest_open_pr_for_branch(repo_branch_name)
             if pr:

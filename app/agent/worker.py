@@ -19,7 +19,7 @@ from app.agent.runtime import RuntimeSetting
 from app.agent.services.graph_assets import save_graph_as_mermaid, save_graph_as_png
 from app.agent.utils import get_workspace, save_state_to_instance
 from app.core.config import get_env_settings
-from app.core.localdb.agent_issues_utils import update_db_issue, read_db_issue
+from app.core.localdb.agent_issues_utils import update_db_agent_state, read_db_agent_state
 from app.core.localdb.agent_actions_utils import create_db_agent_action
 
 logger = logging.getLogger(__name__)
@@ -68,7 +68,7 @@ async def run_agent_cycle(runtime: RuntimeSetting) -> None:
             "next_step": "",
             "issue": None,
             "issue_comments": [],
-            "agent_issue": read_db_issue(),
+            "agent_issue": read_db_agent_state(),
             "agent_stack": runtime.agent_stack,
             "agent_skill_level": runtime.agent_settings.agent_skill_level,
             "current_node": None,
@@ -90,7 +90,7 @@ async def run_agent_cycle(runtime: RuntimeSetting) -> None:
         ):
             if current_state["issue"] and current_state["agent_issue"]:
                 save_state_to_instance(current_state)
-                update_db_issue(
+                update_db_agent_state(
                     issue_id=current_state["issue"].id,
                     issue_name=current_state["issue"].name,
                     issue_description=current_state["issue"].description,

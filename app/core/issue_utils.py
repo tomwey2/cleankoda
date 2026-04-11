@@ -10,7 +10,6 @@ from app.core.its.issue_tracking_system import (  # pylint: disable=unused-impor
     Issue,
 )
 from app.agent.services.pull_request import check_pr_exists_for_branch
-from app.core.localdb.agent_issues_utils import read_db_issue
 
 logger = logging.getLogger(__name__)
 
@@ -74,6 +73,7 @@ async def fetch_review_comments(
     issue_id: str,
     in_progress_state_name: str,
     in_review_state_name: str,
+    repo_branch_name: str,
 ) -> list:
     """
     Fetch comments from review if issue was returned from review to in-progress.
@@ -95,8 +95,6 @@ async def fetch_review_comments(
 
     if its.get_type() == "github":
         # For GitHub, only return last comment if a PR exists for the branch
-        db_issue = read_db_issue(issue_id=issue_id)
-        repo_branch_name = db_issue.repo_branch_name
         if repo_branch_name and check_pr_exists_for_branch(repo_branch_name):
             return all_comments[-1:] if all_comments else []
         return []

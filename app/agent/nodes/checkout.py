@@ -12,7 +12,7 @@ from app.agent.services.git_workspace import checkout_branch, get_current_branch
 from app.agent.state import AgentState, IssueType
 from app.agent.utils import get_workspace
 from app.core.localdb.models import AgentSettingsDb
-from app.core.localdb.agent_issues_utils import read_db_issue, update_db_issue
+from app.core.localdb.agent_issues_utils import update_db_agent_state
 
 logger = logging.getLogger(__name__)
 
@@ -36,7 +36,8 @@ def create_checkout_node(agent_settings: AgentSettingsDb):
             else "coding"
         )
         if issue:
-            await checkout_task_branch(
+            await _checkout_task_branch(
+                state,
                 issue.id,
                 issue.name,
                 issue_type,
@@ -50,8 +51,12 @@ def create_checkout_node(agent_settings: AgentSettingsDb):
     return checkout_node
 
 
-async def checkout_task_branch(
-    issue_id: str, issue_name: str, issue_type: IssueType, agent_settings: AgentSettingsDb
+async def _checkout_task_branch(
+    state: AgentState,
+    issue_id: str,
+    issue_name: str,
+    issue_type: IssueType,
+    agent_settings: AgentSettingsDb,
 ):
     """
     Checks out the existing git branch for a task from the database.
@@ -63,11 +68,11 @@ async def checkout_task_branch(
         repo.git.reset("--hard")
         return
 
-    git_branch = await get_existing_branch_for_task(issue_id)
+    git_branch = await get_existing_branch_for_task(state, issue_id)
 
     if not git_branch:
         logger.info("No git branch found for task %s", issue_id)
-        await checkout_branch_for_task(issue_id, issue_name, issue_type, agent_settings)
+        await _checkout_branch_for_task(issue_id, issue_name, issue_type, agent_settings)
     else:
         logger.info(
             "Checking out existing git branch: %s for task %s - %s",
@@ -86,15 +91,14 @@ async def checkout_task_branch(
         logger.info("Current branch: %s", real_git_branch)
 
 
-async def get_existing_branch_for_task(issue_id: str):
+async def get_existing_branch_for_task(state: AgentState, issue_id: str):
     """
     Retrieves the existing git branch for a task from the database.
     Returns None if no branch exists for this task.
     """
     try:
         with current_app.app_context():
-            db_issue = read_db_issue(issue_id=issue_id)
-            return db_issue.repo_branch_name
+            return state["agent_issue"].repo_branch_name
     except Exception as e:  # pylint: disable=broad-exception-caught
         logger.warning("Failed to retrieve branch for task %s: %s", issue_id, e)
         return None
@@ -148,7 +152,7 @@ def _resolve_unique_repo_branch_name(base_name: str, existing_names: set[str]) -
     return candidate
 
 
-async def checkout_branch_for_task(
+async def _checkout_branch_for_task(
     issue_id: str, issue_name: str, issue_type: IssueType, agent_settings: AgentSettingsDb
 ):
     """
@@ -185,7 +189,9 @@ async def checkout_branch_for_task(
     repo.git.reset("--hard")
     repo.git.checkout("-b", repo_branch_name)
 
-    update_db_issue(issue_id, repo_branch_name=repo_branch_name, github_repo_url=github_repo_url)
+    update_db_agent_state(
+        issue_id, repo_branch_name=repo_branch_name, github_repo_url=github_repo_url
+    )
 
     real_git_branch = get_current_branch(get_workspace())
     logger.info("Current branch after checkout: %s", real_git_branch)
