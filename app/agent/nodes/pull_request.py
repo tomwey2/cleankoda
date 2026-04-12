@@ -42,10 +42,10 @@ def create_pull_request_node():
             logger.error("Pull request creation/update failed")
 
         return {
-            "agent_summary": summary_entries,
             "current_node": "pull_request",
-            "repo_pr_url": repo_pr_url,
-            "repo_pr_number": repo_pr_number,
+            "agent_summary": summary_entries,
+            # "repo_pr_url": repo_pr_url,
+            # "repo_pr_number": repo_pr_number,
         }
 
     return pull_request_node
@@ -121,7 +121,7 @@ def _create_or_update_pr(state: AgentState):
         )
         return False, summary_entries, None, None
 
-    issue_id = state.get("issue").id if state.get("issue") else None
+    issue_id = state.get("issue_id")
     repo_pr_number = None
     if issue_id and repo_pr_url:
         repo_pr_number = _extract_repo_pr_number_from_url(repo_pr_url)
@@ -152,9 +152,7 @@ def _generate_commit_message(state: AgentState) -> str:
     if not summary_text:
         return "fix: automated test-driven changes"
 
-    issue_type = IssueType.from_string(
-        state.get("agent_issue").issue_type if state.get("agent_issue") else ""
-    )
+    issue_type = state.get("issue_type")
     prefix = ROLE_PREFIX_MAP.get(issue_type, "chore")
 
     first_line = f"{prefix}: {summary_text}"
@@ -221,8 +219,7 @@ def _build_pr_inputs(state: AgentState) -> tuple[str, str]:
     )
     pr_body_summary = aggregated_summary
 
-    issue = state.get("issue")
-    issue_title = issue.name
+    issue_title = state.get("issue_name")
     pr_title = issue_title or "Automated Fix"
     pr_description = (state.get("pr_description") or "").strip()
     if pr_description:

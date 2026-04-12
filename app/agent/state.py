@@ -45,25 +45,25 @@ class AgentSummary:
 class PlanState(StrEnum):
     """Defines the states of the plan."""
 
-    REQUESTED = "requested"
-    CREATED = "created"
-    UPDATED = "updated"
-    APPROVED = "approved"
-    REJECTED = "rejected"
+    REQUESTED = "REQUESTED"
+    CREATED = "CREATED"
+    UPDATED = "UPDATED"
+    APPROVED = "APPROVED"
+    REJECTED = "REJECTED"
 
 
 class IssueType(StrEnum):
     """Defines the types of issues."""
 
-    UNKNOWN = "unknown"
-    CODING = "coding"
-    BUGFIXING = "bugfixing"
-    ANALYZING = "analyzing"
+    UNKNOWN = "UNKNOWN"
+    CODING = "CODING"
+    BUGFIXING = "BUGFIXING"
+    ANALYZING = "ANALYZING"
 
     @classmethod
     def from_string(cls, value: str) -> "IssueType":
         """Convert a string to a IssueType, normalizing whitespace and case."""
-        normalized = value.strip().lower() if value else ""
+        normalized = value.strip().upper() if value else ""
         try:
             return cls(normalized)
         except ValueError:
@@ -73,17 +73,18 @@ class IssueType(StrEnum):
 class IssueStateType(StrEnum):
     """Defines the states of issues."""
 
-    TODO = "todo"
-    IN_PROGRESS = "in progress"
-    IN_REVIEW = "in review"
+    TODO = "TODO"
+    IN_PROGRESS = "IN_PROGRESS"
+    IN_REVIEW = "IN_REVIEW"
+    DONE = "DONE"
 
 
 class AgentStack(StrEnum):
     """Supported technology stacks for the agent runtime."""
 
-    BACKEND = "backend"
-    FRONTEND = "frontend"
-    GRADLE_NODE = "gradle-node"
+    BACKEND = "BACKEND"
+    FRONTEND = "FRONTEND"
+    GRADLE_NODE = "GRADLE_NODE"
 
 
 class AgentState(TypedDict):
@@ -109,9 +110,8 @@ class AgentState(TypedDict):
     issue_type: IssueType | None
     issue_skill_level: str | None
     issue_skill_level_reasoning: str | None
+    issue_from_todo: bool | None
 
-    # information from the table agent_issues of the local database
-    agent_issue: AgentStatesDb | None
     # agent information from settings
     agent_stack: AgentStack
     tech_stack: dict | None
@@ -125,6 +125,9 @@ class AgentState(TypedDict):
     repo_branch_name: str | None
     pr_review_message: str | None
 
+    plan_content: str | None
+    plan_state: PlanState | None
+
     # the last agent node that is executed
     current_node: str | None
     # the tool calls that was created from the last agent node
@@ -133,6 +136,8 @@ class AgentState(TypedDict):
     prompt: str | None
     # the system prompt that was sent from the last agent node
     system_prompt: str | None
+    # the working state of the agent
+    working_state: str | None
     # message from the system to the user
     user_message: str | None
     last_update: datetime | None

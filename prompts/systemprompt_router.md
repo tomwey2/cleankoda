@@ -33,7 +33,7 @@ You will receive a `ISSUE_TITLE` and a `ISSUE_DESCRIPTION`.
 
 # OUTPUT FORMAT
 You must return a valid JSON object with exactly two fields:
-1. `issue_type`: The result string, which must be exactly "coding", "bugfixing" or "analyzing"
-2. `issue_skill_level`: The result string, which must be exactly "junior" or "senior".
+1. `issue_type`: The result string, which must be exactly "CODING", "BUGFIXING" or "ANALYZING"
+2. `issue_skill_level`: The result string, which must be exactly "JUNIOR" or "SENIOR".
 3. `reasoning`: A short sentence explaining why you chose the category.
 

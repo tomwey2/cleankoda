@@ -114,7 +114,7 @@ class AgentStatesDb(db.Model):
 
     actions = db.relationship(
         "AgentActionDb",
-        backref="issue",
+        backref="state",
         cascade="all, delete-orphan",  # <-- That is important for SQLAlchemy!
         passive_deletes=True,  # <-- That is important for SQLAlchemy!
     )

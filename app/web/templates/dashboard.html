@@ -10,14 +10,11 @@
                 <!-- Issue Card -->
                 <div class="card shadow-sm border-0 mb-4">
                     <div class="card-header d-flex justify-content-between align-items-center">
-                        <h5 class="card-title fw-bold mb-1">{{ agent_issue.issue_name if agent_issue and
-                            agent_issue.issue_name else 'No
-                            Active
-                            Issue' }}</h5>
-                        {% if agent_issue and agent_issue.issue_skill_level %}
+                        <h5 class="card-title fw-bold mb-1">{{ issue_name if issue_name else 'No Active Issue' }}</h5>
+                        {% if issue_skill_level %}
                         <div class="d-flex gap-2">
-                            <span class="badge bg-secondary">{{ agent_issue.issue_type }}</span>
-                            <span class="badge bg-secondary">{{ agent_issue.issue_skill_level }}</span>
+                            <span class="badge bg-secondary">{{ issue_type }}</span>
+                            <span class="badge bg-secondary">{{ issue_skill_level }}</span>
                         </div>
                         {% endif %}
                     </div>
@@ -37,7 +34,7 @@
                     <div class="card-header bg-transparent d-flex justify-content-between align-items-center py-3">
                         <h5 class="mb-0 fw-bold">Implementation Plan</h5>
                         <div class="d-flex gap-2">
-                            {% if plan_exists and agent_issue and agent_issue.plan_state in ('created', 'updated') %}
+                            {% if plan_exists and plan_state in ('CREATED', 'UPDATED') %}
                             <button id="btn-reject" class="btn btn-outline-danger">
                                 <i class="bi bi-x-circle me-1"></i>Reject
                             </button>
@@ -99,14 +96,13 @@
                         {% endif %}
                         {% endif %}
                         {% endfor %}
-                        <span>{{ agent_issue.working_state if agent_issue and agent_issue.working_state else ''
-                            }}</span>
-                        {% if agent_issue and agent_issue.user_message %}
+                        <span>{{ working_state }}</span>
+                        {% if user_message %}
                         <br><br>
-                        <span class="fw-bold">{{ agent_issue.user_message }}</span>
+                        <span class="fw-bold">{{ user_message }}</span>
                         <br>
-                        {% if agent_issue.repo_pr_url %}
-                        <a href="{{ agent_issue.repo_pr_url }}" target="_blank">Pull Request</a>
+                        {% if repo_pr_url %}
+                        <a href="{{ repo_pr_url }}" target="_blank">Pull Request</a>
                         <br>
                         {% endif %}
                         <span>Waiting for user response...</span>

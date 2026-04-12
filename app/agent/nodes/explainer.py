@@ -38,13 +38,13 @@ def create_explainer_node(llm):
         if state["current_node"] != "explainer":
             logger.info("--- EXPLAINER node ---")
 
-        issue_id = _resolve_issue_id(state)
+        issue_id = state["issue_id"]
         if not issue_id:
             logger.warning("Explainer skipped: missing issue_id in state")
             return {"current_node": "explainer"}
 
         thoughts, tool_actions = _read_issue_thoughts_and_tool_actions(issue_id)
-        plan = _resolve_plan(state, issue_id)
+        plan = state["plan_content"]
         formatted_thoughts = _format_thoughts_for_prompt(thoughts)
         formatted_tools_used = _format_tools_for_prompt(tool_actions)
 
@@ -76,22 +76,6 @@ def create_explainer_node(llm):
     return explainer_node
 
 
-def _resolve_issue_id(state: AgentState) -> str | None:
-    """
-    Resolve the current issue_id from state.
-    Priority: issue.id, then agent_issue.issue_id.
-    """
-    issue = state.get("issue")
-    if issue and issue.id:
-        return issue.id
-
-    agent_issue = state.get("agent_issue")
-    if agent_issue and agent_issue.issue_id:
-        return agent_issue.issue_id
-
-    return None
-
-
 def _read_issue_thoughts_and_tool_actions(
     issue_id: str,
 ) -> tuple[list[AgentActionDb], list[AgentActionDb]]:
@@ -117,22 +101,6 @@ def _read_issue_thoughts_and_tool_actions(
     thoughts = [action for action in actions if action.tool_name == "thinking"]
     tool_actions = [action for action in actions if action.tool_name != "thinking"]
     return thoughts, tool_actions
-
-
-def _resolve_plan(state: AgentState, issue_id: str) -> str:
-    """
-    Resolve implementation plan for prompt input.
-    """
-    agent_issue = state.get("agent_issue")
-    if agent_issue and agent_issue.plan_content:
-        return agent_issue.plan_content
-
-    issue_stmt = select(AgentStatesDb).where(AgentStatesDb.issue_id == issue_id)
-    db_issue = db.session.execute(issue_stmt).scalar_one_or_none()
-    if db_issue and db_issue.plan_content:
-        return db_issue.plan_content
-
-    return "No implementation plan was provided."
 
 
 def _format_thoughts_for_prompt(thoughts: list[AgentActionDb]) -> str:

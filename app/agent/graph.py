@@ -172,7 +172,7 @@ def create_workflow(runtime: RuntimeSetting) -> StateGraph:
     # 1. Start -> Router
     workflow.add_conditional_edges(
         "issue_fetch",
-        lambda state: "router" if state.get("issue") else END,
+        lambda state: "router" if state.get("issue_id") else END,
         {END: END, "router": "router"},
     )
 

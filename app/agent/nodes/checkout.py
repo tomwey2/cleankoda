@@ -27,18 +27,14 @@ def create_checkout_node(agent_settings: AgentSettingsDb):
     async def checkout_node(state: AgentState) -> Dict[str, Any]:  # pylint: disable=unused-argument
         if state["current_node"] != "checkout":
             logger.info("--- CHECKOUT node ---")
-        issue: Issue | None = state["issue"]
-
         issue_type = IssueType.from_string(
-            state.get("agent_issue").issue_type
-            if state.get("agent_issue") and state.get("agent_issue").issue_type
-            else "coding"
+            state.get("issue_type") if state.get("issue_id") else IssueType.CODING
         )
-        if issue:
+        if state.get("issue_id"):
             repo_branch_name = await _checkout_task_branch(
                 state,
-                issue.id,
-                issue.name,
+                state["issue_id"],
+                state["issue_name"],
                 issue_type,
                 agent_settings,
             )
@@ -101,7 +97,7 @@ async def _get_existing_branch_for_task(state: AgentState, issue_id: str) -> str
     """
     try:
         with current_app.app_context():
-            return state["agent_issue"].repo_branch_name
+            return state["repo_branch_name"]
     except Exception as e:  # pylint: disable=broad-exception-caught
         logger.warning("Failed to retrieve branch for task %s: %s", issue_id, e)
         return None

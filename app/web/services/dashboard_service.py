@@ -44,7 +44,7 @@ async def get_template_context() -> dict:
     agent_actions: list[AgentActionDb] = []
 
     if agent_state:
-        agent_actions = read_db_agent_actions(agent_state)
+        agent_actions = read_db_agent_actions(agent_state.issue_id)
         # logger.info("current node: %s", agent_state.current_node)
         plan_content = (
             markdown.markdown(agent_state.plan_content) if agent_state.plan_content else ""
@@ -57,12 +57,20 @@ async def get_template_context() -> dict:
         )
 
     return {
-        "agent_issue": agent_state,
+        "issue_id": agent_state.issue_id,
+        "issue_name": agent_state.issue_name,
+        "issue_description": agent_state.issue_description,
+        "issue_type": agent_state.issue_type,
+        "issue_skill_level": agent_state.issue_skill_level,
         "plan_content": plan_content,
         "plan_exists": plan_exists,
+        "plan_state": agent_state.plan_state,
         "issue_description_html": issue_description_html,
         "current_node": "todo",
         "agent_actions": agent_actions,
+        "working_state": agent_state.working_state,
+        "user_message": agent_state.user_message,
+        "repo_pr_url": agent_state.repo_pr_url,
     }
 
 

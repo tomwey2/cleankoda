@@ -39,33 +39,26 @@ async def fetch_issue_from_state(its: IssueTrackingSystem, state_name: str) -> I
 
 async def move_issue_to_state(
     its: IssueTrackingSystem,
-    issue: Issue,
+    issue_id: str,
     issue_state_name: str,
-) -> Issue:
+):
     """
     Moves the issue to the in-progress state before issue processing begins.
     """
-    modified_issue: Optional[Issue] = issue
     if not issue_state_name:
         logger.warning("issue_in_progress_state not configured, skipping move to in-progress state")
     else:
         logger.info(
             "Moving issue %s to in-progress state: %s",
-            issue.id,
+            issue_id,
             issue_state_name,
         )
 
         try:
-            await its.move_issue_to_named_state(issue.id, issue_state_name)
-            modified_issue = await its.get_issue(issue.id)
+            await its.move_issue_to_named_state(issue_id, issue_state_name)
+            await its.get_issue(issue_id)
         except Exception as e:  # pylint: disable=broad-exception-caught
             logger.error("Failed to move issue to in-progress state: %s", e)
-
-    match modified_issue:
-        case Issue():
-            return modified_issue
-        case None:
-            raise RuntimeError("modified_issue is none")
 
 
 async def fetch_review_comments(

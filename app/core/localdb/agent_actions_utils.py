@@ -4,29 +4,29 @@ from sqlalchemy.exc import IntegrityError
 from app.core.extensions import db
 from app.core.localdb.models import AgentActionDb, AgentStatesDb
 from sqlalchemy import select
+from app.core.localdb.agent_issues_utils import read_db_agent_state
 
 logger = logging.getLogger(__name__)
 
 
-def read_db_agent_actions(agent_issue: AgentStatesDb) -> list[AgentActionDb]:
+def read_db_agent_actions(issue_id: str) -> list[AgentActionDb]:
     """Get the actions from the database for a given issue."""
+    agent_state: AgentStatesDb | None = read_db_agent_state(issue_id=issue_id)
+    if not agent_state:
+        return []
+
     stmt = (
         select(AgentActionDb)
-        .where(AgentActionDb.state_id == agent_issue.id)
+        .where(AgentActionDb.state_id == agent_state.id)
         .order_by(AgentActionDb.id.asc())
     )
     return db.session.execute(stmt).scalars().all()
 
 
-def create_db_agent_action(state: dict):
+def create_db_agent_action(db_agent_state_id: int, tool_calls: list[dict], current_node: str):
     """insert agent state into sqlalchemy database"""
-
-    tool_calls: list[dict] = state.get("current_tool_calls", [])
-    current_node: str | None = state.get("current_node", None)
-    agent_issue: AgentStatesDb = state.get("agent_issue", None)
-
     if current_node is None or not tool_calls:
-        return None
+        return
 
     try:
         for tool_call in tool_calls:
@@ -52,7 +52,7 @@ def create_db_agent_action(state: dict):
             ):
                 return
             new_agent_action = AgentActionDb(
-                state_id=agent_issue.id,
+                state_id=db_agent_state_id,
                 current_node=current_node,
                 tool_name=name,
                 tool_arg0_name=arg0_name,

@@ -14,7 +14,7 @@ from langchain_core.messages import AIMessage
 from app.agent.nodes.base import invoke_tool_node
 from app.agent.services.prompts import load_prompt
 from app.agent.services.summaries import has_finish_task_call, record_finish_task_summary
-from app.agent.state import AgentState
+from app.agent.state import AgentState, IssueType
 
 logger = logging.getLogger(__name__)
 
@@ -36,7 +36,7 @@ def create_coder_node(llm, tools, agent_stack):
         result: dict[str, Any] = {}
 
         if has_finish_task_call(message=response):
-            role = "coder" if state["agent_issue"].issue_type == "coding" else "bugfixer"
+            role = "coder" if state["issue_type"] == IssueType.CODING else "bugfixer"
 
             recorded, agent_summary = record_finish_task_summary(
                 state=state, role=role, ai_message=response
@@ -55,8 +55,8 @@ def create_coder_node(llm, tools, agent_stack):
         if state["current_node"] != "coder":
             logger.info("--- CODER node ---")
         system_message = (
-            load_prompt(f"systemprompt_coder_{agent_stack}.md", state)
-            if state["agent_issue"].issue_type == "coding"
+            load_prompt(f"systemprompt_coder_{agent_stack.lower()}.md", state)
+            if state["issue_type"] == IssueType.CODING
             else load_prompt("systemprompt_bugfixer.md", state)
         )
         human_message = load_prompt("prompt_coding.md", state)

@@ -67,6 +67,8 @@ def update_db_agent_state(issue_id: str, **kwargs: Any) -> AgentStatesDb | None:
     Call e.g.: update_issue(1, issue_name="New", status="Done", priority=5)
     """
     agent_state = read_db_agent_state(issue_id=issue_id)
+    if not agent_state:
+        agent_state = create_db_issue(issue_id, "")
 
     if not agent_state:
         return None
@@ -101,7 +103,7 @@ def update_db_agent_state(issue_id: str, **kwargs: Any) -> AgentStatesDb | None:
         return None
 
 
-def delete_db_issue(issue_id: str) -> bool:
+def delete_db_agent_state(issue_id: str) -> bool:
     """
     Removes the issue mapping from the database.
     Returns True if a record was deleted, False otherwise.

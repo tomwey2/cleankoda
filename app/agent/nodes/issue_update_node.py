@@ -40,30 +40,30 @@ def create_issue_update_node(agent_settings: AgentSettingsDb):
         """
         if state["current_node"] != "issue_update":
             logger.info("--- ISSUE UPDATE node ---")
-        issue: Issue | None = state["issue"]
-        if not issue:
+        if not state["issue_id"]:
             logger.warning("No issue found in state")
             return {}
 
-        logger.info("Updating issue in issue tracking system %s", issue)
+        logger.info("Updating issue in issue tracking system %s", state["issue_id"])
 
         its: IssueTrackingSystem = create_issue_tracking_system(agent_settings)
 
         try:
             final_comments = _build_agent_comments(state)
             for comment in final_comments:
-                await its.add_comment(issue.id, comment)
+                await its.add_comment(state["issue_id"], comment)
                 sleep(0.1)
         except Exception as e:  # pylint: disable=broad-exception-caught
             logger.error("Failed to add comment to issue: %s", e)
 
         try:
             await its.move_issue_to_named_state(
-                issue_id=issue.id, state_name=its.get_state_in_review()
+                issue_id=state["issue_id"], state_name=its.get_state_in_review()
             )
 
             return {
                 "current_node": "issue_update",
+                "working_state": "finished.",
             }
         except ValueError as exc:
             logger.warning(str(exc))
