@@ -17,7 +17,6 @@ from app.agent.services.pull_request import create_or_update_pr
 from app.agent.state import AgentState, AgentSummary, IssueType
 from app.agent.utils import get_workspace
 from app.core.config import get_env_settings
-from app.core.localdb.agent_issues_utils import update_db_agent_state
 
 logger = logging.getLogger(__name__)
 
@@ -36,13 +35,18 @@ def create_pull_request_node():
     async def pull_request_node(state: AgentState) -> Dict[str, Any]:
         if state["current_node"] != "pull_request":
             logger.info("--- PULL REQUEST node ---")
-        success, summary_entries = _create_or_update_pr(state)
+        success, summary_entries, repo_pr_url, repo_pr_number = _create_or_update_pr(state)
         if success:
             logger.info("Pull request created/updated successfully")
         else:
             logger.error("Pull request creation/update failed")
 
-        return {"agent_summary": summary_entries, "current_node": "pull_request"}
+        return {
+            "agent_summary": summary_entries,
+            "current_node": "pull_request",
+            "repo_pr_url": repo_pr_url,
+            "repo_pr_number": repo_pr_number,
+        }
 
     return pull_request_node
 
@@ -80,7 +84,7 @@ def _create_or_update_pr(state: AgentState):
 
     if failure_detected:
         summary_entries = _append_summary(summary_entries, state, "PR", failure_reason)
-        return False, summary_entries
+        return False, summary_entries, None, None
 
     push_success, push_msg = git_push(
         work_dir=get_workspace(), token=get_env_settings().github_token
@@ -89,7 +93,7 @@ def _create_or_update_pr(state: AgentState):
         logger.error("Git push failed: %s", push_msg)
         failure_reason = f"Pull request failed: git push failed ({push_msg})"
         summary_entries = _append_summary(summary_entries, state, "PR", failure_reason)
-        return False, summary_entries
+        return False, summary_entries, None, None
 
     pr_title, pr_body = _build_pr_inputs(state)
     pr_success, pr_msg, repo_pr_url = create_or_update_pr(
@@ -104,7 +108,7 @@ def _create_or_update_pr(state: AgentState):
             "PR",
             f"Pull request creation/update failed: {pr_msg}",
         )
-        return False, summary_entries
+        return False, summary_entries, None, None
 
     logger.info("Git workflow completed successfully: %s", pr_msg)
     if not repo_pr_url:
@@ -115,16 +119,12 @@ def _create_or_update_pr(state: AgentState):
             "PR",
             "Pull request missing URL despite success",
         )
-        return False, summary_entries
+        return False, summary_entries, None, None
 
     issue_id = state.get("issue").id if state.get("issue") else None
+    repo_pr_number = None
     if issue_id and repo_pr_url:
         repo_pr_number = _extract_repo_pr_number_from_url(repo_pr_url)
-        if repo_pr_number:
-            update_db_agent_state(
-                issue_id=issue_id, repo_pr_number=repo_pr_number, repo_pr_url=repo_pr_url
-            )
-            logger.info("Stored PR #%d for issue %s", repo_pr_number, issue_id)
 
     summary_entries = _append_summary(
         summary_entries,
@@ -132,7 +132,7 @@ def _create_or_update_pr(state: AgentState):
         "PR",
         f"Pull request available at\n\n {repo_pr_url}",
     )
-    return True, summary_entries
+    return True, summary_entries, repo_pr_url, repo_pr_number
 
 
 def _generate_commit_message(state: AgentState) -> str:

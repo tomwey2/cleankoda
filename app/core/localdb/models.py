@@ -93,11 +93,11 @@ class AgentStatesDb(db.Model):
     issue_skill_level_reasoning = db.Column(db.Text, nullable=True)
 
     # Branch name of the repository
-    repo_branch_name = db.Column(db.String(200), nullable=True)
+    repo_branch_name = db.Column(db.String(100), nullable=True)
     # Number of the Pull Request in GitHub
     repo_pr_number = db.Column(db.Integer, nullable=True)
     # URL of the Pull Request
-    repo_pr_url = db.Column(db.String(500), nullable=True)
+    repo_pr_url = db.Column(db.String(200), nullable=True)
 
     # Content of the implementation plan
     plan_content = db.Column(db.Text, nullable=True)

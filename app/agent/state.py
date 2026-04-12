@@ -98,9 +98,18 @@ class AgentState(TypedDict):
     messages: Annotated[list[BaseMessage], add_messages]
     message_history: Annotated[list[BaseMessage], add_messages]
     next_step: str
+
     # information from the external issue tracking system
     issue: Issue | None
     issue_comments: list[IssueComment]
+    issue_id: str | None
+    issue_name: str | None
+    issue_description: str | None
+    issue_state: IssueStateType | None
+    issue_type: IssueType | None
+    issue_skill_level: str | None
+    issue_skill_level_reasoning: str | None
+
     # information from the table agent_issues of the local database
     agent_issue: AgentStatesDb | None
     # agent information from settings
@@ -111,9 +120,11 @@ class AgentState(TypedDict):
     retry_count: int  # Attempts: how often switched between coder and tester
     test_result: str | None
     error_log: str | None  # Optional: Stores the last error explicitly
+
     # information from the git system
-    git_branch: str | None
+    repo_branch_name: str | None
     pr_review_message: str | None
+
     # the last agent node that is executed
     current_node: str | None
     # the tool calls that was created from the last agent node

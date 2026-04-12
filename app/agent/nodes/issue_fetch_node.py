@@ -146,33 +146,27 @@ def _fetch_pr_review_info(state: AgentState, issue_id: str) -> str:
         - is_approved: True if PR is approved or no PR exists
         - formatted_review_message: Formatted message for SystemMessage, empty if approved
     """
-    repo_pr_number = state["agent_issue"].repo_pr_number
-    repo_pr_url = state["agent_issue"].repo_pr_url
+    repo_branch_name = state["repo_branch_name"]
+    pr = None
+    if repo_branch_name:
+        pr = get_latest_open_pr_for_branch(repo_branch_name)
 
-    if not repo_pr_number:
-        repo_branch_name = state["agent_issue"].repo_branch_name
-        if repo_branch_name:
-            pr = get_latest_open_pr_for_branch(repo_branch_name)
-            if pr:
-                repo_pr_number = pr.number
-                repo_pr_url = pr.html_url
-
-    if not repo_pr_number:
+    if not pr:
         logger.info("No PR found for issue %s", issue_id)
         return ""
 
-    is_approved, rejection_reviews, code_comments = get_latest_pr_review_status(repo_pr_number)
+    is_approved, rejection_reviews, code_comments = get_latest_pr_review_status(pr.number)
 
     if is_approved:
-        logger.info("PR #%d for issue %s is approved", repo_pr_number, issue_id)
+        logger.info("PR #%d for issue %s is approved", pr.number, issue_id)
         return ""
 
     logger.info(
         "PR #%d for issue %s has %d rejections and %d code comments",
-        repo_pr_number,
+        pr.number,
         issue_id,
         len(rejection_reviews),
         len(code_comments),
     )
 
-    return format_pr_review_message(repo_pr_url or "", rejection_reviews, code_comments)
+    return format_pr_review_message(pr.html_url or "", rejection_reviews, code_comments)

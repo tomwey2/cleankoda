@@ -68,6 +68,7 @@ async def run_agent_cycle(runtime: RuntimeSetting) -> None:
             "next_step": "",
             "issue": None,
             "issue_comments": [],
+            "repo_branch_name": None,
             "agent_issue": read_db_agent_state(),
             "agent_stack": runtime.agent_stack,
             "agent_skill_level": runtime.agent_settings.agent_skill_level,
@@ -99,6 +100,7 @@ async def run_agent_cycle(runtime: RuntimeSetting) -> None:
                     issue_skill_level_reasoning=current_state[
                         "agent_issue"
                     ].issue_skill_level_reasoning,
+                    repo_branch_name=current_state["repo_branch_name"],
                     plan_state=current_state["agent_issue"].plan_state,
                     working_state="working..."
                     if current_state["current_node"] != "issue_update"
