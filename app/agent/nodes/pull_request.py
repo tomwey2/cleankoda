@@ -45,8 +45,8 @@ def create_pull_request_node():
         return {
             "current_node": "pull_request",
             "agent_summary": summary_entries,
-            # "repo_pr_url": repo_pr_url,
-            # "repo_pr_number": repo_pr_number,
+            "repo_pr_url": repo_pr_url,
+            "repo_pr_number": repo_pr_number,
         }
 
     return pull_request_node

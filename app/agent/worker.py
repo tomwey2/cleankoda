@@ -125,7 +125,8 @@ async def run_agent_cycle(runtime: RuntimeSetting) -> None:
                     current_state["current_node"] == "issue_fetch"
                     and current_state["issue_from_todo"]
                 ):
-                    # if the issue is taken from todo state then delete the it in the database (if exist)
+                    # if the issue is taken from todo state then delete the it in the
+                    # database (if exist)
                     delete_db_agent_state(current_state["issue_id"])
 
                 db_agent_state = update_db_agent_state(

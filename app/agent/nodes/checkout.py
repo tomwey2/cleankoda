@@ -39,8 +39,8 @@ def create_checkout_node(agent_settings: AgentSettingsDb):
                 agent_settings,
             )
             return {"current_node": "checkout", "repo_branch_name": repo_branch_name}
-        else:
-            raise ValueError("Missing issue_id or issue_name in AgentState")
+
+        raise ValueError("Missing issue_id or issue_name in AgentState")
 
     return checkout_node
 
