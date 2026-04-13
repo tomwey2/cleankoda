@@ -1,5 +1,7 @@
 """Defines constants for the application."""
 
+from app.core.types import AgentStack
+
 # Issue States
 # These values correspond to what we read and want to write (before formatting).
 ISSUE_STATE_OPEN = "Open"
@@ -18,7 +20,7 @@ LLM_PROVIDER_API_ENV = {
 }
 
 TECH_STACKS = {
-    "backend": {
+    AgentStack.BACKEND: {
         "language": "Java 21",
         "framework": "Spring Boot 3.2 (Web, JPA)",
         "build_tool": "Maven",
@@ -36,7 +38,7 @@ TECH_STACKS = {
             "all": ["*Test.java", "*IT.java"],
         },
     },
-    "gradle-node": {
+    AgentStack.GRADLE_NODE: {
         "language": "Java 21",
         "framework": "Spring Boot 3.3 (multi-module Gradle)",
         "build_tool": "Gradle",
@@ -59,7 +61,7 @@ TECH_STACKS = {
             "all": ["*Test.java", "*IT.java"],
         },
     },
-    "frontend": {
+    AgentStack.FRONTEND: {
         "language": "JavaScript (ES6+) / TypeScript",
         "framework": "React (Functional Components, Hooks)",
         "build_tool": "Vite",

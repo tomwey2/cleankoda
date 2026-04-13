@@ -13,14 +13,14 @@ from typing import Any, Optional
 import httpx
 
 from app.core.config import get_env_settings
-from app.core.localdb.models import AgentSettings
+from app.core.localdb.models import AgentSettingsDb
 
 logger = logging.getLogger(__name__)
 
 GITHUB_GRAPHQL_ENDPOINT = "/graphql"
 
 
-def _get_github_token(agent_settings: Optional[AgentSettings] = None) -> str:
+def _get_github_token(agent_settings: Optional[AgentSettingsDb] = None) -> str:
     """Get GitHub token from config or environment variable.
 
     Args:
@@ -33,9 +33,9 @@ def _get_github_token(agent_settings: Optional[AgentSettings] = None) -> str:
         ValueError: If no token is available.
     """
     if agent_settings:
-        issue_system = agent_settings.get_issue_system("github")
-        if issue_system and issue_system.token:
-            return issue_system.token
+        issue_system = agent_settings.get_issue_system("GITHUB")
+        if issue_system and issue_system.its_token:
+            return issue_system.its_token
 
     token = get_env_settings().github_token
     if not token:
@@ -46,15 +46,15 @@ def _get_github_token(agent_settings: Optional[AgentSettings] = None) -> str:
     return token
 
 
-def _get_base_url(agent_settings: AgentSettings) -> str:
+def _get_base_url(agent_settings: AgentSettingsDb) -> str:
     """Get the GitHub API base URL from config or default."""
     issue_system = agent_settings.get_issue_system("github")
-    if issue_system and issue_system.base_url:
-        return issue_system.base_url.rstrip("/")
+    if issue_system and issue_system.its_base_url:
+        return issue_system.its_base_url.rstrip("/")
     return "https://api.github.com"
 
 
-def _get_graphql_url(agent_settings: AgentSettings) -> str:
+def _get_graphql_url(agent_settings: AgentSettingsDb) -> str:
     """Get the full GraphQL endpoint URL."""
     return f"{_get_base_url(agent_settings)}{GITHUB_GRAPHQL_ENDPOINT}"
 
@@ -62,7 +62,7 @@ def _get_graphql_url(agent_settings: AgentSettings) -> str:
 async def _execute_graphql(
     query: str,
     variables: dict[str, Any],
-    agent_settings: AgentSettings,
+    agent_settings: AgentSettingsDb,
 ) -> dict[str, Any]:
     """Execute a GraphQL query against the GitHub API."""
     url = _get_graphql_url(agent_settings)
@@ -94,7 +94,7 @@ async def _execute_graphql(
 async def get_project_id(
     owner: str,
     project_number: int,
-    agent_settings: AgentSettings,
+    agent_settings: AgentSettingsDb,
 ) -> str:
     """
     Fetch the project node ID for a GitHub Project v2.
@@ -159,7 +159,7 @@ async def get_project_id(
     raise RuntimeError(f"GitHub Project #{project_number} not found for owner '{owner}'")
 
 
-async def get_project_columns(agent_settings: AgentSettings) -> list[dict[str, str]]:
+async def get_project_columns(agent_settings: AgentSettingsDb) -> list[dict[str, str]]:
     """
     Fetch all columns (status field options) from the GitHub Project.
 
@@ -167,7 +167,7 @@ async def get_project_columns(agent_settings: AgentSettings) -> list[dict[str, s
         List of dicts with 'id' and 'name' keys for each column.
     """
     issue_system = agent_settings.get_issue_system("github")
-    project_id = issue_system.board_id if issue_system else None
+    project_id = issue_system.its_container_identifier if issue_system else None
 
     query = """
     query($projectId: ID!) {
@@ -196,10 +196,10 @@ async def get_project_columns(agent_settings: AgentSettings) -> list[dict[str, s
     return [{"id": opt["id"], "name": opt["name"]} for opt in options]
 
 
-async def get_status_field_id(agent_settings: AgentSettings) -> str:
+async def get_status_field_id(agent_settings: AgentSettingsDb) -> str:
     """Get the ID of the Status field for the project."""
     issue_system = agent_settings.get_issue_system("github")
-    project_id = issue_system.board_id if issue_system else None
+    project_id = issue_system.its_container_identifier if issue_system else None
 
     query = """
     query($projectId: ID!) {
@@ -229,7 +229,7 @@ async def get_status_field_id(agent_settings: AgentSettings) -> str:
 
 async def get_items_from_column(
     column_name: str,
-    agent_settings: AgentSettings,
+    agent_settings: AgentSettingsDb,
 ) -> list[dict[str, Any]]:
     """
     Fetch all items from a specific column (status) in the GitHub Project.
@@ -242,7 +242,7 @@ async def get_items_from_column(
         List of item dicts with id, title, body, url, and content info.
     """
     issue_system = agent_settings.get_issue_system("github")
-    project_id = issue_system.board_id if issue_system else None
+    project_id = issue_system.its_container_identifier if issue_system else None
 
     query = """
     query($projectId: ID!, $cursor: String) {
@@ -319,7 +319,7 @@ async def get_items_from_column(
 
 async def get_project_item(
     item_id: str,
-    agent_settings: AgentSettings,
+    agent_settings: AgentSettingsDb,
 ) -> dict[str, Any] | None:
     """Fetch a single project item with its status metadata."""
     query = """
@@ -375,7 +375,7 @@ async def get_project_item(
 async def move_item_to_column(
     item_id: str,
     column_id: str,
-    agent_settings: AgentSettings,
+    agent_settings: AgentSettingsDb,
 ) -> None:
     """
     Move a project item to a different column (status).
@@ -386,7 +386,7 @@ async def move_item_to_column(
         agent_settings: Agent configuration.
     """
     issue_system = agent_settings.get_issue_system("github")
-    project_id = issue_system.board_id if issue_system else None
+    project_id = issue_system.its_container_identifier if issue_system else None
     field_id = await get_status_field_id(agent_settings)
 
     mutation = """
@@ -420,7 +420,7 @@ async def move_item_to_column(
 async def move_item_to_named_column(
     item_id: str,
     column_name: str,
-    agent_settings: AgentSettings,
+    agent_settings: AgentSettingsDb,
 ) -> str:
     """
     Move a project item to a column identified by name.
@@ -440,7 +440,7 @@ async def move_item_to_named_column(
 
 async def _resolve_to_issue_id(
     node_id: str,
-    agent_settings: AgentSettings,
+    agent_settings: AgentSettingsDb,
 ) -> str:
     """
     Resolve a node ID to an Issue ID.
@@ -505,7 +505,7 @@ async def _resolve_to_issue_id(
 async def add_comment_to_issue(
     issue_id: str,
     comment: str,
-    agent_settings: AgentSettings,
+    agent_settings: AgentSettingsDb,
 ) -> None:
     """
     Add a comment to a GitHub issue or project item.
@@ -537,7 +537,7 @@ async def add_comment_to_issue(
 
 async def get_issue_comments(
     issue_id: str,
-    agent_settings: AgentSettings,
+    agent_settings: AgentSettingsDb,
 ) -> list[dict[str, Any]]:
     """
     Fetch all comments for a GitHub issue or project item.
@@ -609,7 +609,7 @@ async def get_issue_comments(
 
 async def get_item_status_history(
     item_id: str,
-    agent_settings: AgentSettings,
+    agent_settings: AgentSettingsDb,
 ) -> list[dict[str, Any]]:
     """
     Fetch status change history for a project item.
@@ -629,7 +629,7 @@ async def create_draft_issue(
     title: str,
     body: str,
     column_name: str,
-    agent_settings: AgentSettings,
+    agent_settings: AgentSettingsDb,
 ) -> dict[str, Any]:
     """
     Create a new draft issue in the GitHub Project.
@@ -644,7 +644,7 @@ async def create_draft_issue(
         Dict with id, title, and column info.
     """
     issue_system = agent_settings.get_issue_system("github")
-    project_id = issue_system.board_id if issue_system else None
+    project_id = issue_system.its_container_identifier if issue_system else None
 
     mutation = """
     mutation($projectId: ID!, $title: String!, $body: String!) {

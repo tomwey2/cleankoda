@@ -10,13 +10,13 @@ import logging
 from datetime import datetime, timezone
 from typing import Optional
 
-from app.core.issueprovider.issue_provider import (
+from app.core.its.issue_tracking_system import (
     IssueComment,
-    IssueProvider,
+    IssueTrackingSystem,
     IssueStateMove,
     Issue,
 )
-from app.core.issueprovider.github_client import (
+from app.core.its.github_client import (
     add_comment_to_issue,
     create_draft_issue,
     get_issue_comments,
@@ -27,20 +27,20 @@ from app.core.issueprovider.github_client import (
     move_item_to_column,
     move_item_to_named_column,
 )
-from app.core.localdb.models import AgentSettings, IssueSystem
+from app.core.localdb.models import AgentSettingsDb
 
 logger = logging.getLogger(__name__)
 
 
-class GitHubProvider(IssueProvider):
+class GitHubIts(IssueTrackingSystem):
     """
-    GitHub Projects v2 implementation of the IssueProvider interface.
+    GitHub Projects v2 implementation of the IssueTrackingSystem interface.
 
     This class wraps the GitHub GraphQL API client functions and provides
     a consistent interface for issue operations.
     """
 
-    def __init__(self, agent_settings: AgentSettings):
+    def __init__(self, agent_settings: AgentSettingsDb):
         """
         Initialize the GitHub provider.
 
@@ -48,7 +48,6 @@ class GitHubProvider(IssueProvider):
             agent_settings: Agent settings containing GitHub project configuration.
         """
         self.agent_settings = agent_settings
-        self._issue_system: IssueSystem | None = agent_settings.get_issue_system("github")
 
     async def get_states(self) -> list[dict]:
         """Fetch all states (columns) from the GitHub Project."""
@@ -172,10 +171,6 @@ class GitHubProvider(IssueProvider):
         """Return the provider identifier."""
         return "github"
 
-    def get_issue_system(self) -> IssueSystem | None:
-        """Return the configured GitHub IssueSystem if available."""
-        return self._issue_system
-
     def _parse_timestamp(self, value: str | None) -> datetime:
         """
         Parse a GitHub timestamp string into a datetime object.
@@ -200,3 +195,15 @@ class GitHubProvider(IssueProvider):
             parsed = parsed.replace(tzinfo=timezone.utc)
 
         return parsed
+
+    def get_state_todo(self) -> str:
+        return self.agent_settings.its_state_todo
+
+    def get_state_in_progress(self) -> str:
+        return self.agent_settings.its_state_in_progress
+
+    def get_state_in_review(self) -> str:
+        return self.agent_settings.its_state_in_review
+
+    def get_state_done(self) -> str:
+        return self.agent_settings.its_state_done

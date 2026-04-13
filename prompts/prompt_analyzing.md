@@ -1,8 +1,8 @@
 # ISSUE
 
 Analyze the following issue:
-Issue: {{agent_issue.issue_name}}
-Description: {{agent_issue.issue_description}}
+Issue: {{issue_name}}
+Description: {{issue_description}}
 
 {% if agent_summary %}
 
@@ -28,8 +28,8 @@ The comments below indicate ADDITIONAL work that needs to be done.
 # PULL REQUEST MESSAGE
 {{ pr_review_message }}
 {% endif %}
-{% if agent_issue.plan_content %}
+{% if plan_content %}
 # SPECIFIC IMPLEMENTATION PLAN
 You MUST follow these exact steps to complete the issue:
-{{agent_issue.plan_content}}
+{{plan_content}}
 {% endif %}

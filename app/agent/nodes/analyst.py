@@ -20,8 +20,9 @@ from app.agent.services.summaries import (
     has_finish_task_call,
     record_finish_task_summary,
 )
-from app.agent.state import AgentState, PlanState
+from app.agent.state import AgentState
 from app.core.plan_utils import exist_plan, get_plan
+from app.core.types import PlanState
 
 logger = logging.getLogger(__name__)
 
@@ -72,9 +73,7 @@ def create_analyst_node(llm: BaseChatModel, tools):
                     state, role="analyst", ai_message=response
                 )
 
-                plan_content, plan_state = _get_plan_content_and_plan_state(
-                    initial_plan_exists
-                )
+                plan_content, plan_state = _get_plan_content_and_plan_state(initial_plan_exists)
 
                 if plan_content:
                     agent_summary = append_agent_summary(
@@ -88,10 +87,8 @@ def create_analyst_node(llm: BaseChatModel, tools):
                 if recorded:
                     result["agent_summary"] = agent_summary
 
-                agent_issue = state["agent_issue"]
-                agent_issue.plan_content = plan_content
-                agent_issue.plan_state = plan_state
-                result["agent_issue"] = agent_issue
+                result["plan_content"] = plan_content
+                result["plan_state"] = plan_state
 
             return result
 

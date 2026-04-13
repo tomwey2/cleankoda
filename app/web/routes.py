@@ -26,6 +26,7 @@ from app.agent.services.pull_request import (
 )
 from app.web.services import dashboard_service, settings_service
 from app.web.services.dashboard_service import PlanReviewError, process_plan_review
+from app.core.types import PlanState
 
 logger = logging.getLogger(__name__)
 
@@ -141,7 +142,7 @@ def get_pr_formatted(owner: str, repo: str, repo_pr_number: int):
 async def review_plan():
     """Updates the plan state of the current issue."""
     data = request.json or {}
-    new_state = data.get("plan_state")
+    new_state = PlanState.from_string(data.get("plan_state"))
     rejection_reason = data.get("rejection_reason")
 
     try:

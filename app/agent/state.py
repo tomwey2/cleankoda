@@ -9,14 +9,16 @@ issue details, and internal counters.
 
 from dataclasses import dataclass
 from datetime import datetime
-from enum import StrEnum
-from typing import Annotated, TypedDict
+from typing import Annotated, TypedDict, TYPE_CHECKING
 
 from langchain_core.messages import BaseMessage
 from langgraph.graph.message import add_messages
 
-from app.core.issueprovider.issue_provider import Issue, IssueComment
-from app.core.localdb.models import AgentIssue
+from app.core.its.issue_tracking_system import Issue, IssueComment
+from app.core.types import PlanState, IssueStateType, IssueType, AgentStack
+
+if TYPE_CHECKING:
+    from app.agent.runtime import RuntimeSetting
 
 
 @dataclass
@@ -42,50 +44,6 @@ class AgentSummary:
         return f"**[{role_prefix}]** {self.summary}"
 
 
-class PlanState(StrEnum):
-    """Defines the states of the plan."""
-
-    REQUESTED = "requested"
-    CREATED = "created"
-    UPDATED = "updated"
-    APPROVED = "approved"
-    REJECTED = "rejected"
-
-
-class IssueType(StrEnum):
-    """Defines the types of issues."""
-
-    UNKNOWN = "unknown"
-    CODING = "coding"
-    BUGFIXING = "bugfixing"
-    ANALYZING = "analyzing"
-
-    @classmethod
-    def from_string(cls, value: str) -> "IssueType":
-        """Convert a string to a IssueType, normalizing whitespace and case."""
-        normalized = value.strip().lower() if value else ""
-        try:
-            return cls(normalized)
-        except ValueError:
-            return cls.UNKNOWN
-
-
-class IssueStateType(StrEnum):
-    """Defines the states of issues."""
-
-    TODO = "todo"
-    IN_PROGRESS = "in progress"
-    IN_REVIEW = "in review"
-
-
-class AgentStack(StrEnum):
-    """Supported technology stacks for the agent runtime."""
-
-    BACKEND = "backend"
-    FRONTEND = "frontend"
-    GRADLE_NODE = "gradle-node"
-
-
 class AgentState(TypedDict):
     """
     Represents the state of the agent graph.
@@ -98,11 +56,19 @@ class AgentState(TypedDict):
     messages: Annotated[list[BaseMessage], add_messages]
     message_history: Annotated[list[BaseMessage], add_messages]
     next_step: str
+
     # information from the external issue tracking system
     issue: Issue | None
     issue_comments: list[IssueComment]
-    # information from the table agent_issues of the local database
-    agent_issue: AgentIssue | None
+    issue_id: str | None
+    issue_name: str | None
+    issue_description: str | None
+    issue_state: IssueStateType | None
+    issue_type: IssueType | None
+    issue_skill_level: str | None
+    issue_skill_level_reasoning: str | None
+    issue_from_todo: bool | None
+
     # agent information from settings
     agent_stack: AgentStack
     tech_stack: dict | None
@@ -111,9 +77,14 @@ class AgentState(TypedDict):
     retry_count: int  # Attempts: how often switched between coder and tester
     test_result: str | None
     error_log: str | None  # Optional: Stores the last error explicitly
+
     # information from the git system
-    git_branch: str | None
+    repo_branch_name: str | None
     pr_review_message: str | None
+
+    plan_content: str | None
+    plan_state: PlanState | None
+
     # the last agent node that is executed
     current_node: str | None
     # the tool calls that was created from the last agent node
@@ -122,8 +93,42 @@ class AgentState(TypedDict):
     prompt: str | None
     # the system prompt that was sent from the last agent node
     system_prompt: str | None
+    # the working state of the agent
+    working_state: str | None
     # message from the system to the user
     user_message: str | None
     last_update: datetime | None
     #
     pr_description: str | None
+
+    @staticmethod
+    def init_state(runtime: "RuntimeSetting") -> "AgentState":
+        """Initialize the default agent state based on runtime settings."""
+        # pylint: disable=import-outside-toplevel
+        from app.core.constants import TECH_STACKS
+        return {
+            # values that are stored in the database
+            "issue_id": None,
+            "issue_name": None,
+            "issue_description": None,
+            "issue_comments": [],
+            "issue_type": None,
+            "issue_skill_level": None,
+            "issue_skill_level_reasoning": None,
+            "issue_from_todo": None,
+            "repo_branch_name": None,
+            "plan_content": None,
+            "plan_state": None,
+            "working_state": None,
+            "user_message": None,
+            # values that are not stored in the database
+            "messages": [],
+            "next_step": "",
+            "agent_stack": runtime.agent_stack,
+            "agent_skill_level": runtime.agent_settings.agent_skill_level,
+            "current_node": None,
+            "current_tool_calls": [],
+            "prompt": None,
+            "system_prompt": None,
+            "tech_stack": TECH_STACKS[runtime.agent_stack],
+        }

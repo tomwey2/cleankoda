@@ -8,6 +8,8 @@ import logging
 import os
 from pathlib import Path
 
+from app.core.types import IssueTrackingSystemType
+
 logger = logging.getLogger(__name__)
 
 
@@ -59,7 +61,7 @@ SERVERS_ROOT = Path("/coding-agent/servers")
 
 
 MCP_SYSTEM_DEFINITIONS = {
-    "TRELLO": {
+    IssueTrackingSystemType.TRELLO: {
         "command": ["tsx", os.path.join(SERVERS_ROOT.as_posix(), "trello/src/index.ts")],
         "polling_tool": "read_board",
         "polling_args": {"boardId": "{trello_todo_list_id}"},

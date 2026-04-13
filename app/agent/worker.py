@@ -12,15 +12,19 @@ from contextlib import AsyncExitStack
 from langchain_core.runnables import RunnableConfig
 from langgraph.graph import StateGraph
 
-from app.core.constants import TECH_STACKS
 from app.agent.graph import create_workflow
 from app.agent.mcp.adapter import McpServerClient
 from app.agent.runtime import RuntimeSetting
 from app.agent.services.graph_assets import save_graph_as_mermaid, save_graph_as_png
 from app.agent.utils import get_workspace, save_state_to_instance
 from app.core.config import get_env_settings
-from app.core.localdb.agent_issues_utils import update_db_issue, read_db_issue
+from app.core.localdb.agent_issues_utils import (
+    update_db_agent_state,
+    read_db_agent_state,
+    delete_db_agent_state,
+)
 from app.core.localdb.agent_actions_utils import create_db_agent_action
+from app.agent.state import AgentState
 
 logger = logging.getLogger(__name__)
 
@@ -45,9 +49,9 @@ async def run_agent_cycle(runtime: RuntimeSetting) -> None:
                         runtime.mcp_system_def["command"][0],
                         runtime.mcp_system_def["command"][1:],
                         env={
-                            "TRELLO_API_KEY": active_issue_system.api_key,
-                            "TRELLO_TOKEN": active_issue_system.token,
-                            "TRELLO_BASE_URL": active_issue_system.base_url,
+                            "TRELLO_API_KEY": active_issue_system.its_api_key,
+                            "TRELLO_TOKEN": active_issue_system.its_token,
+                            "TRELLO_BASE_URL": active_issue_system.its_base_url,
                         },
                     )
                     await stack.enter_async_context(issue_mcp)
@@ -63,21 +67,9 @@ async def run_agent_cycle(runtime: RuntimeSetting) -> None:
         save_graph_as_mermaid(app_graph)
         logger.info("Executing graph cycle...")
 
-        inputs = {
-            "messages": [],
-            "next_step": "",
-            "issue": None,
-            "issue_comments": [],
-            "agent_issue": read_db_issue(),
-            "agent_stack": runtime.agent_stack,
-            "agent_skill_level": runtime.agent_settings.agent_skill_level,
-            "current_node": None,
-            "current_tool_calls": [],
-            "prompt": None,
-            "system_prompt": None,
-            "tech_stack": TECH_STACKS[runtime.agent_stack],
-            "user_message": None,
-        }
+        input_state = AgentState.init_state(runtime)
+        input_state = _restore_state_from_database(input_state)
+
         # Config for threa level persistence
         thread_config: RunnableConfig = {
             "configurable": {"thread_id": "1"},
@@ -86,31 +78,52 @@ async def run_agent_cycle(runtime: RuntimeSetting) -> None:
 
         # stream_mode="values" gibt uns den kompletten State nach jedem Node zurück
         async for current_state in app_graph.astream(
-            inputs, config=thread_config, stream_mode="values", context=runtime.agent_settings
+            input_state, config=thread_config, stream_mode="values", context=runtime.agent_settings
         ):
-            if current_state["issue"] and current_state["agent_issue"]:
-                save_state_to_instance(current_state)
-                update_db_issue(
-                    issue_id=current_state["issue"].id,
-                    issue_name=current_state["issue"].name,
-                    issue_description=current_state["issue"].description,
-                    issue_type=current_state["agent_issue"].issue_type,
-                    issue_skill_level=current_state["agent_issue"].issue_skill_level,
-                    issue_skill_level_reasoning=current_state[
-                        "agent_issue"
-                    ].issue_skill_level_reasoning,
-                    plan_state=current_state["agent_issue"].plan_state,
-                    working_state="working..."
-                    if current_state["current_node"] != "issue_update"
-                    else "finished.",
-                    user_message=current_state["user_message"]
-                    if current_state["current_node"] == "issue_update"
-                    else "",
-                )
-                create_db_agent_action(
-                    agent_issue=current_state["agent_issue"],
-                    current_node=current_state["current_node"],
-                    tool_calls=current_state["current_tool_calls"],
-                )
+            save_state_to_instance(current_state)
+            if current_state["issue_id"]:
+                _persist_state_to_database(current_state)
 
         logger.info("Finish graph cycle.")
+
+
+def _persist_state_to_database(current_state: AgentState) -> None:
+    if current_state["current_node"] == "issue_fetch" and current_state["issue_from_todo"]:
+        # if the issue is taken from todo state then delete the it in the
+        # database (if exist)
+        delete_db_agent_state(current_state["issue_id"])
+
+    db_agent_state = update_db_agent_state(
+        issue_id=current_state["issue_id"],
+        issue_name=current_state["issue_name"],
+        issue_description=current_state["issue_description"],
+        issue_type=current_state["issue_type"],
+        issue_skill_level=current_state["issue_skill_level"],
+        issue_skill_level_reasoning=current_state["issue_skill_level_reasoning"],
+        repo_branch_name=current_state["repo_branch_name"],
+        plan_state=current_state["plan_state"],
+        working_state=current_state["working_state"],
+        user_message=current_state["user_message"],
+    )
+    create_db_agent_action(
+        db_agent_state_id=db_agent_state.id,
+        tool_calls=current_state["current_tool_calls"],
+        current_node=current_state["current_node"],
+    )
+
+
+def _restore_state_from_database(state: AgentState) -> AgentState:
+    db_agent_state = read_db_agent_state()
+    if db_agent_state:
+        state["issue_id"] = db_agent_state.issue_id
+        state["issue_name"] = db_agent_state.issue_name
+        state["issue_description"] = db_agent_state.issue_description
+        state["issue_type"] = db_agent_state.issue_type
+        state["issue_skill_level"] = db_agent_state.issue_skill_level
+        state["issue_skill_level_reasoning"] = db_agent_state.issue_skill_level_reasoning
+        state["repo_branch_name"] = db_agent_state.repo_branch_name
+        state["plan_content"] = db_agent_state.plan_content
+        state["plan_state"] = db_agent_state.plan_state
+        state["working_state"] = db_agent_state.working_state
+        state["user_message"] = db_agent_state.user_message
+    return state

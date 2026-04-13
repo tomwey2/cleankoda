@@ -1,9 +1,9 @@
 """
-Abstract interface for external issue system integrations.
+Abstract interface for external issue tracking system integrations.
 
-This module defines the contract that all issue providers (Trello, GitHub, Jira, etc.)
+This module defines the contract that all issue tracking system (Trello, GitHub Issues, Jira, etc.)
 must implement. It provides domain models that are independent of any specific
-issue system implementation.
+issue tracking system implementation.
 """
 
 from abc import ABC, abstractmethod
@@ -11,13 +11,11 @@ from dataclasses import dataclass
 from datetime import datetime
 from typing import Optional
 
-from app.core.localdb.models import IssueSystem
-
 
 @dataclass
 class Issue:
     """
-    Domain model for a issue, independent of the issue system.
+    Domain model for a issue, independent of the issue tracking system.
 
     Attributes:
         id: Unique identifier for the issue
@@ -75,11 +73,11 @@ class IssueStateMove:
     state_after: str | None
 
 
-class IssueProvider(ABC):
+class IssueTrackingSystem(ABC):
     """
-    Abstract interface for external issue system operations.
+    Abstract interface for external issue tracking system operations.
 
-    All issue providers (Trello, GitHub Projects, Jira, etc.) must implement
+    All issue tracking systems (Trello, GitHub Issues, Jira, etc.) must implement
     this interface to ensure consistent behavior across different systems.
     """
 
@@ -212,8 +210,20 @@ class IssueProvider(ABC):
 
     @abstractmethod
     def get_type(self) -> str:
-        """Return provider identifier (e.g., 'trello', 'github')."""
+        """Return provider identifier (e.g., 'TRELLO', 'GITHUB')."""
 
     @abstractmethod
-    def get_issue_system(self) -> IssueSystem:
-        """Return the issueSystem configuration backing this provider."""
+    def get_state_todo(self) -> str:
+        """Return the state name for todo."""
+
+    @abstractmethod
+    def get_state_in_progress(self) -> str:
+        """Return the state name for in progress."""
+
+    @abstractmethod
+    def get_state_in_review(self) -> str:
+        """Return the state name for in review."""
+
+    @abstractmethod
+    def get_state_done(self) -> str:
+        """Return the state name for done."""

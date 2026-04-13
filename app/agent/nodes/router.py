@@ -13,8 +13,9 @@ from langchain_core.messages import SystemMessage, HumanMessage, BaseMessage
 from pydantic import BaseModel, Field
 
 from app.agent.services.message_processing import filter_messages_for_llm
-from app.agent.state import AgentState, PlanState, IssueType
+from app.agent.state import AgentState
 from app.agent.services.prompts import load_prompt
+from app.core.types import SkillLevelType, PlanState, IssueType
 
 logger = logging.getLogger(__name__)
 
@@ -23,10 +24,10 @@ logger = logging.getLogger(__name__)
 class RouterDecision(BaseModel):
     """Classify the incoming issue into the correct category and skill level."""
 
-    issue_type: Literal["coding", "bugfixing", "analyzing"] = Field(
+    issue_type: Literal[IssueType.CODING, IssueType.BUGFIXING, IssueType.ANALYZING] = Field(
         description="The specific type of the issue."
     )
-    issue_skill_level: Literal["junior", "senior"] = Field(
+    issue_skill_level: Literal[SkillLevelType.JUNIOR, SkillLevelType.SENIOR] = Field(
         description="Must be 'junior' or 'senior'"
     )
     reasoning: str = Field(description="Why this classification was chosen")
@@ -62,9 +63,7 @@ def create_router_node(llm):
         logger.info("Issue skill level: %s", response.issue_skill_level)
         logger.info("Issue reasoning: %s", response.reasoning)
 
-        issue_type = IssueType.UNKNOWN
-        if response.issue_type in [t.value for t in IssueType]:
-            issue_type = IssueType(response.issue_type)
+        issue_type = IssueType.from_string(response.issue_type)
 
         next_step = "reject"
         if issue_type == IssueType.ANALYZING:
@@ -73,19 +72,19 @@ def create_router_node(llm):
             next_step = "coder"
         elif issue_type == IssueType.CODING:
             next_step = route_to_coder_or_analyst(
-                state["agent_issue"].plan_state,
+                state["plan_state"],
                 state["agent_skill_level"],
                 response.issue_skill_level,
             )
 
-        agent_issue = state["agent_issue"]
-        agent_issue.issue_type = response.issue_type
-        agent_issue.issue_skill_level = response.issue_skill_level
-        agent_issue.issue_skill_level_reasoning = response.reasoning
         return {
-            "next_step": next_step,
-            "agent_issue": agent_issue,
             "current_node": "router",
+            "next_step": next_step,
+            "issue_type": issue_type,
+            "issue_skill_level": response.issue_skill_level,
+            "issue_skill_level_reasoning": response.reasoning,
+            "user_message": "",
+            "working_state": "working...",
         }
 
     return router_node
@@ -100,13 +99,13 @@ def route_to_coder_or_analyst(
         return "coder"
 
     # if the difficulty of the issue is higher than the agent's skill level, reject it
-    if agent_skill_level == "junior" and issue_skill_level == "senior":
+    if agent_skill_level == SkillLevelType.JUNIOR and issue_skill_level == SkillLevelType.SENIOR:
         logger.info("Issue difficulty is higher than agent skill level, rejecting")
         return "reject"
 
     # if the difficulty of the issue is lower to the agent's skill level,
     # and the issue can be executed by the coder without a plan, then route to coder
-    if agent_skill_level == "senior" and issue_skill_level == "junior":
+    if agent_skill_level == SkillLevelType.SENIOR and issue_skill_level == SkillLevelType.JUNIOR:
         logger.info("Issue difficulty is lower than agent skill level, routing to coder")
         return "coder"
 

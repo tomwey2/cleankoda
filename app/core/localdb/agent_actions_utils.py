@@ -2,28 +2,31 @@ import logging
 from sqlalchemy.exc import IntegrityError
 
 from app.core.extensions import db
-from app.core.localdb.models import AgentAction, AgentIssue
+from app.core.localdb.models import AgentActionDb, AgentStatesDb
 from sqlalchemy import select
+from app.core.localdb.agent_issues_utils import read_db_agent_state
 
 logger = logging.getLogger(__name__)
 
 
-def read_db_agent_actions(agent_issue: AgentIssue) -> list[AgentAction]:
+def read_db_agent_actions(issue_id: str) -> list[AgentActionDb]:
     """Get the actions from the database for a given issue."""
+    agent_state: AgentStatesDb | None = read_db_agent_state(issue_id=issue_id)
+    if not agent_state:
+        return []
+
     stmt = (
-        select(AgentAction)
-        .where(AgentAction.issue_id == agent_issue.id)
-        .order_by(AgentAction.id.asc())
+        select(AgentActionDb)
+        .where(AgentActionDb.state_id == agent_state.id)
+        .order_by(AgentActionDb.id.asc())
     )
     return db.session.execute(stmt).scalars().all()
 
 
-def create_db_agent_action(
-    agent_issue: AgentIssue, current_node: str | None, tool_calls: list[dict] | None
-):
+def create_db_agent_action(db_agent_state_id: int, tool_calls: list[dict], current_node: str):
     """insert agent state into sqlalchemy database"""
     if current_node is None or not tool_calls:
-        return None
+        return
 
     try:
         for tool_call in tool_calls:
@@ -48,8 +51,8 @@ def create_db_agent_action(
                 and last_agent_action.tool_arg0_value == arg0_value
             ):
                 return
-            new_agent_action = AgentAction(
-                issue_id=agent_issue.id,
+            new_agent_action = AgentActionDb(
+                state_id=db_agent_state_id,
                 current_node=current_node,
                 tool_name=name,
                 tool_arg0_name=arg0_name,
@@ -70,7 +73,7 @@ def create_db_agent_action(
         return None
 
 
-def get_last_agent_action() -> AgentAction | None:
+def get_last_agent_action() -> AgentActionDb | None:
     """Get the last action from the database."""
-    stmt = select(AgentAction).order_by(AgentAction.id.desc())
+    stmt = select(AgentActionDb).order_by(AgentActionDb.id.desc())
     return db.session.execute(stmt).scalar()
