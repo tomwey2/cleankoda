@@ -14,9 +14,10 @@ from app.agent.services.summaries import (
     build_agent_summary_markdown,
 )
 from app.agent.services.pull_request import create_or_update_pr
-from app.agent.state import AgentState, AgentSummary, IssueType
+from app.agent.state import AgentState, AgentSummary
 from app.agent.utils import get_workspace
 from app.core.config import get_env_settings
+from app.core.types import IssueType
 
 logger = logging.getLogger(__name__)
 

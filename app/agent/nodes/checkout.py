@@ -7,11 +7,11 @@ from typing import Any, Dict
 from flask import current_app
 from git import Repo
 
-from app.core.its.issue_tracking_system import Issue
 from app.agent.services.git_workspace import checkout_branch, get_current_branch
-from app.agent.state import AgentState, IssueType
+from app.agent.state import AgentState
 from app.agent.utils import get_workspace
 from app.core.localdb.models import AgentSettingsDb
+from app.core.types import IssueType
 
 logger = logging.getLogger(__name__)
 

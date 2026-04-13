@@ -9,14 +9,13 @@ issue details, and internal counters.
 
 from dataclasses import dataclass
 from datetime import datetime
-from enum import StrEnum
 from typing import Annotated, TypedDict
 
 from langchain_core.messages import BaseMessage
 from langgraph.graph.message import add_messages
 
 from app.core.its.issue_tracking_system import Issue, IssueComment
-from app.core.localdb.models import AgentStatesDb
+from app.core.types import PlanState, IssueStateType, IssueType, AgentStack
 
 
 @dataclass
@@ -40,51 +39,6 @@ class AgentSummary:
         """Format the summary as a markdown entry with role prefix."""
         role_prefix = self.role.capitalize()
         return f"**[{role_prefix}]** {self.summary}"
-
-
-class PlanState(StrEnum):
-    """Defines the states of the plan."""
-
-    REQUESTED = "REQUESTED"
-    CREATED = "CREATED"
-    UPDATED = "UPDATED"
-    APPROVED = "APPROVED"
-    REJECTED = "REJECTED"
-
-
-class IssueType(StrEnum):
-    """Defines the types of issues."""
-
-    UNKNOWN = "UNKNOWN"
-    CODING = "CODING"
-    BUGFIXING = "BUGFIXING"
-    ANALYZING = "ANALYZING"
-
-    @classmethod
-    def from_string(cls, value: str) -> "IssueType":
-        """Convert a string to a IssueType, normalizing whitespace and case."""
-        normalized = value.strip().upper() if value else ""
-        try:
-            return cls(normalized)
-        except ValueError:
-            return cls.UNKNOWN
-
-
-class IssueStateType(StrEnum):
-    """Defines the states of issues."""
-
-    TODO = "TODO"
-    IN_PROGRESS = "IN_PROGRESS"
-    IN_REVIEW = "IN_REVIEW"
-    DONE = "DONE"
-
-
-class AgentStack(StrEnum):
-    """Supported technology stacks for the agent runtime."""
-
-    BACKEND = "BACKEND"
-    FRONTEND = "FRONTEND"
-    GRADLE_NODE = "GRADLE_NODE"
 
 
 class AgentState(TypedDict):

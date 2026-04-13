@@ -11,11 +11,11 @@ from langchain_core.language_models import BaseChatModel
 
 from app.agent.services.git_workspace import ensure_repository_exists
 from app.agent.services.llm_factory import get_llm
-from app.agent.state import AgentStack
 from app.agent.system_mappings import MCP_SYSTEM_DEFINITIONS
 from app.agent.utils import get_workbench, get_workspace
 from app.core.config import get_env_settings
 from app.core.localdb.models import AgentSettingsDb
+from app.core.types import AgentStack
 
 logger = logging.getLogger(__name__)
 

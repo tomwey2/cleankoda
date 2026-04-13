@@ -1,6 +1,6 @@
 """Defines constants for the application."""
 
-from app.agent.state import AgentStack
+from app.core.types import AgentStack
 
 # Issue States
 # These values correspond to what we read and want to write (before formatting).

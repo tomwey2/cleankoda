@@ -9,7 +9,6 @@ from typing import Any, Dict
 
 from flask import request
 
-from app.core.config import get_env_settings
 from app.core.localdb.models import AgentSettingsDb
 from app.web.schemas.settings_schema import (
     LLMConfigSchema,

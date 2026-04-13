@@ -13,9 +13,9 @@ from langchain_core.messages import SystemMessage, HumanMessage, BaseMessage
 from pydantic import BaseModel, Field
 
 from app.agent.services.message_processing import filter_messages_for_llm
-from app.agent.state import AgentState, PlanState, IssueType
+from app.agent.state import AgentState
 from app.agent.services.prompts import load_prompt
-from app.core.types import SkillLevelType
+from app.core.types import SkillLevelType, PlanState, IssueType
 
 logger = logging.getLogger(__name__)
 

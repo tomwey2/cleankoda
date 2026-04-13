@@ -14,7 +14,8 @@ from langchain_core.messages import AIMessage
 from app.agent.nodes.base import invoke_tool_node
 from app.agent.services.prompts import load_prompt
 from app.agent.services.summaries import has_finish_task_call, record_finish_task_summary
-from app.agent.state import AgentState, IssueType
+from app.agent.state import AgentState
+from app.core.types import IssueType
 
 logger = logging.getLogger(__name__)
 

@@ -20,8 +20,9 @@ from app.agent.services.summaries import (
     has_finish_task_call,
     record_finish_task_summary,
 )
-from app.agent.state import AgentState, PlanState
+from app.agent.state import AgentState
 from app.core.plan_utils import exist_plan, get_plan
+from app.core.types import PlanState
 
 logger = logging.getLogger(__name__)
 

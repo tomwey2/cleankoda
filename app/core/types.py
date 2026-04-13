@@ -55,3 +55,48 @@ class IssueTrackingSystemType(StrEnum):
             return cls(normalized)
         except ValueError:
             return cls.UNKNOWN
+
+
+class PlanState(StrEnum):
+    """Defines the states of the plan."""
+
+    REQUESTED = "REQUESTED"
+    CREATED = "CREATED"
+    UPDATED = "UPDATED"
+    APPROVED = "APPROVED"
+    REJECTED = "REJECTED"
+
+
+class IssueStateType(StrEnum):
+    """Defines the states of issues."""
+
+    TODO = "TODO"
+    IN_PROGRESS = "IN_PROGRESS"
+    IN_REVIEW = "IN_REVIEW"
+    DONE = "DONE"
+
+
+class IssueType(StrEnum):
+    """Defines the types of issues."""
+
+    UNKNOWN = "UNKNOWN"
+    CODING = "CODING"
+    BUGFIXING = "BUGFIXING"
+    ANALYZING = "ANALYZING"
+
+    @classmethod
+    def from_string(cls, value: str) -> "IssueType":
+        """Convert a string to a IssueType, normalizing whitespace and case."""
+        normalized = value.strip().upper() if value else ""
+        try:
+            return cls(normalized)
+        except ValueError:
+            return cls.UNKNOWN
+
+
+class AgentStack(StrEnum):
+    """Supported technology stacks for the agent runtime."""
+
+    BACKEND = "BACKEND"
+    FRONTEND = "FRONTEND"
+    GRADLE_NODE = "GRADLE_NODE"

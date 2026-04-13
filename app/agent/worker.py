@@ -25,6 +25,7 @@ from app.core.localdb.agent_issues_utils import (
     delete_db_agent_state,
 )
 from app.core.localdb.agent_actions_utils import create_db_agent_action
+from app.agent.state import AgentState
 
 logger = logging.getLogger(__name__)
 
@@ -67,7 +68,7 @@ async def run_agent_cycle(runtime: RuntimeSetting) -> None:
         save_graph_as_mermaid(app_graph)
         logger.info("Executing graph cycle...")
 
-        inputs = {
+        inputs: AgentState = {
             # values that are stored in the database
             "issue_id": None,
             "issue_name": None,

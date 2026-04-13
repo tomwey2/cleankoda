@@ -17,7 +17,6 @@ from app.agent.services.pull_request import (
 from app.core.issue_utils import (
     fetch_review_comments,
     fetch_issue_from_state,
-    move_issue_to_state,
 )
 from app.agent.state import AgentState
 from app.core.localdb.models import AgentSettingsDb
