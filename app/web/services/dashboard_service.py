@@ -12,6 +12,7 @@ from app.core.localdb.agent_issues_utils import read_db_agent_state, update_db_a
 from app.core.localdb.models import AgentActionDb, AgentSettingsDb, AgentStatesDb
 from app.core.its.its_factory import create_issue_tracking_system
 from app.web.services import settings_service
+from app.core.types import PlanState
 
 logger = logging.getLogger(__name__)
 
@@ -99,7 +100,7 @@ async def move_issue_to_in_progress(issue_id: str) -> bool:
     return True
 
 
-def _validate_plan_review_input(new_state: str | None, rejection_reason: str | None) -> str:
+def _validate_plan_review_input(new_state: PlanState, rejection_reason: str | None):
     """Validate and normalize plan review input.
 
     Args:
@@ -113,22 +114,19 @@ def _validate_plan_review_input(new_state: str | None, rejection_reason: str | N
         PlanReviewError: If validation fails.
     """
     # Input validation
-    if not new_state or not isinstance(new_state, str):
-        raise PlanReviewError("Plan state is required and must be a string.")
+    if not new_state or not isinstance(new_state, PlanState):
+        raise PlanReviewError("Plan state is required and must be a PlanState.")
 
-    new_state = new_state.strip().lower()
-    if new_state not in ["approved", "rejected"]:
-        raise PlanReviewError("Invalid state. Must be 'approved' or 'rejected'.")
+    if new_state not in [PlanState.APPROVED, PlanState.REJECTED]:
+        raise PlanReviewError("Invalid state. Must be 'APPROVED' or 'REJECTED'.")
 
     rejection_reason = (rejection_reason or "").strip()
 
-    if new_state == "rejected" and not rejection_reason:
+    if new_state == PlanState.REJECTED and not rejection_reason:
         raise PlanReviewError("A rejection reason is required.")
 
-    return new_state
 
-
-def _rollback_issue_state(issue_id: str, original_state: str) -> bool:
+def _rollback_issue_state(issue_id: str, original_state: PlanState) -> bool:
     """Attempt to rollback issue state to original value.
 
     Args:
@@ -149,7 +147,7 @@ def _rollback_issue_state(issue_id: str, original_state: str) -> bool:
         return False
 
 
-async def process_plan_review(new_state: str | None, rejection_reason: str | None) -> dict:
+async def process_plan_review(new_state: PlanState, rejection_reason: str | None) -> dict:
     """Handle plan review transitions and side-effects.
 
     Args:
@@ -163,35 +161,40 @@ async def process_plan_review(new_state: str | None, rejection_reason: str | Non
         PlanReviewError: If validation fails or operations cannot be completed.
     """
     # Validate input
-    new_state = _validate_plan_review_input(new_state, rejection_reason)
+    _validate_plan_review_input(new_state, rejection_reason)
     rejection_reason = (rejection_reason or "").strip()
 
     agent_state = read_db_agent_state()
     if not agent_state:
         raise PlanReviewError("No active issue found in database.", status_code=HTTP_NOT_FOUND)
 
-    if new_state == "rejected" and agent_state.plan_state not in ("created", "updated"):
+    # Store original state for potential rollback
+    original_plan_state = PlanState.from_string(agent_state.plan_state)
+
+    if new_state == PlanState.REJECTED and original_plan_state not in (
+        PlanState.CREATED,
+        PlanState.UPDATED,
+    ):
         raise PlanReviewError(
             "Plan can only be rejected when it is in review.", status_code=HTTP_CONFLICT
         )
 
-    # Store original state for potential rollback
-    original_plan_state = agent_state.plan_state
-
     try:
         # Update issue state first
-        updated_issue = update_db_agent_state(agent_state.issue_id, plan_state=new_state)
-        if not updated_issue:
+        updated_agent_state = update_db_agent_state(
+            agent_state.issue_id, plan_state=new_state.value
+        )
+        if not updated_agent_state:
             raise PlanReviewError("Failed to update issue", status_code=HTTP_INTERNAL_SERVER_ERROR)
 
         # Add rejection comment if needed
-        if new_state == "rejected" and rejection_reason:
+        if new_state == PlanState.REJECTED and rejection_reason:
             try:
-                await add_plan_rejection_comment(updated_issue.issue_id, rejection_reason)
+                await add_plan_rejection_comment(updated_agent_state.issue_id, rejection_reason)
             except Exception as exc:
                 logger.exception(
                     "Failed to add rejection comment to issue %s. Rolling back state change.",
-                    updated_issue.issue_id,
+                    updated_agent_state.issue_id,
                 )
                 # Rollback the state change
                 _rollback_issue_state(agent_state.issue_id, original_plan_state)
@@ -202,11 +205,11 @@ async def process_plan_review(new_state: str | None, rejection_reason: str | Non
 
         # Move issue to in progress
         try:
-            moved = await move_issue_to_in_progress(updated_issue.issue_id)
+            moved = await move_issue_to_in_progress(updated_agent_state.issue_id)
         except Exception as exc:
             logger.exception(
                 "Failed to move issue %s to in progress. Rolling back state change.",
-                updated_issue.issue_id,
+                updated_agent_state.issue_id,
             )
             # Rollback the state change
             _rollback_issue_state(agent_state.issue_id, original_plan_state)
@@ -222,8 +225,8 @@ async def process_plan_review(new_state: str | None, rejection_reason: str | Non
 
         return {
             "message": f"Plan state updated to {new_state}",
-            "issue_id": updated_issue.issue_id,
-            "plan_state": updated_issue.plan_state,
+            "issue_id": updated_agent_state.issue_id,
+            "plan_state": updated_agent_state.plan_state,
         }
 
     except PlanReviewError:

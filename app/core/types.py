@@ -60,11 +60,21 @@ class IssueTrackingSystemType(StrEnum):
 class PlanState(StrEnum):
     """Defines the states of the plan."""
 
+    UNKNOWN = "UNKNOWN"
     REQUESTED = "REQUESTED"
     CREATED = "CREATED"
     UPDATED = "UPDATED"
     APPROVED = "APPROVED"
     REJECTED = "REJECTED"
+
+    @classmethod
+    def from_string(cls, value: str) -> "PlanState":
+        """Convert a string to a PlanState, normalizing whitespace and case."""
+        normalized = value.strip().upper() if value else ""
+        try:
+            return cls(normalized)
+        except ValueError:
+            return cls.UNKNOWN
 
 
 class IssueStateType(StrEnum):

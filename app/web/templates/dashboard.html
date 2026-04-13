@@ -229,7 +229,7 @@
         document.body.addEventListener('click', function (event) {
             if (event.target && event.target.closest('#btn-approve')) {
                 reopenRejectionPanelOnError = false;
-                reviewPlan('approved');
+                reviewPlan("APPROVED");
             }
             if (event.target && event.target.closest('#btn-reject')) {
                 const panel = document.getElementById('rejection-panel');
@@ -246,7 +246,7 @@
                 if (panel) { panel.style.display = 'none'; }
                 // Trigger plan rejection workflow; on failure the inline error gives the
                 // reviewer a quick path back to the dialog.
-                reviewPlan('rejected', reason);
+                reviewPlan("REJECTED", reason);
             }
             if (event.target && event.target.closest('#btn-cancel-reject')) {
                 const panel = document.getElementById('rejection-panel');

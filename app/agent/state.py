@@ -9,13 +9,16 @@ issue details, and internal counters.
 
 from dataclasses import dataclass
 from datetime import datetime
-from typing import Annotated, TypedDict
+from typing import Annotated, TypedDict, TYPE_CHECKING
 
 from langchain_core.messages import BaseMessage
 from langgraph.graph.message import add_messages
 
 from app.core.its.issue_tracking_system import Issue, IssueComment
 from app.core.types import PlanState, IssueStateType, IssueType, AgentStack
+
+if TYPE_CHECKING:
+    from app.agent.runtime import RuntimeSetting
 
 
 @dataclass
@@ -97,3 +100,35 @@ class AgentState(TypedDict):
     last_update: datetime | None
     #
     pr_description: str | None
+
+    @staticmethod
+    def init_state(runtime: "RuntimeSetting") -> "AgentState":
+        """Initialize the default agent state based on runtime settings."""
+        # pylint: disable=import-outside-toplevel
+        from app.core.constants import TECH_STACKS
+        return {
+            # values that are stored in the database
+            "issue_id": None,
+            "issue_name": None,
+            "issue_description": None,
+            "issue_comments": [],
+            "issue_type": None,
+            "issue_skill_level": None,
+            "issue_skill_level_reasoning": None,
+            "issue_from_todo": None,
+            "repo_branch_name": None,
+            "plan_content": None,
+            "plan_state": None,
+            "working_state": None,
+            "user_message": None,
+            # values that are not stored in the database
+            "messages": [],
+            "next_step": "",
+            "agent_stack": runtime.agent_stack,
+            "agent_skill_level": runtime.agent_settings.agent_skill_level,
+            "current_node": None,
+            "current_tool_calls": [],
+            "prompt": None,
+            "system_prompt": None,
+            "tech_stack": TECH_STACKS[runtime.agent_stack],
+        }

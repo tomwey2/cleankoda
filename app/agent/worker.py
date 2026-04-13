@@ -12,7 +12,6 @@ from contextlib import AsyncExitStack
 from langchain_core.runnables import RunnableConfig
 from langgraph.graph import StateGraph
 
-from app.core.constants import TECH_STACKS
 from app.agent.graph import create_workflow
 from app.agent.mcp.adapter import McpServerClient
 from app.agent.runtime import RuntimeSetting
@@ -68,7 +67,7 @@ async def run_agent_cycle(runtime: RuntimeSetting) -> None:
         save_graph_as_mermaid(app_graph)
         logger.info("Executing graph cycle...")
 
-        input_state = _init_state(runtime)
+        input_state = AgentState.init_state(runtime)
         input_state = _restore_state_from_database(input_state)
 
         # Config for threa level persistence
@@ -86,35 +85,6 @@ async def run_agent_cycle(runtime: RuntimeSetting) -> None:
                 _persist_state_to_database(current_state)
 
         logger.info("Finish graph cycle.")
-
-
-def _init_state(runtime: RuntimeSetting) -> AgentState:
-    return {
-        # values that are stored in the database
-        "issue_id": None,
-        "issue_name": None,
-        "issue_description": None,
-        "issue_comments": [],
-        "issue_type": None,
-        "issue_skill_level": None,
-        "issue_skill_level_reasoning": None,
-        "issue_from_todo": None,
-        "repo_branch_name": None,
-        "plan_content": None,
-        "plan_state": None,
-        "working_state": None,
-        "user_message": None,
-        # values that are not stored in the database
-        "messages": [],
-        "next_step": "",
-        "agent_stack": runtime.agent_stack,
-        "agent_skill_level": runtime.agent_settings.agent_skill_level,
-        "current_node": None,
-        "current_tool_calls": [],
-        "prompt": None,
-        "system_prompt": None,
-        "tech_stack": TECH_STACKS[runtime.agent_stack],
-    }
 
 
 def _persist_state_to_database(current_state: AgentState) -> None:
