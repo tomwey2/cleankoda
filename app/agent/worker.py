@@ -100,6 +100,7 @@ def _persist_state_to_database(current_state: AgentState) -> None:
         issue_type=current_state["issue_type"],
         issue_skill_level=current_state["issue_skill_level"],
         issue_skill_level_reasoning=current_state["issue_skill_level_reasoning"],
+        issue_is_active=current_state["issue_is_active"],
         repo_branch_name=current_state["repo_branch_name"],
         plan_state=current_state["plan_state"],
         working_state=current_state["working_state"],
@@ -121,6 +122,7 @@ def _restore_state_from_database(state: AgentState) -> AgentState:
         state["issue_type"] = db_agent_state.issue_type
         state["issue_skill_level"] = db_agent_state.issue_skill_level
         state["issue_skill_level_reasoning"] = db_agent_state.issue_skill_level_reasoning
+        state["issue_is_active"] = db_agent_state.issue_is_active
         state["repo_branch_name"] = db_agent_state.repo_branch_name
         state["plan_content"] = db_agent_state.plan_content
         state["plan_state"] = db_agent_state.plan_state

@@ -58,7 +58,6 @@ class AgentState(TypedDict):
     next_step: str
 
     # information from the external issue tracking system
-    issue: Issue | None
     issue_comments: list[IssueComment]
     issue_id: str | None
     issue_name: str | None
@@ -68,6 +67,7 @@ class AgentState(TypedDict):
     issue_skill_level: str | None
     issue_skill_level_reasoning: str | None
     issue_from_todo: bool | None
+    issue_is_active: bool | None
 
     # agent information from settings
     agent_stack: AgentStack
@@ -106,6 +106,7 @@ class AgentState(TypedDict):
         """Initialize the default agent state based on runtime settings."""
         # pylint: disable=import-outside-toplevel
         from app.core.constants import TECH_STACKS
+
         return {
             # values that are stored in the database
             "issue_id": None,
@@ -115,6 +116,7 @@ class AgentState(TypedDict):
             "issue_type": None,
             "issue_skill_level": None,
             "issue_skill_level_reasoning": None,
+            "issue_is_active": None,
             "issue_from_todo": None,
             "repo_branch_name": None,
             "plan_content": None,

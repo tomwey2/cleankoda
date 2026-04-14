@@ -36,21 +36,24 @@ def create_issue_fetch_node(agent_settings: AgentSettingsDb):
             logger.info("--- ISSUE FETCH node ---")
 
         try:
-            issue, issue_is_new = await _resolve_issue(state["issue_id"], its)
+            issue = await _resolve_issue(state["issue_id"], its)
 
+            # if no issue is found, return
             if not issue:
                 logger.info("There is no current issue to work on.")
                 return {"issue_id": None}
 
+            # if issue is found, determine if it is active, i.e. in todo, in progress or in review
+            issue_is_active = issue.state_name in [
+                its.get_state_todo(),
+                its.get_state_in_progress(),
+                its.get_state_in_review(),
+            ]
+            issue_from_todo = issue.state_name == its.get_state_todo()
+
             comments = []
             pr_review_message = ""
-            if issue_is_new:
-                # if the issue is new and has the state "todo" then clean up the workspace
-                logger.info("Processing issue ID: %s - %s", state["issue_id"], state["issue_name"])
-                await its.move_issue_to_named_state(
-                    issue_id=issue.id, state_name=its.get_state_in_review()
-                )
-            else:
+            if issue_is_active and issue.state_name == its.get_state_in_progress():
                 # otherwise fetch review comments from issue tracking system and pr, in order
                 # to give further information from user
                 comments = await fetch_review_comments(
@@ -62,6 +65,13 @@ def create_issue_fetch_node(agent_settings: AgentSettingsDb):
                 )
                 pr_review_message = _fetch_pr_review_info(state, issue.id)
 
+            if issue_is_active and issue_from_todo:
+                # if the issue is new and has the state "todo" then move it to "in progress"
+                await its.move_issue_to_named_state(
+                    issue_id=issue.id, state_name=its.get_state_in_progress()
+                )
+                issue.state_name = its.get_state_in_progress()
+
             return {
                 "current_node": "issue_fetch",
                 "issue_id": issue.id,
@@ -69,7 +79,8 @@ def create_issue_fetch_node(agent_settings: AgentSettingsDb):
                 "issue_description": issue.description,
                 "issue_state_name": issue.state_name,
                 "issue_comments": comments,
-                "issue_from_todo": issue_is_new,
+                "issue_is_active": issue_is_active,
+                "issue_from_todo": issue_from_todo,
                 "pr_review_message": pr_review_message,
             }
 
@@ -80,15 +91,11 @@ def create_issue_fetch_node(agent_settings: AgentSettingsDb):
     return issue_fetch
 
 
-async def _resolve_issue(
-    issue_id: str | None, its: IssueTrackingSystem
-) -> tuple[Issue | None, bool]:
+async def _resolve_issue(issue_id: str | None, its: IssueTrackingSystem) -> Issue | None:
     """
     Get the last issue (with issue_id) or create a new issue.
     See specification in issue-management.md.
-    Returns:
-        the issue
-        true if the issue is new (from todo) otherwise false.
+    Returns: the issue
     """
 
     if issue_id:
@@ -103,18 +110,19 @@ async def _resolve_issue(
             # check if issue in review or in progress
             if issue.state_name == its.get_state_in_review():
                 logger.info("Issue is in review. Wait for user action.")
-                return None, False
+                return None
 
             if issue.state_name == its.get_state_in_progress():
                 logger.info("Issue is in progress. Add review comments.")
-                return issue, False
+                return issue
 
             logger.info("Last issue found but it is not in review or in progress.")
+            return issue
 
     # Get a new issue from todo
     logger.info("Fetching new issue from todo.")
     issue = await fetch_issue_from_state(its, its.get_state_todo())
-    return issue, True
+    return issue
 
 
 def _fetch_pr_review_info(state: AgentState, issue_id: str) -> str:
