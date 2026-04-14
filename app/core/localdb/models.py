@@ -85,12 +85,15 @@ class AgentStatesDb(db.Model):
     # Issue description from the external issue system
     issue_description = db.Column(db.Text, nullable=True)
 
+    # Issue state from the external issue system converted to IssueStateType
+    issue_state = db.Column(db.String(20), nullable=True)
     # Issue type (e.g., "coding", "analyzing", "bugfixing")
     issue_type = db.Column(db.String(20), nullable=True)
     # Issue skill level ("junior", "senior")
     issue_skill_level = db.Column(db.String(20), nullable=True)
     # The LLM description of the skill level decision
     issue_skill_level_reasoning = db.Column(db.Text, nullable=True)
+    issue_is_active = db.Column(db.Boolean, nullable=False, default=False)
 
     # Branch name of the repository
     repo_branch_name = db.Column(db.String(100), nullable=True)

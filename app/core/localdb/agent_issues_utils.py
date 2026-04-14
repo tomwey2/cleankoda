@@ -28,11 +28,16 @@ def read_db_agent_state(id: int | None = None, issue_id: str | None = None) -> A
     # Priority 3 (Fallback): get the first issue
     # We sort by ID, so "the first" is uniquely defined.
     else:
-        stmt = select(AgentStatesDb).order_by(AgentStatesDb.id.asc()).limit(1)
+        stmt = (
+            select(AgentStatesDb)
+            .where(AgentStatesDb.issue_is_active.is_(True))
+            .order_by(AgentStatesDb.id.asc())
+            .limit(1)
+        )
         agent_state = db.session.execute(stmt).scalar_one_or_none()
 
     if agent_state is None:
-        logger.warning("No issue found in database")
+        logger.debug("No issue found in database")
     else:
         logger.debug("Current issue found: %s (%s)", agent_state.issue_id, agent_state.issue_name)
     return agent_state

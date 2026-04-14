@@ -137,12 +137,17 @@ def get_template_context(settings: AgentSettingsDb) -> Dict[str, Any]:
     if not settings.repo_url:
         settings.repo_url = get_env_settings().github_repo_url
 
+    agent_age = settings.agent_skill_level.lower()
+    agent_gender = settings.agent_gender.lower()
+    agent_image = f"{agent_age}-{agent_gender}-is-waiting.png"
+
     return {
         "settings": settings,
         "form_data": form_data,
         "selected_provider": selected_provider,
         "missing_provider_env": missing_env,
         "show_ollama_warning": show_ollama_warning,
+        "agent_image": agent_image,
     }
 
 

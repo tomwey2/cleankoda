@@ -12,7 +12,7 @@ from app.core.localdb.agent_issues_utils import read_db_agent_state, update_db_a
 from app.core.localdb.models import AgentActionDb, AgentSettingsDb, AgentStatesDb
 from app.core.its.its_factory import create_issue_tracking_system
 from app.web.services import settings_service
-from app.core.types import PlanState
+from app.core.types import PlanState, IssueStateType
 
 logger = logging.getLogger(__name__)
 
@@ -37,12 +37,18 @@ async def get_template_context() -> dict:
     Returns:
         Dictionary with all template variables.
     """
+    agent_settings: AgentSettingsDb | None = settings_service.get_or_create_settings()
     agent_state: AgentStatesDb | None = read_db_agent_state()
 
     plan_content = ""
     plan_exists = False
     issue_description_html = ""
     agent_actions: list[AgentActionDb] = []
+    agent_image = ""
+
+    agent_age = agent_settings.agent_skill_level.lower() if agent_settings else "junior"
+    agent_gender = agent_settings.agent_gender.lower() if agent_settings else "male"
+    agent_activity = "is-waiting"
 
     if agent_state:
         agent_actions = read_db_agent_actions(agent_state.issue_id)
@@ -57,21 +63,30 @@ async def get_template_context() -> dict:
             else ""
         )
 
+        if agent_state.issue_state == IssueStateType.IN_PROGRESS.value:
+            agent_activity = "is-working"
+        elif agent_state.issue_state == IssueStateType.IN_REVIEW.value:
+            agent_activity = "is-happy"
+
+    agent_image = f"{agent_age}-{agent_gender}-{agent_activity}.png"
+
     return {
-        "issue_id": agent_state.issue_id,
-        "issue_name": agent_state.issue_name,
-        "issue_description": agent_state.issue_description,
-        "issue_type": agent_state.issue_type,
-        "issue_skill_level": agent_state.issue_skill_level,
+        "issue_id": agent_state.issue_id if agent_state else None,
+        "issue_name": agent_state.issue_name if agent_state else None,
+        "issue_description": agent_state.issue_description if agent_state else None,
+        "issue_type": agent_state.issue_type if agent_state else None,
+        "issue_skill_level": agent_state.issue_skill_level if agent_state else None,
         "plan_content": plan_content,
         "plan_exists": plan_exists,
-        "plan_state": agent_state.plan_state,
+        "plan_state": agent_state.plan_state if agent_state else None,
         "issue_description_html": issue_description_html,
         "current_node": "todo",
         "agent_actions": agent_actions,
-        "working_state": agent_state.working_state,
-        "user_message": agent_state.user_message,
-        "repo_pr_url": agent_state.repo_pr_url,
+        "working_state": agent_state.working_state if agent_state else None,
+        "user_message": agent_state.user_message if agent_state else None,
+        "repo_pr_url": agent_state.repo_pr_url if agent_state else None,
+        "agent_skill_level": agent_settings.agent_skill_level if agent_settings else None,
+        "agent_image": agent_image,
     }
 
 

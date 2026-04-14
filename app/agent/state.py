@@ -14,7 +14,7 @@ from typing import Annotated, TypedDict, TYPE_CHECKING
 from langchain_core.messages import BaseMessage
 from langgraph.graph.message import add_messages
 
-from app.core.its.issue_tracking_system import Issue, IssueComment
+from app.core.its.issue_tracking_system import IssueComment
 from app.core.types import PlanState, IssueStateType, IssueType, AgentStack
 
 if TYPE_CHECKING:
@@ -58,7 +58,6 @@ class AgentState(TypedDict):
     next_step: str
 
     # information from the external issue tracking system
-    issue: Issue | None
     issue_comments: list[IssueComment]
     issue_id: str | None
     issue_name: str | None
@@ -68,6 +67,7 @@ class AgentState(TypedDict):
     issue_skill_level: str | None
     issue_skill_level_reasoning: str | None
     issue_from_todo: bool | None
+    issue_is_active: bool | None
 
     # agent information from settings
     agent_stack: AgentStack
@@ -106,15 +106,18 @@ class AgentState(TypedDict):
         """Initialize the default agent state based on runtime settings."""
         # pylint: disable=import-outside-toplevel
         from app.core.constants import TECH_STACKS
+
         return {
             # values that are stored in the database
             "issue_id": None,
             "issue_name": None,
             "issue_description": None,
             "issue_comments": [],
+            "issue_state": None,
             "issue_type": None,
             "issue_skill_level": None,
             "issue_skill_level_reasoning": None,
+            "issue_is_active": None,
             "issue_from_todo": None,
             "repo_branch_name": None,
             "plan_content": None,
