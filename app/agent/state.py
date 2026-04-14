@@ -113,6 +113,7 @@ class AgentState(TypedDict):
             "issue_name": None,
             "issue_description": None,
             "issue_comments": [],
+            "issue_state": None,
             "issue_type": None,
             "issue_skill_level": None,
             "issue_skill_level_reasoning": None,

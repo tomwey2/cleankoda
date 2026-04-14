@@ -80,10 +80,20 @@ class PlanState(StrEnum):
 class IssueStateType(StrEnum):
     """Defines the states of issues."""
 
+    UNKNOWN = "UNKNOWN"
     TODO = "TODO"
     IN_PROGRESS = "IN_PROGRESS"
     IN_REVIEW = "IN_REVIEW"
     DONE = "DONE"
+
+    @classmethod
+    def from_string(cls, value: str) -> "IssueStateType":
+        """Convert a string to a IssueStateType, normalizing whitespace and case."""
+        normalized = value.strip().upper() if value else ""
+        try:
+            return cls(normalized)
+        except ValueError:
+            return cls.UNKNOWN
 
 
 class IssueType(StrEnum):

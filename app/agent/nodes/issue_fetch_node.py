@@ -20,6 +20,7 @@ from app.core.issue_utils import (
 )
 from app.agent.state import AgentState
 from app.core.localdb.models import AgentSettingsDb
+from app.core.types import IssueStateType
 
 logger = logging.getLogger(__name__)
 
@@ -70,14 +71,15 @@ def create_issue_fetch_node(agent_settings: AgentSettingsDb):
                 await its.move_issue_to_named_state(
                     issue_id=issue.id, state_name=its.get_state_in_progress()
                 )
-                issue.state_name = its.get_state_in_progress()
 
             return {
                 "current_node": "issue_fetch",
                 "issue_id": issue.id,
                 "issue_name": issue.name,
                 "issue_description": issue.description,
-                "issue_state_name": issue.state_name,
+                "issue_state": IssueStateType.IN_PROGRESS
+                if issue_is_active
+                else IssueStateType.UNKNOWN,
                 "issue_comments": comments,
                 "issue_is_active": issue_is_active,
                 "issue_from_todo": issue_from_todo,

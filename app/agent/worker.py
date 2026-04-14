@@ -25,6 +25,7 @@ from app.core.localdb.agent_issues_utils import (
 )
 from app.core.localdb.agent_actions_utils import create_db_agent_action
 from app.agent.state import AgentState
+from app.core.types import IssueStateType
 
 logger = logging.getLogger(__name__)
 
@@ -98,6 +99,7 @@ def _persist_state_to_database(current_state: AgentState) -> None:
         issue_name=current_state["issue_name"],
         issue_description=current_state["issue_description"],
         issue_type=current_state["issue_type"],
+        issue_state=current_state["issue_state"].value,
         issue_skill_level=current_state["issue_skill_level"],
         issue_skill_level_reasoning=current_state["issue_skill_level_reasoning"],
         issue_is_active=current_state["issue_is_active"],
@@ -120,6 +122,7 @@ def _restore_state_from_database(state: AgentState) -> AgentState:
         state["issue_name"] = db_agent_state.issue_name
         state["issue_description"] = db_agent_state.issue_description
         state["issue_type"] = db_agent_state.issue_type
+        state["issue_state"] = IssueStateType.from_string(db_agent_state.issue_state)
         state["issue_skill_level"] = db_agent_state.issue_skill_level
         state["issue_skill_level_reasoning"] = db_agent_state.issue_skill_level_reasoning
         state["issue_is_active"] = db_agent_state.issue_is_active

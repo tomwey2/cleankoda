@@ -16,6 +16,7 @@ from app.core.its.issue_tracking_system import IssueTrackingSystem
 from app.agent.services.summaries import get_agent_summary_entries
 from app.agent.state import AgentState
 from app.core.localdb.models import AgentSettingsDb
+from app.core.types import IssueStateType
 
 AGENT_DEFAULT_COMMENT = "Issue completed by AI Agent."
 
@@ -64,6 +65,7 @@ def create_issue_update_node(agent_settings: AgentSettingsDb):
             return {
                 "current_node": "issue_update",
                 "working_state": "finished.",
+                "issue_state": IssueStateType.IN_REVIEW,
             }
         except ValueError as exc:
             logger.warning(str(exc))

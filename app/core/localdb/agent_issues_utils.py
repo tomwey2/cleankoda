@@ -37,7 +37,7 @@ def read_db_agent_state(id: int | None = None, issue_id: str | None = None) -> A
         agent_state = db.session.execute(stmt).scalar_one_or_none()
 
     if agent_state is None:
-        logger.warning("No issue found in database")
+        logger.debug("No issue found in database")
     else:
         logger.debug("Current issue found: %s (%s)", agent_state.issue_id, agent_state.issue_name)
     return agent_state
