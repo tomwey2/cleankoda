@@ -14,7 +14,7 @@ from typing import Annotated, TypedDict, TYPE_CHECKING
 from langchain_core.messages import BaseMessage
 from langgraph.graph.message import add_messages
 
-from app.core.its.issue_tracking_system import Issue, IssueComment
+from app.core.its.issue_tracking_system import IssueComment
 from app.core.types import PlanState, IssueStateType, IssueType, AgentStack
 
 if TYPE_CHECKING:
