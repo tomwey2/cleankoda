@@ -87,6 +87,8 @@ class AgentStatesDb(db.Model):
 
     # Issue state from the external issue system converted to IssueStateType
     issue_state = db.Column(db.String(20), nullable=True)
+    # link to the issue in the issue tracking system
+    issue_url = db.Column(db.String(200), nullable=True)
     # Issue type (e.g., "coding", "analyzing", "bugfixing")
     issue_type = db.Column(db.String(20), nullable=True)
     # Issue skill level ("junior", "senior")
@@ -145,7 +147,7 @@ class AgentActionDb(db.Model):
         db.Integer, db.ForeignKey("agent_states.id", ondelete="CASCADE"), nullable=True
     )
     # Current node of the agent ("issue_fetch", "coder", "tester", "issue_update")
-    current_node = db.Column(db.String(50), nullable=True)
+    node_name = db.Column(db.String(50), nullable=True)
     # Tool used by the agent
     tool_name = db.Column(db.String(50), nullable=True)
     tool_arg0_name = db.Column(db.String(50), nullable=True)

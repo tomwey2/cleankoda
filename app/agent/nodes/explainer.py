@@ -180,18 +180,18 @@ def _enforce_char_budget(lines: list[str], max_chars: int) -> tuple[list[str], i
 
 def _format_event_line(kind: str, action: AgentActionDb) -> str:
     timestamp = _format_timestamp(action.created_at)
-    node = (action.current_node or "?").strip()
+    node_name = (action.node_name or "?").strip()
     tool_name = (action.tool_name or "unknown").strip()
 
     if kind == "thought":
-        return f"- {timestamp} | thought | node={node}"
+        return f"- {timestamp} | thought | node={node_name}"
 
     arg_text = ""
     if action.tool_arg0_name and action.tool_arg0_value:
         value = _truncate(str(action.tool_arg0_value), MAX_VALUE_CHARS)
         arg_text = f" {action.tool_arg0_name}={value}"
 
-    return f"- {timestamp} | tool | {node}.{tool_name}{arg_text}"
+    return f"- {timestamp} | tool | {node_name}.{tool_name}{arg_text}"
 
 
 def _format_timestamp(value: datetime | None) -> str:

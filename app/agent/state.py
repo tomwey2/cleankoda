@@ -63,6 +63,7 @@ class AgentState(TypedDict):
     issue_name: str | None
     issue_description: str | None
     issue_state: IssueStateType | None
+    issue_url: str | None
     issue_type: IssueType | None
     issue_skill_level: str | None
     issue_skill_level_reasoning: str | None
@@ -80,6 +81,7 @@ class AgentState(TypedDict):
 
     # information from the git system
     repo_branch_name: str | None
+    repo_pr_url: str | None
     pr_review_message: str | None
 
     plan_content: str | None
@@ -114,12 +116,14 @@ class AgentState(TypedDict):
             "issue_description": None,
             "issue_comments": [],
             "issue_state": None,
+            "issue_url": None,
             "issue_type": None,
             "issue_skill_level": None,
             "issue_skill_level_reasoning": None,
             "issue_is_active": None,
             "issue_from_todo": None,
             "repo_branch_name": None,
+            "repo_pr_url": None,
             "plan_content": None,
             "plan_state": None,
             "working_state": None,
