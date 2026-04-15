@@ -103,6 +103,12 @@ def credentials_new_selection():
             "icon": "bi-cpu",
             "description": "API Key for Mistral, OpenAI, Anthropic, etc.",
         },
+        {
+            "id": "basic_auth",
+            "name": "Basic Auth",
+            "icon": "bi-person",
+            "description": "Basic Auth for username and password",
+        },
     ]
     return render_template("credentials_new.html", types=credential_types)
 
