@@ -23,40 +23,40 @@ def read_db_agent_actions(issue_id: str) -> list[AgentActionDb]:
     return db.session.execute(stmt).scalars().all()
 
 
-def create_db_agent_action(db_agent_state_id: int, tool_calls: list[dict], current_node: str):
+def create_db_agent_action(db_agent_state_id: int, tool_calls: list[dict], node_name: str):
     """insert agent state into sqlalchemy database"""
-    if current_node is None or not tool_calls:
+    if node_name is None or not tool_calls:
         return
 
     try:
         for tool_call in tool_calls:
-            name = tool_call.get("name", "unknown")
+            tool_name = tool_call.get("name", "unknown")
             logger.debug(
-                "Creating agent state in database for current_node: %s tool: %s",
-                current_node,
-                name,
+                "Creating agent state in database for node: %s tool: %s",
+                node_name,
+                tool_name,
             )
             args = tool_call.get("args", {}) or {}
-            arg0_name = ""
-            arg0_value = ""
-            if args and name in ["read_file", "write_to_file", "run_command"]:
-                arg0_name, arg0_value = next(iter(args.items()))
+            tool_arg0_name = ""
+            tool_arg0_value = ""
+            if args and tool_name in ["read_file", "write_to_file", "run_command"]:
+                tool_arg0_name, tool_arg0_value = next(iter(args.items()))
 
             last_agent_action = get_last_agent_action()
             if (
                 last_agent_action
-                and last_agent_action.current_node == current_node
-                and last_agent_action.tool_name == name
-                and last_agent_action.tool_arg0_name == arg0_name
-                and last_agent_action.tool_arg0_value == arg0_value
+                and last_agent_action.node_name == node_name
+                and last_agent_action.tool_name == tool_name
+                and last_agent_action.tool_arg0_name == tool_arg0_name
+                and last_agent_action.tool_arg0_value == tool_arg0_value
             ):
                 return
             new_agent_action = AgentActionDb(
                 state_id=db_agent_state_id,
-                current_node=current_node,
-                tool_name=name,
-                tool_arg0_name=arg0_name,
-                tool_arg0_value=arg0_value,
+                node_name=node_name,
+                tool_name=tool_name,
+                tool_arg0_name=tool_arg0_name,
+                tool_arg0_value=tool_arg0_value,
             )
             db.session.add(new_agent_action)
             db.session.commit()

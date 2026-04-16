@@ -83,6 +83,7 @@ def create_issue_fetch_node(agent_settings: AgentSettingsDb):
                 "issue_comments": comments,
                 "issue_is_active": issue_is_active,
                 "issue_from_todo": issue_from_todo,
+                "issue_url": issue.url,
                 "pr_review_message": pr_review_message,
             }
 

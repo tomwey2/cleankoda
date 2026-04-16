@@ -12,9 +12,11 @@ from flask import (
     Blueprint,
     flash,
     jsonify,
+    redirect,
     render_template,
     request,
     Response,
+    url_for,
 )
 
 from app.agent.services.pull_request import (
@@ -24,7 +26,7 @@ from app.agent.services.pull_request import (
     format_pr_review_message,
     get_latest_pr_review_status,
 )
-from app.web.services import dashboard_service, settings_service
+from app.web.services import dashboard_service, settings_service, credentials_service
 from app.web.services.dashboard_service import PlanReviewError, process_plan_review
 from app.core.types import PlanState
 
@@ -62,6 +64,109 @@ def settings():
 
     context = settings_service.get_template_context(agent_settings)
     return render_template("settings.html", **context)
+
+
+@web_bp.route("/credentials", methods=["GET"])
+def credentials_overview():
+    """Handles the credentials overview page."""
+    user_id = credentials_service.get_current_user_id()
+    credentials = credentials_service.get_credentials_for_user(user_id)
+    return render_template("credentials_overview.html", credentials=credentials)
+
+
+@web_bp.route("/credentials/new", methods=["GET"])
+def credentials_new_selection():
+    """Handles the credential type selection page."""
+    # List of available credential types
+    credential_types = [
+        {
+            "id": "github",
+            "name": "GitHub PAT",
+            "icon": "bi-github",
+            "description": "Personal Access Token for GitHub",
+        },
+        {
+            "id": "jira",
+            "name": "Jira Basic Auth",
+            "icon": "bi-bezier",
+            "description": "Email and API Token for Jira",
+        },
+        {
+            "id": "trello",
+            "name": "Trello Key",
+            "icon": "bi-trello",
+            "description": "API Key and Token for Trello",
+        },
+        {
+            "id": "llm",
+            "name": "LLM Provider API Key",
+            "icon": "bi-cpu",
+            "description": "API Key for Mistral, OpenAI, Anthropic, etc.",
+        },
+        {
+            "id": "basic_auth",
+            "name": "Basic Auth",
+            "icon": "bi-person",
+            "description": "Basic Auth for username and password",
+        },
+    ]
+    return render_template("credentials_new.html", types=credential_types)
+
+
+@web_bp.route("/credentials/new/<credential_type>", methods=["GET", "POST"])
+def credentials_new_form(credential_type: str):
+    """Handles the credential creation form for a specific type."""
+    user_id = credentials_service.get_current_user_id()
+
+    if request.method == "POST":
+        try:
+            data = request.form.to_dict()
+            data["credential_type"] = credential_type
+            credentials_service.save_credential(user_id, data)
+            flash("Credential saved successfully!", "success")
+            return redirect(url_for("web.credentials_overview"))
+        except Exception as e:  # pylint: disable=broad-exception-caught
+            logger.exception("Failed to save credential")
+            flash(f"Failed to save credential: {str(e)}", "danger")
+
+    return render_template("credentials_form.html", credential_type=credential_type)
+
+
+@web_bp.route("/credentials/<int:credential_id>/edit", methods=["GET", "POST"])
+def credentials_edit(credential_id: int):
+    """Handles editing an existing credential."""
+    user_id = credentials_service.get_current_user_id()
+    credential = credentials_service.get_credential_by_id(user_id, credential_id)
+    if not credential:
+        flash("Credential not found.", "danger")
+        return redirect(url_for("web.credentials_overview"))
+
+    if request.method == "POST":
+        try:
+            data = request.form.to_dict()
+            data["id"] = credential_id
+            credentials_service.save_credential(user_id, data)
+            flash("Credential updated successfully!", "success")
+            return redirect(url_for("web.credentials_overview"))
+        except Exception as e:  # pylint: disable=broad-exception-caught
+            logger.exception("Failed to update credential")
+            flash(f"Failed to update credential: {str(e)}", "danger")
+
+    return render_template(
+        "credentials_form.html", credential_type=credential.credential_type, credential=credential
+    )
+
+
+@web_bp.route("/credentials/<int:credential_id>/delete", methods=["POST"])
+def credentials_delete(credential_id: int):
+    """Handles deleting a credential."""
+    user_id = credentials_service.get_current_user_id()
+    success = credentials_service.delete_credential(user_id, credential_id)
+    if success:
+        flash("Credential deleted successfully!", "success")
+    else:
+        flash("Failed to delete credential.", "danger")
+    return redirect(url_for("web.credentials_overview"))
 
 
 @web_bp.route("/api/pr/<owner>/<repo>/<int:repo_pr_number>", methods=["GET"])

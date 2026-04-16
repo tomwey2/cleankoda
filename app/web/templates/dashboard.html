@@ -87,9 +87,9 @@
                     </div>
                     <div class="card-body">
                         {% for agent_action in agent_actions %}
-                        {% if agent_action.current_node in ['analyst', 'coder', 'tester'] %}
+                        {% if agent_action.node_name in ['analyst', 'coder', 'tester'] %}
                         {% if agent_action.tool_name != 'finish_task' %}
-                        <span>({{ agent_action.current_node }}) {{ agent_action.tool_name }} {{
+                        <span>({{ agent_action.node_name }}) {{ agent_action.tool_name }} {{
                             agent_action.tool_arg0_value
                             }}</span>
                         <br>

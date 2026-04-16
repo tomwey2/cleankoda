@@ -100,10 +100,12 @@ def _persist_state_to_database(current_state: AgentState) -> None:
         issue_description=current_state["issue_description"],
         issue_type=current_state["issue_type"],
         issue_state=current_state["issue_state"].value,
+        issue_url=current_state["issue_url"],
         issue_skill_level=current_state["issue_skill_level"],
         issue_skill_level_reasoning=current_state["issue_skill_level_reasoning"],
         issue_is_active=current_state["issue_is_active"],
         repo_branch_name=current_state["repo_branch_name"],
+        repo_pr_url=current_state["repo_pr_url"],
         plan_state=current_state["plan_state"],
         working_state=current_state["working_state"],
         user_message=current_state["user_message"],
@@ -111,7 +113,7 @@ def _persist_state_to_database(current_state: AgentState) -> None:
     create_db_agent_action(
         db_agent_state_id=db_agent_state.id,
         tool_calls=current_state["current_tool_calls"],
-        current_node=current_state["current_node"],
+        node_name=current_state["current_node"],
     )
 
 
@@ -123,10 +125,12 @@ def _restore_state_from_database(state: AgentState) -> AgentState:
         state["issue_description"] = db_agent_state.issue_description
         state["issue_type"] = db_agent_state.issue_type
         state["issue_state"] = IssueStateType.from_string(db_agent_state.issue_state)
+        state["issue_url"] = db_agent_state.issue_url
         state["issue_skill_level"] = db_agent_state.issue_skill_level
         state["issue_skill_level_reasoning"] = db_agent_state.issue_skill_level_reasoning
         state["issue_is_active"] = db_agent_state.issue_is_active
         state["repo_branch_name"] = db_agent_state.repo_branch_name
+        state["repo_pr_url"] = db_agent_state.repo_pr_url
         state["plan_content"] = db_agent_state.plan_content
         state["plan_state"] = db_agent_state.plan_state
         state["working_state"] = db_agent_state.working_state

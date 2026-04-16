@@ -110,6 +110,13 @@
                     </a>
                 </li>
                 <li>
+                    <a href="{{ url_for('web.credentials_overview') }}"
+                        class="nav-link {% if request.path.startswith('/credentials') %}active{% endif %}">
+                        <i class="bi bi-key me-2"></i>
+                        Credentials
+                    </a>
+                </li>
+                <li>
                     <a href="{{ url_for('web.settings') }}"
                         class="nav-link {% if request.path == url_for('web.settings') %}active{% endif %}">
                         <i class="bi bi-gear me-2"></i>
