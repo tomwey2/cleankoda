@@ -16,7 +16,7 @@ logger = logging.getLogger(__name__)
 
 def get_current_user_id() -> str:
     """Mock implementation to get the current user ID.
-    
+
     Since a full authentication layer is not yet implemented, this function
     returns the ID of the first user in the database. If no user exists,
     it creates a mock user and returns its ID.
@@ -27,16 +27,12 @@ def get_current_user_id() -> str:
     first_user = User.query.first()
     if not first_user:
         mock_id = str(uuid.uuid4())
-        first_user = User(
-            id=mock_id,
-            first_name="Mock",
-            last_name="User"
-        )
+        first_user = User(id=mock_id, first_name="Mock", last_name="User")
         db.session.add(first_user)
         db.session.commit()
         logger.info("Created mock user with ID: %s", mock_id)
         return mock_id
-        
+
     return first_user.id
 
 
@@ -71,12 +67,12 @@ def save_credential(user_id: str, data: dict) -> UserCredential:
     Args:
         user_id: The ID of the user.
         data: Dictionary containing credential fields.
-        
+
     Returns:
         The created or updated UserCredential object.
     """
     credential_id = data.get("id")
-    
+
     if credential_id:
         credential = get_credential_by_id(user_id, int(credential_id))
         if not credential:
@@ -92,7 +88,7 @@ def save_credential(user_id: str, data: dict) -> UserCredential:
         credential.name = data["name"]
     if "username_or_email" in data:
         credential.username_or_email = data["username_or_email"]
-        
+
     # Encrypted fields
     if "password" in data and data["password"]:
         credential.password = data["password"]
@@ -119,7 +115,7 @@ def delete_credential(user_id: str, credential_id: int) -> bool:
     credential = get_credential_by_id(user_id, credential_id)
     if not credential:
         return False
-        
+
     db.session.delete(credential)
     db.session.commit()
     logger.info("Deleted credential ID %s for user %s", credential_id, user_id)

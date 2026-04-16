@@ -125,7 +125,7 @@ def credentials_new_form(credential_type: str):
             credentials_service.save_credential(user_id, data)
             flash("Credential saved successfully!", "success")
             return redirect(url_for("web.credentials_overview"))
-        except Exception as e:
+        except Exception as e:  # pylint: disable=broad-exception-caught
             logger.exception("Failed to save credential")
             flash(f"Failed to save credential: {str(e)}", "danger")
 
@@ -148,11 +148,13 @@ def credentials_edit(credential_id: int):
             credentials_service.save_credential(user_id, data)
             flash("Credential updated successfully!", "success")
             return redirect(url_for("web.credentials_overview"))
-        except Exception as e:
+        except Exception as e:  # pylint: disable=broad-exception-caught
             logger.exception("Failed to update credential")
             flash(f"Failed to update credential: {str(e)}", "danger")
 
-    return render_template("credentials_form.html", credential_type=credential.credential_type, credential=credential)
+    return render_template(
+        "credentials_form.html", credential_type=credential.credential_type, credential=credential
+    )
 
 
 @web_bp.route("/credentials/<int:credential_id>/delete", methods=["POST"])
