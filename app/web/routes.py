@@ -132,6 +132,41 @@ def credentials_new_form(credential_type: str):
     return render_template("credentials_form.html", credential_type=credential_type)
 
 
+@web_bp.route("/credentials/<int:credential_id>/edit", methods=["GET", "POST"])
+def credentials_edit(credential_id: int):
+    """Handles editing an existing credential."""
+    user_id = credentials_service.get_current_user_id()
+    credential = credentials_service.get_credential_by_id(user_id, credential_id)
+    if not credential:
+        flash("Credential not found.", "danger")
+        return redirect(url_for("web.credentials_overview"))
+
+    if request.method == "POST":
+        try:
+            data = request.form.to_dict()
+            data["id"] = credential_id
+            credentials_service.save_credential(user_id, data)
+            flash("Credential updated successfully!", "success")
+            return redirect(url_for("web.credentials_overview"))
+        except Exception as e:
+            logger.exception("Failed to update credential")
+            flash(f"Failed to update credential: {str(e)}", "danger")
+
+    return render_template("credentials_form.html", credential_type=credential.credential_type, credential=credential)
+
+
+@web_bp.route("/credentials/<int:credential_id>/delete", methods=["POST"])
+def credentials_delete(credential_id: int):
+    """Handles deleting a credential."""
+    user_id = credentials_service.get_current_user_id()
+    success = credentials_service.delete_credential(user_id, credential_id)
+    if success:
+        flash("Credential deleted successfully!", "success")
+    else:
+        flash("Failed to delete credential.", "danger")
+    return redirect(url_for("web.credentials_overview"))
+
+
 @web_bp.route("/api/pr/<owner>/<repo>/<int:repo_pr_number>", methods=["GET"])
 def get_pr_json(owner: str, repo: str, repo_pr_number: int):
     """
