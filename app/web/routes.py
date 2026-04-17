@@ -12,9 +12,11 @@ from flask import (
     Blueprint,
     flash,
     jsonify,
+    redirect,
     render_template,
     request,
     Response,
+    url_for,
 )
 
 from app.agent.services.pull_request import (
@@ -24,8 +26,9 @@ from app.agent.services.pull_request import (
     format_pr_review_message,
     get_latest_pr_review_status,
 )
-from app.web.services import dashboard_service, settings_service
+from app.web.services import dashboard_service, settings_service, credentials_service
 from app.web.services.dashboard_service import PlanReviewError, process_plan_review
+from app.core.types import PlanState
 
 logger = logging.getLogger(__name__)
 
@@ -63,27 +66,130 @@ def settings():
     return render_template("settings.html", **context)
 
 
-@web_bp.route("/api/pr/<owner>/<repo>/<int:pr_number>", methods=["GET"])
-def get_pr_json(owner: str, repo: str, pr_number: int):
+@web_bp.route("/credentials", methods=["GET"])
+def credentials_overview():
+    """Handles the credentials overview page."""
+    user_id = credentials_service.get_current_user_id()
+    credentials = credentials_service.get_credentials_for_user(user_id)
+    return render_template("credentials_overview.html", credentials=credentials)
+
+
+@web_bp.route("/credentials/new", methods=["GET"])
+def credentials_new_selection():
+    """Handles the credential type selection page."""
+    # List of available credential types
+    credential_types = [
+        {
+            "id": "github",
+            "name": "GitHub PAT",
+            "icon": "bi-github",
+            "description": "Personal Access Token for GitHub",
+        },
+        {
+            "id": "jira",
+            "name": "Jira Basic Auth",
+            "icon": "bi-bezier",
+            "description": "Email and API Token for Jira",
+        },
+        {
+            "id": "trello",
+            "name": "Trello Key",
+            "icon": "bi-trello",
+            "description": "API Key and Token for Trello",
+        },
+        {
+            "id": "llm",
+            "name": "LLM Provider API Key",
+            "icon": "bi-cpu",
+            "description": "API Key for Mistral, OpenAI, Anthropic, etc.",
+        },
+        {
+            "id": "basic_auth",
+            "name": "Basic Auth",
+            "icon": "bi-person",
+            "description": "Basic Auth for username and password",
+        },
+    ]
+    return render_template("credentials_new.html", types=credential_types)
+
+
+@web_bp.route("/credentials/new/<credential_type>", methods=["GET", "POST"])
+def credentials_new_form(credential_type: str):
+    """Handles the credential creation form for a specific type."""
+    user_id = credentials_service.get_current_user_id()
+
+    if request.method == "POST":
+        try:
+            data = request.form.to_dict()
+            data["credential_type"] = credential_type
+            credentials_service.save_credential(user_id, data)
+            flash("Credential saved successfully!", "success")
+            return redirect(url_for("web.credentials_overview"))
+        except Exception as e:  # pylint: disable=broad-exception-caught
+            logger.exception("Failed to save credential")
+            flash(f"Failed to save credential: {str(e)}", "danger")
+
+    return render_template("credentials_form.html", credential_type=credential_type)
+
+
+@web_bp.route("/credentials/<int:credential_id>/edit", methods=["GET", "POST"])
+def credentials_edit(credential_id: int):
+    """Handles editing an existing credential."""
+    user_id = credentials_service.get_current_user_id()
+    credential = credentials_service.get_credential_by_id(user_id, credential_id)
+    if not credential:
+        flash("Credential not found.", "danger")
+        return redirect(url_for("web.credentials_overview"))
+
+    if request.method == "POST":
+        try:
+            data = request.form.to_dict()
+            data["id"] = credential_id
+            credentials_service.save_credential(user_id, data)
+            flash("Credential updated successfully!", "success")
+            return redirect(url_for("web.credentials_overview"))
+        except Exception as e:  # pylint: disable=broad-exception-caught
+            logger.exception("Failed to update credential")
+            flash(f"Failed to update credential: {str(e)}", "danger")
+
+    return render_template(
+        "credentials_form.html", credential_type=credential.credential_type, credential=credential
+    )
+
+
+@web_bp.route("/credentials/<int:credential_id>/delete", methods=["POST"])
+def credentials_delete(credential_id: int):
+    """Handles deleting a credential."""
+    user_id = credentials_service.get_current_user_id()
+    success = credentials_service.delete_credential(user_id, credential_id)
+    if success:
+        flash("Credential deleted successfully!", "success")
+    else:
+        flash("Failed to delete credential.", "danger")
+    return redirect(url_for("web.credentials_overview"))
+
+
+@web_bp.route("/api/pr/<owner>/<repo>/<int:repo_pr_number>", methods=["GET"])
+def get_pr_json(owner: str, repo: str, repo_pr_number: int):
     """
     Fetch a GitHub PR with its reviews and review comments as JSON.
 
     Args:
         owner: Repository owner
         repo: Repository name
-        pr_number: Pull request number
+        repo_pr_number: Pull request number
 
     Returns:
         JSON response with PR details, reviews, and comments
     """
-    pr = fetch_pr_details(owner, repo, pr_number)
+    pr = fetch_pr_details(owner, repo, repo_pr_number)
     if not pr:
-        return jsonify({"error": f"PR #{pr_number} not found"}), 404
+        return jsonify({"error": f"PR #{repo_pr_number} not found"}), 404
 
-    reviews = fetch_pr_reviews(pr_number, owner, repo)
-    comments = fetch_pr_review_comments(pr_number, owner, repo)
+    reviews = fetch_pr_reviews(repo_pr_number, owner, repo)
+    comments = fetch_pr_review_comments(repo_pr_number, owner, repo)
 
-    is_approved, rejection_reviews, _ = get_latest_pr_review_status(pr_number, owner, repo)
+    is_approved, rejection_reviews, _ = get_latest_pr_review_status(repo_pr_number, owner, repo)
 
     response = {
         "pull_request": asdict(pr),
@@ -96,29 +202,29 @@ def get_pr_json(owner: str, repo: str, pr_number: int):
     return jsonify(response)
 
 
-@web_bp.route("/api/pr/<owner>/<repo>/<int:pr_number>/formatted", methods=["GET"])
-def get_pr_formatted(owner: str, repo: str, pr_number: int):
+@web_bp.route("/api/pr/<owner>/<repo>/<int:repo_pr_number>/formatted", methods=["GET"])
+def get_pr_formatted(owner: str, repo: str, repo_pr_number: int):
     """
     Fetch a GitHub PR with its reviews and comments as formatted text.
 
     Args:
         owner: Repository owner
         repo: Repository name
-        pr_number: Pull request number
+        repo_pr_number: Pull request number
 
     Returns:
         Plain text response with formatted PR review feedback
     """
-    pr = fetch_pr_details(owner, repo, pr_number)
+    pr = fetch_pr_details(owner, repo, repo_pr_number)
     if not pr:
-        return Response(f"PR #{pr_number} not found", status=404, mimetype="text/plain")
+        return Response(f"PR #{repo_pr_number} not found", status=404, mimetype="text/plain")
 
     is_approved, rejection_reviews, code_comments = get_latest_pr_review_status(
-        pr_number, owner, repo
+        repo_pr_number, owner, repo
     )
 
     lines = [
-        f"Pull Request #{pr_number}: {pr.title}",
+        f"Pull Request #{repo_pr_number}: {pr.title}",
         f"URL: {pr.html_url}",
         f"State: {pr.state}",
         f"Branch: {pr.head_branch} -> {pr.base_branch}",
@@ -137,11 +243,11 @@ def get_pr_formatted(owner: str, repo: str, pr_number: int):
     return Response("\n".join(lines), mimetype="text/plain")
 
 
-@web_bp.route("/task/review_plan", methods=["POST"])
+@web_bp.route("/issue/review_plan", methods=["POST"])
 async def review_plan():
-    """Updates the plan state of the current task."""
+    """Updates the plan state of the current issue."""
     data = request.json or {}
-    new_state = data.get("plan_state")
+    new_state = PlanState.from_string(data.get("plan_state"))
     rejection_reason = data.get("rejection_reason")
 
     try:
@@ -151,4 +257,4 @@ async def review_plan():
         return jsonify({"error": str(exc)}), exc.status_code
     except Exception:  # pylint: disable=broad-exception-caught
         logger.exception("Unexpected error while updating plan state")
-        return jsonify({"error": "Failed to update task"}), 500
+        return jsonify({"error": "Failed to update issue"}), 500

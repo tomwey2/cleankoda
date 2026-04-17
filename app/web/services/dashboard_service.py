@@ -8,10 +8,11 @@ import logging
 import markdown
 
 from app.core.localdb.agent_actions_utils import read_db_agent_actions
-from app.core.localdb.agent_tasks_utils import read_db_task, update_db_task
-from app.core.localdb.models import AgentAction, AgentSettings, AgentTask
-from app.core.taskprovider.task_factory import create_task_provider
+from app.core.localdb.agent_issues_utils import read_db_agent_state, update_db_agent_state
+from app.core.localdb.models import AgentActionDb, AgentSettingsDb, AgentStatesDb
+from app.core.its.its_factory import create_issue_tracking_system
 from app.web.services import settings_service
+from app.core.types import PlanState, IssueStateType
 
 logger = logging.getLogger(__name__)
 
@@ -36,55 +37,85 @@ async def get_template_context() -> dict:
     Returns:
         Dictionary with all template variables.
     """
-    agent_task: AgentTask | None = read_db_task()
+    agent_settings: AgentSettingsDb | None = settings_service.get_or_create_settings()
+    agent_state: AgentStatesDb | None = read_db_agent_state()
 
     plan_content = ""
     plan_exists = False
-    agent_actions: list[AgentAction] = []
+    issue_description_html = ""
+    agent_actions: list[AgentActionDb] = []
+    agent_image = ""
 
-    if agent_task:
-        agent_actions = read_db_agent_actions(agent_task)
-        # logger.info("current node: %s", agent_task.current_node)
-        plan_content = markdown.markdown(agent_task.plan_content) if agent_task.plan_content else ""
-        plan_exists = bool(agent_task.plan_content)
+    agent_age = agent_settings.agent_skill_level.lower() if agent_settings else "junior"
+    agent_gender = agent_settings.agent_gender.lower() if agent_settings else "male"
+    agent_activity = "is-waiting"
+
+    if agent_state:
+        agent_actions = read_db_agent_actions(agent_state.issue_id)
+        # logger.info("current node: %s", agent_state.current_node)
+        plan_content = (
+            markdown.markdown(agent_state.plan_content) if agent_state.plan_content else ""
+        )
+        plan_exists = bool(agent_state.plan_content)
+        issue_description_html = (
+            markdown.markdown(agent_state.issue_description)
+            if agent_state.issue_description
+            else ""
+        )
+
+        if agent_state.issue_state == IssueStateType.IN_PROGRESS.value:
+            agent_activity = "is-working"
+        elif agent_state.issue_state == IssueStateType.IN_REVIEW.value:
+            agent_activity = "is-happy"
+
+    agent_image = f"{agent_age}-{agent_gender}-{agent_activity}.png"
 
     return {
-        "agent_task": agent_task,
+        "issue_id": agent_state.issue_id if agent_state else None,
+        "issue_name": agent_state.issue_name if agent_state else None,
+        "issue_description": agent_state.issue_description if agent_state else None,
+        "issue_type": agent_state.issue_type if agent_state else None,
+        "issue_skill_level": agent_state.issue_skill_level if agent_state else None,
         "plan_content": plan_content,
         "plan_exists": plan_exists,
+        "plan_state": agent_state.plan_state if agent_state else None,
+        "issue_description_html": issue_description_html,
         "current_node": "todo",
         "agent_actions": agent_actions,
+        "working_state": agent_state.working_state if agent_state else None,
+        "user_message": agent_state.user_message if agent_state else None,
+        "repo_pr_url": agent_state.repo_pr_url if agent_state else None,
+        "agent_skill_level": agent_settings.agent_skill_level if agent_settings else None,
+        "agent_image": agent_image,
     }
 
 
-def _get_task_provider():
-    """Creates and returns a task provider from the current agent settings."""
-    agent_settings: AgentSettings = settings_service.get_or_create_settings()
-    return create_task_provider(agent_settings)
+def _get_its():
+    """Creates and returns a issue provider from the current agent settings."""
+    agent_settings: AgentSettingsDb = settings_service.get_or_create_settings()
+    return create_issue_tracking_system(agent_settings)
 
 
-async def add_plan_rejection_comment(task_id: str, rejection_reason: str) -> None:
-    """Adds a comment to the task with the rejection reason.
+async def add_plan_rejection_comment(issue_id: str, rejection_reason: str) -> None:
+    """Adds a comment to the issue with the rejection reason.
 
     Raises:
         Exception: If adding the comment fails.
     """
-    logger.info("Adding rejection comment to task %s", task_id)
-    task_provider = _get_task_provider()
-    await task_provider.add_comment(task_id, rejection_reason)
+    logger.info("Adding rejection comment to issue %s", issue_id)
+    its = _get_its()
+    await its.add_comment(issue_id, rejection_reason)
 
 
-async def move_task_to_in_progress(task_id: str) -> bool:
-    """Moves the task to the state in progress."""
-    logger.info("Moving task %s to in progress", task_id)
-    task_provider = _get_task_provider()
-    await task_provider.move_task_to_named_state(
-        task_id, state_name=task_provider.get_task_system().state_in_progress
-    )
+async def move_issue_to_in_progress(issue_id: str) -> bool:
+    """Moves the issue to the state in progress."""
+    logger.info("Moving issue %s to in progress", issue_id)
+    its = _get_its()
+    await its.move_issue_to_named_state(issue_id, state_name=its.get_state_in_progress())
     return True
 
 
-def _validate_plan_review_input(new_state: str | None, rejection_reason: str | None) -> str:
+def _validate_plan_review_input(new_state: PlanState, rejection_reason: str | None):
     """Validate and normalize plan review input.
 
     Args:
@@ -98,43 +129,40 @@ def _validate_plan_review_input(new_state: str | None, rejection_reason: str | N
         PlanReviewError: If validation fails.
     """
     # Input validation
-    if not new_state or not isinstance(new_state, str):
-        raise PlanReviewError("Plan state is required and must be a string.")
+    if not new_state or not isinstance(new_state, PlanState):
+        raise PlanReviewError("Plan state is required and must be a PlanState.")
 
-    new_state = new_state.strip().lower()
-    if new_state not in ["approved", "rejected"]:
-        raise PlanReviewError("Invalid state. Must be 'approved' or 'rejected'.")
+    if new_state not in [PlanState.APPROVED, PlanState.REJECTED]:
+        raise PlanReviewError("Invalid state. Must be 'APPROVED' or 'REJECTED'.")
 
     rejection_reason = (rejection_reason or "").strip()
 
-    if new_state == "rejected" and not rejection_reason:
+    if new_state == PlanState.REJECTED and not rejection_reason:
         raise PlanReviewError("A rejection reason is required.")
 
-    return new_state
 
-
-def _rollback_task_state(task_id: str, original_state: str) -> bool:
-    """Attempt to rollback task state to original value.
+def _rollback_issue_state(issue_id: str, original_state: PlanState) -> bool:
+    """Attempt to rollback issue state to original value.
 
     Args:
-        task_id: The task ID to rollback.
+        issue_id: The issue ID to rollback.
         original_state: The original plan state to restore.
 
     Returns:
         True if rollback succeeded, False otherwise.
     """
     try:
-        rollback_task = update_db_task(task_id, plan_state=original_state)
-        if not rollback_task:
-            logger.error("Failed to rollback task state for task %s", task_id)
+        rollback_issue = update_db_agent_state(issue_id, plan_state=original_state)
+        if not rollback_issue:
+            logger.error("Failed to rollback issue state for issue %s", issue_id)
             return False
         return True
     except (ValueError, RuntimeError, KeyError) as exc:
-        logger.exception("Exception during rollback for task %s: %s", task_id, exc)
+        logger.exception("Exception during rollback for issue %s: %s", issue_id, exc)
         return False
 
 
-async def process_plan_review(new_state: str | None, rejection_reason: str | None) -> dict:
+async def process_plan_review(new_state: PlanState, rejection_reason: str | None) -> dict:
     """Handle plan review transitions and side-effects.
 
     Args:
@@ -142,73 +170,78 @@ async def process_plan_review(new_state: str | None, rejection_reason: str | Non
         rejection_reason: Reason for rejection (required if new_state is 'rejected').
 
     Returns:
-        Dictionary with success message and task details.
+        Dictionary with success message and issue details.
 
     Raises:
         PlanReviewError: If validation fails or operations cannot be completed.
     """
     # Validate input
-    new_state = _validate_plan_review_input(new_state, rejection_reason)
+    _validate_plan_review_input(new_state, rejection_reason)
     rejection_reason = (rejection_reason or "").strip()
 
-    task = read_db_task()
-    if not task:
-        raise PlanReviewError("No active task found in database.", status_code=HTTP_NOT_FOUND)
+    agent_state = read_db_agent_state()
+    if not agent_state:
+        raise PlanReviewError("No active issue found in database.", status_code=HTTP_NOT_FOUND)
 
-    if new_state == "rejected" and task.plan_state not in ("created", "updated"):
+    # Store original state for potential rollback
+    original_plan_state = PlanState.from_string(agent_state.plan_state)
+
+    if new_state == PlanState.REJECTED and original_plan_state not in (
+        PlanState.CREATED,
+        PlanState.UPDATED,
+    ):
         raise PlanReviewError(
             "Plan can only be rejected when it is in review.", status_code=HTTP_CONFLICT
         )
 
-    # Store original state for potential rollback
-    original_plan_state = task.plan_state
-
     try:
-        # Update task state first
-        updated_task = update_db_task(task.task_id, plan_state=new_state)
-        if not updated_task:
-            raise PlanReviewError("Failed to update task", status_code=HTTP_INTERNAL_SERVER_ERROR)
+        # Update issue state first
+        updated_agent_state = update_db_agent_state(
+            agent_state.issue_id, plan_state=new_state.value
+        )
+        if not updated_agent_state:
+            raise PlanReviewError("Failed to update issue", status_code=HTTP_INTERNAL_SERVER_ERROR)
 
         # Add rejection comment if needed
-        if new_state == "rejected" and rejection_reason:
+        if new_state == PlanState.REJECTED and rejection_reason:
             try:
-                await add_plan_rejection_comment(updated_task.task_id, rejection_reason)
+                await add_plan_rejection_comment(updated_agent_state.issue_id, rejection_reason)
             except Exception as exc:
                 logger.exception(
-                    "Failed to add rejection comment to task %s. Rolling back state change.",
-                    updated_task.task_id,
+                    "Failed to add rejection comment to issue %s. Rolling back state change.",
+                    updated_agent_state.issue_id,
                 )
                 # Rollback the state change
-                _rollback_task_state(task.task_id, original_plan_state)
+                _rollback_issue_state(agent_state.issue_id, original_plan_state)
                 raise PlanReviewError(
                     "Failed to add rejection comment. Plan state has been rolled back.",
                     status_code=HTTP_INTERNAL_SERVER_ERROR,
                 ) from exc
 
-        # Move task to in progress
+        # Move issue to in progress
         try:
-            moved = await move_task_to_in_progress(updated_task.task_id)
+            moved = await move_issue_to_in_progress(updated_agent_state.issue_id)
         except Exception as exc:
             logger.exception(
-                "Failed to move task %s to in progress. Rolling back state change.",
-                updated_task.task_id,
+                "Failed to move issue %s to in progress. Rolling back state change.",
+                updated_agent_state.issue_id,
             )
             # Rollback the state change
-            _rollback_task_state(task.task_id, original_plan_state)
+            _rollback_issue_state(agent_state.issue_id, original_plan_state)
             raise PlanReviewError(
-                "Failed to move task to in progress. Plan state has been rolled back.",
+                "Failed to move issue to in progress. Plan state has been rolled back.",
                 status_code=HTTP_INTERNAL_SERVER_ERROR,
             ) from exc
 
         if not moved:
             raise PlanReviewError(
-                "Failed to move task to in progress", status_code=HTTP_INTERNAL_SERVER_ERROR
+                "Failed to move issue to in progress", status_code=HTTP_INTERNAL_SERVER_ERROR
             )
 
         return {
             "message": f"Plan state updated to {new_state}",
-            "task_id": updated_task.task_id,
-            "plan_state": updated_task.plan_state,
+            "issue_id": updated_agent_state.issue_id,
+            "plan_state": updated_agent_state.plan_state,
         }
 
     except PlanReviewError:
@@ -218,7 +251,7 @@ async def process_plan_review(new_state: str | None, rejection_reason: str | Non
         logger.exception("Unexpected error in process_plan_review")
         # Attempt rollback if we have an original state
         if "original_plan_state" in locals():
-            _rollback_task_state(task.task_id, original_plan_state)
+            _rollback_issue_state(agent_state.issue_id, original_plan_state)
         raise PlanReviewError(
             "An unexpected error occurred. Plan state has been rolled back.",
             status_code=HTTP_INTERNAL_SERVER_ERROR,

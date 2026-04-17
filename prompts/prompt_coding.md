@@ -1,8 +1,8 @@
-# TASK
+# ISSUE
 
-Implement the following task:
-Task: {{agent_task.task_name}}
-Description: {{agent_task.task_description}}
+Implement the following issue:
+Issue: {{issue_name}}
+Description: {{issue_description}}
 
 {% if agent_summary %}
 
@@ -15,12 +15,12 @@ The previous agent completed the following work:
 {% endfor %}
 
 {% endif %}
-{% if provider_task_comments %}
+{% if issue_comments %}
 # REVIEW COMMENTS
 The Pull Request was rejected with the following review comments: 
-NOTE: The task description shows the current implementation. 
+NOTE: The issue description shows the current implementation. 
 The comments below indicate ADDITIONAL work that needs to be done.
-{% for comment in provider_task_comments %}
+{% for comment in issue_comments %}
   - {{ comment.text }}
 {% endfor %}
 {% endif %}
@@ -28,8 +28,8 @@ The comments below indicate ADDITIONAL work that needs to be done.
 # PULL REQUEST MESSAGE
 {{ pr_review_message }}
 {% endif %}
-{% if agent_task.plan_content %}
+{% if plan_content %}
 # SPECIFIC IMPLEMENTATION PLAN
-You MUST follow these exact steps to complete the task:
-{{agent_task.plan_content}}
+You MUST follow these exact steps to complete the issue:
+{{plan_content}}
 {% endif %}

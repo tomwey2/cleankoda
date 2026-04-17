@@ -3,11 +3,11 @@
 from app.web.schemas.settings_schema import (
     LLMConfigSchema,
     SettingsFormSchema,
-    TrelloConfigSchema,
+    ItsConfigSchema,
 )
 
 __all__ = [
     "LLMConfigSchema",
     "SettingsFormSchema",
-    "TrelloConfigSchema",
+    "ItsConfigSchema",
 ]

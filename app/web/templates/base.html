@@ -110,6 +110,13 @@
                     </a>
                 </li>
                 <li>
+                    <a href="{{ url_for('web.credentials_overview') }}"
+                        class="nav-link {% if request.path.startswith('/credentials') %}active{% endif %}">
+                        <i class="bi bi-key me-2"></i>
+                        Credentials
+                    </a>
+                </li>
+                <li>
                     <a href="{{ url_for('web.settings') }}"
                         class="nav-link {% if request.path == url_for('web.settings') %}active{% endif %}">
                         <i class="bi bi-gear me-2"></i>
@@ -117,6 +124,10 @@
                     </a>
                 </li>
             </ul>
+            {% if agent_image %}
+            <img id="agent-avatar" src="{{ url_for('web.static', filename='images/' + agent_image) }}" class="img-fluid"
+                alt="Agent Image" hx-swap-oob="true">
+            {% endif %}
             <hr>
             <div class="small text-muted">
                 v0.5.0

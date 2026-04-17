@@ -83,7 +83,7 @@ def _build_message_window(messages: list[BaseMessage], max_messages: int) -> lis
 def filter_messages_for_llm(
     messages: list[BaseMessage], max_messages: int = 10
 ) -> list[BaseMessage]:
-    """Filter messages to keep task context and recent history while maintaining valid stack.
+    """Filter messages to keep issue context and recent history while maintaining valid stack.
 
     This function performs filtering that preserves message stack validity:
     1. The very first SystemMessage (if present) is always kept at the start while

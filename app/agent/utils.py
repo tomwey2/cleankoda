@@ -5,7 +5,6 @@ from __future__ import annotations
 import json
 import os
 import shutil
-from dataclasses import asdict
 from datetime import datetime
 from typing import Final
 
@@ -24,7 +23,7 @@ DEFAULT_WORKSPACE: Final[str] = "/coding-agent-workspace"
 
 def get_workspace() -> str:
     """Return the agent's workspace directory path.
-    
+
     This is where the agent operates and may be a host path when running locally.
     """
     return get_env_settings().workspace
@@ -32,7 +31,7 @@ def get_workspace() -> str:
 
 def get_workbench_workspace() -> str:
     """Return the workbench workspace directory path.
-    
+
     This is where commands are executed inside the workbench container.
     Defaults to the workspace value if WORKBENCH_WORKSPACE is not set.
     """
@@ -78,8 +77,6 @@ def save_state_to_instance(state: dict, filename: str = "agent_state.json") -> s
             for msg in serializable_state["messages"]
         ]
 
-    serializable_state["provider_task"] = asdict(serializable_state["provider_task"])
-    serializable_state["agent_task"] = serializable_state["agent_task"].to_dict()
     serializable_state["last_update"] = datetime.now().astimezone().isoformat()
     temp_path = file_path + ".tmp"
 

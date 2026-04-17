@@ -46,6 +46,12 @@ def log_agent_response(  # pylint: disable=unused-argument
             logger.info("Tool Call: %s", _get_tool_call_info(tool_call))
             logger.debug("Tool Call: %s", name)
             args = tool_call.get("args", {}) or {}
+
+            # Log tool calls at INFO level
+            if name == "thinking":
+                thought = args.get("thought", "")
+                if thought:
+                    logger.info("Thinking: %s", thought)
             for key, value in args.items():
                 if name == "write_to_file" and key == "content":
                     out_value = safe_truncate(value, arg_limit)
@@ -108,8 +114,8 @@ def log_agent_state(
     logger.info("retry_count       : %s", state.get("retry_count"))
     logger.info("test_result       : %s", state.get("test_result"))
     logger.info("error_log         : %s", state.get("error_log"))
-    provider_task = state.get("provider_task")
-    logger.info("task_id           : %s", provider_task.id if provider_task else None)
+    issue = state.get("issue")
+    logger.info("issue_id           : %s", issue.id if issue else None)
 
     messages = state.get("messages", [])
     logger.info("\n--- Messages (%d) ---", len(messages))
