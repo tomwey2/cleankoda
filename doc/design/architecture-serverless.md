@@ -1,4 +1,4 @@
-# Architecture Blueprint: Serverless CleanKoda on Google Cloud Run
+## CleanKoda's Serverless Architecture on Google Cloud Run
 This document describes the final, scalable serverless architecture for CleanKoda on the Google Cloud Platform (GCP). It solves the problem of the lack of shared disks in the cloud, enables seamless customer onboarding, and optimizes runtime costs through intelligent event routing ("scale-to-zero").
 
 ## 1. GCP Products at a Glance
@@ -36,7 +36,7 @@ There are 2 variants:
 ##### 1. The frontend (in your dashboard.html or base.html):
 
 Insert this small script at the very bottom, before the closing </body> tag.
-```
+```html
 <script>
     // Führt die Funktion alle 5 Minuten (300.000 Millisekunden) aus
     const SYNC_INTERVAL_MS = 5 * 60 * 1000; 
@@ -264,66 +264,3 @@ The agent never waits for a human. Waiting consumes processing time. The process
 
 - Maximum cost control: Thanks to the shift-left approach (Flask checks, agent works), not a single CPU second is wasted waiting for tasks.
 
-## 6. Monetization & LLM Routing (Hybrid Billing)
-
-The system is divided into two plans. The backend dynamically determines whose costs the agent will incur.
-
-- **"Start Free" Plan (BYOK):** Users provide their own OpenAI/Anthropic API key. The user bears 100% of the LLM costs. Additionally, the repository size is limited to restrict cloud costs.
-
-- **"Paid Plans" (Bundled SaaS):** CleanKoda uses its master API key; LLM and cloud costs are cross-subsidized by the SaaS fee.
-
-## 7. Database & Multi-tenancy (Supabase)
-To guarantee a stateless architecture, Supabase (serverless PostgreSQL) completely replaces local databases.
-
-**1. Auth & Identity:** Supabase manages the login system (JWT tokens) securely and scalably: Supabase handles the entire login system (e.g., "Sign in with GitHub" or "Sign in with Google"). Flask does not need to store passwords. We use Supabase's secure JWT tokens (JSON Web Tokens) to manage user sessions in the dashboard.
-
-**2. Multi-tenancy (RLS):** Each table is assigned a tenant_id. Supabase's "Row Level Security" (RLS) ensures at the database level that a user may only read or edit rows where the tenant_id matches their own user ID. Even in the event of a bug in our Flask backend, Customer A can never see Customer B's data.
-
-**3. Operations Dashboard:** The Supabase Studio web interface serves as a direct admin panel. CleanKoda does not require its own admin panel. The Supabase Studio (web interface) acts as a control center: Here you can immediately see new registrations, active agent jobs, connected repositories, and, in the case of support requests, directly view the logs (agent_logs table) of a specific job.
-
-## 8. The Hybrid Strategy: Serverless & On-Premise from ONE Codebase
-
-As shown in Chapter 2, we support two completely different deployment models from the exact same codebase using the DEPLOYMENT_MODE variable.
-
-Architectural Comparison
-
-| Property | SERVERLESS (SaaS / Cloud Run) | ON_PREMISE (Enterprise / On-Premise Server)
-| ----------- | ------------------------------ | ----------------------------------------- |
-| Trigger Logic | Flask starts a job via Google API | Flask starts a container via Docker API |
-| Agent Lifecycle | 1 cycle -> Code push -> sys.exit(0) | Continuous loop (Waiting & Pulling) |
-| Cost Impact | Scale-to-Zero (Costs only incurred during work) | Fixed costs (hardware runs 24/7 anyway) |
-
-### The lifecycle switch (in the agent run_agent.py)
-
-The base image (`Dockerfile`) is identical for both worlds. The magic happens in the agent's Python entry point, where, depending on the mode, it either dies after one run or remains permanently alive:
-
-```python
-import os
-import sys
-import time
-from langgraph_agent import run_single_cycle
-
-def main():
-    mode = os.environ.get("DEPLOYMENT_MODE", "SERVERLESS")
-    
-    if mode == "SERVERLESS":
-        # 1 Zyklus und sofortige Selbstzerstörung (GCP Scale-to-Zero)
-        print("Starte im Serverless-Modus...")
-        run_single_cycle()
-        print("Zyklus beendet. Container terminiert sich.")
-        sys.exit(0) 
-        
-    elif mode == "ON_PREMISE":
-        # Dauerbetrieb: Der Container wartet auf dem Enterprise-Server
-        print("Starte im On-Premise Dauerbetrieb...")
-        while True:
-            has_work = run_single_cycle()
-            if not has_work:
-                print("Warte auf neues Ticket...")
-                time.sleep(60) # Schlafen bis zum nächsten Prüf-Zyklus
-
-if __name__ == "__main__":
-    main()
-```
-
-This clean abstraction makes CleanKoda a B2B product ready for use by both cost-conscious startups (SaaS in the Google Cloud) and highly regulated corporations (on-premise in banks) without any additional architectural effort!
