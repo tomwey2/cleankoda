@@ -2,6 +2,11 @@
 
 Um eine zustandslose Architektur zu gewährleisten, ersetzt Supabase (serverloses PostgreSQL) lokale Datenbanken vollständig.
 
+Issues:
+- [Google Cloud: Initial Supabase project setup & database schema #179](https://github.com/tomwey2/cleankoda/issues/179)
+- [Google Cloud: Implementation of multi-tenancy in Supabase #180](https://github.com/tomwey2/cleankoda/issues/180)
+- [Google Cloud: Secure BYOK (Bring Your Own Key) management with Supabase & pgcrypto #182](https://github.com/tomwey2/cleankoda/issues/182)
+
 ### Key Features
 
 **1. Auth & Identity:** Supabase verwaltet das Anmeldesystem (JWT-Token) sicher und skalierbar: Supabase übernimmt das gesamte Anmeldesystem (z. B. „Mit GitHub anmelden“ oder „Mit Google anmelden“). Flask muss keine Passwörter speichern. Wir verwenden die sicheren JWT-Token (JSON Web Tokens) von Supabase, um Benutzersitzungen im Dashboard zu verwalten.
