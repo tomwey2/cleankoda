@@ -15,18 +15,99 @@ To prevent resource-intensive AI agents from running into a void, the stateless 
 
 We use two automated triggers for this:
 
-### Trigger: Smart Polling via Cloud Scheduler (e.g., Jira)
-Since enterprise customers are reluctant to allow internal Jira webhooks through firewalls, we use an asynchronous pull model.
+### Trigger: Smart Polling the Issue and starting the worker
+We ask the Issue Tracking System periodically if there is a issue the agent should work on. 
 
-- Google Cloud Scheduler (a serverless cron job) periodically calls a protected route in the Flask app.
-- Shift Left: Flask makes a tiny, lightning-fast API call to the ticketing system (Jira/Trello). If there are no new tickets in the CleanKoda column, Flask responds with 200 OK. The resource-intensive worker job is not triggered (cost: €0).
-- If the ticket's status changes, Flask assigns the event to the tenant and immediately fires a targeted worker job that starts the agent.
-- Smart Scheduling: To avoid unnecessary API calls at night or on weekends, the scheduler runs according to the customer's defined working hours (e.g., Mon-Fri, 8:00 AM - 6:00 PM via cron syntax */5 8-18 * * 1-5).
+1. The user logs in and sees their dashboard.
+2. Flask makes a tiny, lightning-fast API call to the ticketing system (Jira/Trello). If there are no new tickets in the CleanKoda column, Flask responds with 200 OK. The resource-intensive worker job is not triggered (cost: €0).
+3. If the ticket's status changes, Flask assigns the event to the tenant and immediately fires a targeted worker job that starts the agent.
 
 The same applies to GitHub: If the status of a pull request changes (e.g., if a human developer adds a comment to the pull request, such as "Please make the button red"), the agent is called.
 
+There are 2 variants:
+
+#### 1. via Frontend Polling: 
+- An invisible JavaScript interval starts (e.g., every 5 minutes).
+- The script makes an unobtrusive API call (AJAX/Fetch) to your Flask app (e.g., /api/trigger-sync).
+- Since this call originates from the logged-in user's browser, the standard Supabase session cookie / JWT token is automatically included!
+- Advantages: No infrastructure overhead: no cloud scheduler, service accounts, OIDC, or JWT signing is required. Everything runs through the user's normal session. RLS works perfectly.
+- The drawback: if the user closes the browser tab or their phone screen turns off, the automation stops immediately. The agent only cleans up the tickets again when the user opens CleanKoda next.
+
+##### 1. The frontend (in your dashboard.html or base.html):
+
+Insert this small script at the very bottom, before the closing </body> tag.
+```
+<script>
+    // Führt die Funktion alle 5 Minuten (300.000 Millisekunden) aus
+    const SYNC_INTERVAL_MS = 5 * 60 * 1000; 
+
+    function checkTasksInBackground() {
+        // Ein unsichtbarer Call an dein Flask Backend
+        fetch('/api/sync-tasks', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            }
+        })
+        .then(response => {
+            if (response.ok) {
+                console.log("Automatischer Background-Sync erfolgreich angestoßen.");
+            }
+        })
+        .catch(error => console.error("Sync fehlgeschlagen:", error));
+    }
+
+    // Startet den Timer, sobald die Seite geladen ist
+    document.addEventListener('DOMContentLoaded', (event) => {
+        setInterval(checkTasksInBackground, SYNC_INTERVAL_MS);
+        // Optional: Direkt beim ersten Laden einmal ausführen
+        // setTimeout(checkTasksInBackground, 2000); 
+    });
+</script>
+```
+
+##### 2. The backend (in your Flask routes.py):
+
+This is now super simple because we bypass all the security drama.
+
+```python
+from flask import jsonify, session
+
+@app.route('/api/sync-tasks', methods=['POST'])
+def sync_tasks_api():
+    # 1. Ist der User eingeloggt?
+    user_jwt = session.get("supabase_access_token")
+    if not user_jwt:
+        return jsonify({"error": "Unauthorized"}), 401
+
+    # 2. Supabase Client GANZ NORMAL (mit RLS) initialisieren
+    options = ClientOptions(headers={"Authorization": f"Bearer {user_jwt}"})
+    supabase = create_client(SUPABASE_URL, SUPABASE_ANON_KEY, options=options)
+    
+    # 3. Nachschauen, ob es ein aktives Task-System für diesen User gibt
+    # RLS blockt automatisch alles Fremde ab!
+    response = supabase.table("task_system").select("id").execute()
+    
+    if response.data:
+        for system in response.data:
+            # 4. Den Worker starten und ihm den normalen JWT übergeben
+            trigger_agent_job(system['id'], user_jwt)
+            
+    return jsonify({"status": "Sync triggered"}), 200
+```
+
+
+#### 2. via Google Cloud Scheduler
+- Google Cloud Scheduler (a serverless cron job) periodically calls a protected route in the Flask app.
+- Smart Scheduling: To avoid unnecessary API calls at night or on weekends, the scheduler runs according to the customer's defined working hours (e.g., Mon-Fri, 8:00 AM - 6:00 PM via cron syntax */5 8-18 * * 1-5).
+
+
 ### Technical Implementation in Code (Flask Backend - Hybrid Setup)
 Flask spawns the worker as soon as actual work has been validated. This is where our hybrid strategy comes into play: The gateway dynamically decides, via an environment variable (DEPLOYMENT_MODE), whether the agent is started via the Google API (SaaS) or via the local Docker environment (on-premises).
+
+#### Schritt 1: Flask ruft den Agenten auf und reicht den Supabase Token weiter
+In deiner Flask-App (wo der User ja bereits über Supabase eingeloggt ist), hast du Zugriff auf seinen aktuellen access_token (JWT). Diesen Token übergibst du als Umgebungsvariable (Override) an den Cloud Run Job.
+Da der JWT nur maximal 1 Stunden gültig ist, treffen wir die Annahme, dass der Worker nicht länger für seine Arbeit braucht. Damit erbt der Worker exakt die Rechte des Users, und die Supabase Row Level Security (RLS) greift zu 100 %. Es wird kein Root-Key benötigt ("Zero Trust" Ansatz).
 
 ```python
 import os
@@ -62,16 +143,25 @@ def _spawn_gcp_cloud_run_job(project_id, region, target_language, env_vars):
     """
     Option A (Serverless): Spawn an asynchronous Cloud Run Job via the Google API.
     """
+    # Retrieve the current JWT of the logged-in user
+    user_access_token = session.get("supabase_access_token")
+
     client = run_v2.JobsClient()
     job_name = f"cleankoda-agent-{target_language}"
     job_path = client.job_path(project_id, region, job_name)
 
-    # Formatting variables for the GCP API
-    gcp_env_vars = [{"name": k, "value": str(v)} for k, v in env_vars.items()]
-
     request = run_v2.RunJobRequest(
-        name=job_path,
-        overrides={"container_overrides": [{"env": gcp_env_vars}]}
+        name=job_name,
+        overrides={
+            "container_overrides": [
+                {
+                    "env": [
+                        # We are handing over the token
+                        {"name": "USER_JWT", "value": user_access_token},
+                    ]
+                }
+            ]
+        }
     )
 
     # Start job (“Fire and Forget”)
@@ -94,6 +184,41 @@ def _spawn_local_docker_container(target_language, env_vars):
         remove=True # Wichtig: Container löscht sich nach der Arbeit selbst!
     )
     return container.id
+```
+
+#### Schritt 2: Der Worker nutzt den Token (Supabase Python SDK)
+Im Python-Code des Cloud Run Jobs nutzen wir ganz normal den öffentlichen ANON_KEY. Über die ClientOptions sagen wir dem Client: "Hey, nutze für alle Anfragen diesen JWT-Token statt des Standard-Anon-Tokens!"
+
+```
+import os
+from supabase import create_client, ClientOptions
+
+# 1. Variablen auslesen
+supabase_url = os.environ.get("SUPABASE_URL")
+supabase_anon_key = os.environ.get("SUPABASE_ANON_KEY") # Nur der öffentliche Key!
+user_jwt = os.environ.get("USER_JWT")
+task_system_id = os.environ.get("TASK_SYSTEM_ID")
+
+# 2. Den Client mit dem User-Token initialisieren
+# Wir überschreiben den Authorization-Header mit dem Token des Users
+options = ClientOptions(headers={"Authorization": f"Bearer {user_jwt}"})
+supabase = create_client(supabase_url, supabase_anon_key, options=options)
+
+def run_agent():
+    # 3. Datenbank-Abfrage
+    # Da RLS jetzt aktiv ist, MÜSSEN wir nicht mal zwingend nach user_id filtern!
+    # Supabase gibt uns sowieso nur die Zeilen, die diesem User gehören.
+    response = supabase.table("task_system") \
+        .select("*, tenant_credentials(*)") \
+        .eq("id", task_system_id) \
+        .execute()
+        
+    if not response.data:
+        raise Exception("Zugriff verweigert oder Task nicht gefunden (RLS hat geblockt!)")
+        
+    task_data = response.data[0]
+    print(f"Agent startet für System: {task_data['container_identifier']}")
+    # ... Agenten Logik ...
 ```
 
 ## 3. The Worker: The "Fat Image" Pattern
