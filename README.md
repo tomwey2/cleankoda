@@ -198,7 +198,7 @@ If the coding agent made a mistake, please let me know, e.g. on LinkedIn.
 Found a bug or have a feature idea? Check our [Contributing Guide](CONTRIBUTING.md) to get started.
 
 ## POC Results
-[Results of the First POC](poc-results.md)
+[Results of the First POC](doc/poc/poc-results-01.md)
 
 <!-- MARKDOWN LINKS & IMAGES -->
 <!-- https://www.markdownguide.org/basic-syntax/#reference-style-links -->

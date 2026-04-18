@@ -3,10 +3,8 @@
 # workspace: shared storage for the local repository
 WORKSPACE=./local/workspace
 
-# Docker container name that hosts the runnable workbench (backend or frontend)
-WORKBENCH=workbench-backend
-# Alternate workbench example for a frontend stack
-#WORKBENCH=workbench-frontend
+# Docker container name that hosts the runnable workbench
+WORKBENCH=cleankoda-workbench
 
 # Optional override for the agent stack (fallback derives from WORKBENCH)
 #AGENT_STACK=backend
