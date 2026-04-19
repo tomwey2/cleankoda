@@ -51,7 +51,7 @@ def log_agent_response(  # pylint: disable=unused-argument
             if name == "thinking":
                 thought = args.get("thought", "")
                 if thought:
-                    logger.info("Thinking: %s", thought)
+                    logger.info("Thinking: %s%s", thought[:50], "..." if len(thought) > 50 else "")
             for key, value in args.items():
                 if name == "write_to_file" and key == "content":
                     out_value = safe_truncate(value, arg_limit)
