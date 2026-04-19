@@ -2,6 +2,12 @@
 .env-local
 .local/
 workspace/
+.local/keys.env
+workflow_graph.mmd
+/workflow_graph.png
+.zed
+.vscode/*
+!.vscode/launch.json
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
@@ -210,12 +216,3 @@ cython_debug/
 marimo/_static/
 marimo/_lsp/
 __marimo__/
-
-# own rules
-.env-local
-.local/keys.env
-workflow_graph.mmd
-/workflow_graph.png
-.zed
-.vscode
-.docker-home/

@@ -5,6 +5,11 @@ WORKSPACE=./local/workspace
 
 # Docker container name that hosts the runnable workbench
 WORKBENCH=cleankoda-workbench
+# select docker socket if you start the cleankoda from the IDE with .vscode/launch.json you need DOCKER_HOST 
+# if you use the docker socket in the standard linux system
+#DOCKER_HOST="/var/run/docker.sock"
+# if you use the docker socket from docker.desktop
+#DOCKER_HOST="unix:///home/<user>/.docker/desktop/docker.sock"
 
 # Optional override for the agent stack (fallback derives from WORKBENCH)
 #AGENT_STACK=backend
