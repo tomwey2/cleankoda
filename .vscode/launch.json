@@ -1,0 +1,30 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Python: Run Agent",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${workspaceFolder}/run_agent.py",
+            "console": "integratedTerminal",
+            "envFile": "${workspaceFolder}/.env",
+            "cwd": "${workspaceFolder}",
+            "env": {
+                "WORKSPACE": "${workspaceFolder}/.local/workspace",
+                "WORKBENCH": "cleankoda-workbench-local"
+            }
+        },
+        {
+            "name": "Python: Run Web",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${workspaceFolder}/run_web.py",
+            "console": "integratedTerminal",
+            "envFile": "${workspaceFolder}/.env",
+            "cwd": "${workspaceFolder}",
+            "env": {
+                "WORKSPACE": "${workspaceFolder}/.local/workspace",
+            }
+        }
+    ]
+}

@@ -1,0 +1,29 @@
+FROM python:3.11-slim-bookworm
+
+ENV PYTHONUNBUFFERED=1 \
+    UV_COMPILE_BYTECODE=1 \
+    UV_LINK_MODE=copy
+
+WORKDIR /coding-agent
+
+# 1. System-Pakete installieren
+RUN apt-get update && apt-get install -y \
+    git \
+    && rm -rf /var/lib/apt/lists/*
+
+# 2. 'uv' installieren
+RUN pip install uv
+
+# 3. Dependencies installieren
+COPY pyproject.toml uv.lock ./
+
+# Installiere Abhängigkeiten ins System-Python
+RUN uv sync --frozen --no-install-project
+
+# 3. Code kopieren
+COPY run_web.py ./
+COPY app ./app
+COPY prompts ./prompts
+
+# 4. Startbefehl
+CMD ["uv", "run", "run_web.py"]

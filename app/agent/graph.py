@@ -155,7 +155,7 @@ def create_workflow(runtime: RuntimeSetting) -> StateGraph:
         "tester",
         create_tester_node(runtime.llm_large, tester_tools),
     )
-    workflow.add_node("explainer", create_explainer_node(runtime.llm_large))
+    workflow.add_node("explainer", create_explainer_node(runtime.llm_small))
 
     # Tool Nodes
     workflow.add_node("tools_coder", ToolNode(coder_tools))

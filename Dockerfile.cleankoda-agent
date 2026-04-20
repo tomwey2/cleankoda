@@ -31,7 +31,9 @@ RUN mkdir -p /coding-agent/servers && \
     npm install
 
 # 5. Code kopieren
-COPY . .
+COPY run_agent.py ./
+COPY app ./app
+COPY prompts ./prompts
 
 # 6. Git Dummy-Config (damit der Agent committen kann)
 RUN git config --global user.email "agent@bot.local" && \
@@ -39,4 +41,4 @@ RUN git config --global user.email "agent@bot.local" && \
     git config --global safe.directory "/coding-agent-workspace"
 
 # 7. Startbefehl
-CMD ["uv", "run", "run_web.py"]
+CMD ["uv", "run", "run_agent.py"]
