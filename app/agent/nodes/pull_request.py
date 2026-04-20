@@ -47,6 +47,8 @@ def create_pull_request_node():
             "agent_summary": summary_entries,
             "repo_pr_url": repo_pr_url,
             "repo_pr_number": repo_pr_number,
+            "user_message": "Review the pull request. If you approve it, move the task to 'done'.\n"
+            + "If you reject it, comment the task and move it to 'in progress'.",
         }
 
     return pull_request_node

@@ -11,7 +11,7 @@
             "cwd": "${workspaceFolder}",
             "env": {
                 "WORKSPACE": "${workspaceFolder}/.local/workspace",
-                "WORKBENCH": "cleankoda-workbench"
+                "WORKBENCH": "cleankoda-workbench-local"
             }
         },
         {
