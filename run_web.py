@@ -1,11 +1,11 @@
 from dotenv import load_dotenv
 
-from app.core.config import get_env_settings
-from app.core.extensions import db
-from app.core.utils import log_and_validate_env, setup_logging
+from src.core.config import get_env_settings
+from src.core.extensions import db
+from src.core.utils import log_and_validate_env, setup_logging
 
 # Importe angepasst für Root-Level Execution
-from app.web import create_app
+from src.web import create_app
 
 load_dotenv()
 

@@ -15,6 +15,7 @@ WORKBENCH=cleankoda-workbench
 #AGENT_STACK=backend
 
 # database
+INSTANCE_DIR=./src/instance
 ENCRYPTION_KEY=your_encryption_key_here
 
 # GitHub Credentials
