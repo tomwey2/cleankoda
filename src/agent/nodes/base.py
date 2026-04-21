@@ -1,0 +1,223 @@
+"""
+Shared base helper for tool-based agent nodes.
+
+Provides `invoke_tool_node`, which encapsulates the common LLM-invoke-with-retry
+loop used by the Coder, Analyst, and Tester nodes.
+"""
+
+import asyncio
+import logging
+import time
+from collections.abc import Callable
+from typing import Any
+
+from langchain_core.messages import (
+    AIMessage,
+    BaseMessage,
+    HumanMessage,
+    RemoveMessage,
+    SystemMessage,
+)
+
+from src.agent.services.logging import log_agent_response
+from src.agent.services.message_processing import filter_messages_for_llm, sanitize_response
+from src.agent.state import AgentState
+from src.core.config import get_env_settings
+
+logger = logging.getLogger(__name__)
+
+_RATE_LIMIT_LOCK: asyncio.Lock | None = None
+_LAST_LLM_CALL_TIME: float = 0.0
+
+# Tool call repetition tracking
+EXPLORATION_TOOLS = {"list_files", "read_file"}
+MAX_CONSECUTIVE_EXPLORATION_CALLS = 8
+
+
+def _count_consecutive_exploration_calls(messages: list[BaseMessage]) -> int:
+    """Count consecutive exploration tool calls from the end of message history.
+    
+    PURPOSE: Prevent endless exploration loops where agent keeps calling 
+    list_files/read_file without making progress. The streak continues ONLY
+    when AI messages contain exploration tools. Only non-exploration tools 
+    (write_to_file, thinking, finish_task) break the streak, indicating 
+    the agent is actually processing information and moving forward.
+    
+    Mixed tool calls (exploration + non-exploration) are considered progress
+    and break the streak since the agent is thinking/writing, not just exploring.
+    """
+    count = 0
+    for msg in reversed(messages):
+        if isinstance(msg, AIMessage) and hasattr(msg, "tool_calls") and msg.tool_calls:
+            # Check if any tool call is an exploration tool
+            if any(tc.get("name") in EXPLORATION_TOOLS for tc in msg.tool_calls):
+                count += 1
+            else:
+                # Non-exploration tool breaks the streak (agent is making progress)
+                break
+        elif not isinstance(msg, AIMessage):
+            # ToolMessage or other message types don't break the streak
+            continue
+    return count
+
+
+async def invoke_tool_node(  # pylint: disable=too-many-arguments,too-many-locals,duplicate-code
+    *,
+    node_name: str,
+    state: AgentState,
+    llm: Any,
+    tools: list,
+    system_prompt: str,
+    human_prompt: str,
+    max_messages: int,
+    fallback_tool_name: str,
+    fallback_tool_args: dict[str, Any],
+    llm_response_hook: Callable[[AgentState, AIMessage], dict[str, Any]] | None = None,
+) -> dict[str, Any]:
+    """
+    Shared LLM-invoke-with-retry loop for tool-based agent nodes.
+
+    Args:
+        node_name: Identifier used in logging and the returned state dict.
+        state: Current agent state.
+        llm: The language model to bind tools to.
+        tools: Tools to bind to the LLM.
+        system_prompt: Rendered system prompt string.
+        human_prompt: Rendered human prompt string.
+        max_messages: Maximum number of messages to pass to the LLM.
+        fallback_tool_name: Tool name used in the emergency fallback AIMessage.
+        fallback_tool_args: Args dict for the emergency fallback tool call.
+        llm_response_hook: Optional callable invoked on a successful response.
+            Receives (state, response) and returns a dict merged into the result.
+    Returns:
+        A state-update dict suitable for returning from a LangGraph node.
+    """
+    # Detect node switch: if current_node differs from node_name, we're switching nodes
+    is_node_switch = state.get("current_node") != node_name
+
+    # Always start with system and human prompts
+    current_messages: list[BaseMessage | SystemMessage | HumanMessage] = [
+        SystemMessage(content=system_prompt),
+        HumanMessage(content=human_prompt),
+    ]
+
+    # On tool call loop (not node switch), append filtered existing messages
+    if not is_node_switch:
+        existing_messages = state.get("messages", [])
+        filtered_messages = filter_messages_for_llm(
+            existing_messages, max_messages=max_messages
+        )
+        current_messages.extend(filtered_messages)
+
+        # Check for excessive exploration tool calls
+        exploration_count = _count_consecutive_exploration_calls(existing_messages)
+        if exploration_count >= MAX_CONSECUTIVE_EXPLORATION_CALLS:
+            logger.warning(
+                "Detected %d consecutive exploration tool calls. Injecting intervention.",
+                exploration_count
+            )
+            current_messages.append(
+                HumanMessage(
+                    content=(
+                        f"STOP exploring! You've called exploration tools "
+                        f"{exploration_count} times in a row. "
+                        "You have enough information. Move to the next step: "
+                        "use 'thinking' to diagnose, then 'write_to_file' to fix, "
+                        "or 'finish_task' if done."
+                    )
+                )
+            )
+
+    current_tool_choice = "auto"
+
+    for attempt in range(3):
+        try:
+            chain = llm.bind_tools(tools, tool_choice=current_tool_choice)
+            await _apply_rate_limit()
+            response: AIMessage = await chain.ainvoke(current_messages)
+
+            response = sanitize_response(response)
+
+            tool_calls = getattr(response, "tool_calls", []) or []
+            if tool_calls and len(tool_calls) > 0:
+                log_agent_response(node_name, response, attempt=attempt + 1)
+
+                # On node switch, preserve old messages to history and clear them
+                messages_to_add = [response]
+                if is_node_switch:
+                    old_messages = state.get("messages", [])
+                    if old_messages:
+                        # Create RemoveMessage for each old message to clear them
+                        remove_messages = [
+                            RemoveMessage(id=msg.id) for msg in old_messages if msg.id
+                        ]
+                        messages_to_add = remove_messages + [response]
+
+                result: dict[str, Any] = {
+                    "messages": messages_to_add,
+                    "current_node": node_name,
+                    "current_tool_calls": tool_calls,
+                    "prompt": human_prompt,
+                    "system_prompt": system_prompt,
+                }
+
+                # Preserve old messages to history on node switch
+                if is_node_switch:
+                    old_messages = state.get("messages", [])
+                    if old_messages:
+                        result["message_history"] = old_messages
+
+                if llm_response_hook:
+                    hook_result = llm_response_hook(state, response)
+                    result.update(hook_result)
+
+                return result
+
+            logger.warning("Attempt %d: No tool calls. Escalating strategy...", attempt + 1)
+            current_tool_choice = "any"
+            current_messages.append(
+                HumanMessage(content="ERROR: Invalid response. You MUST call a tool!")
+            )
+
+        except Exception as e:  # pylint: disable=broad-exception-caught
+            logger.error("Error in LLM call (Attempt %d): %s", attempt + 1, e)
+
+    # Fallback
+    logger.error("Agent stuck after 3 attempts. Hard exit.")
+
+    fallback_message = AIMessage(
+        content="Stuck.",
+        tool_calls=[
+            {
+                "name": fallback_tool_name,
+                "args": fallback_tool_args,
+                "id": "call_emergency",
+                "type": "tool_call",
+            }
+        ],
+    )
+
+    fallback_result: dict[str, Any] = {
+        "messages": [fallback_message],
+        "current_node": node_name,
+    }
+
+    return fallback_result
+
+
+async def _apply_rate_limit() -> None:
+    """Enforce the configured LLM calls-per-second limit, if set."""
+    calls_per_second = get_env_settings().llm_calls_per_second
+    if calls_per_second <= 0:
+        return
+    min_interval = 1.0 / calls_per_second
+    global _RATE_LIMIT_LOCK, _LAST_LLM_CALL_TIME  # pylint: disable=global-statement
+    if _RATE_LIMIT_LOCK is None:
+        _RATE_LIMIT_LOCK = asyncio.Lock()
+    async with _RATE_LIMIT_LOCK:
+        now = time.monotonic()
+        wait = min_interval - (now - _LAST_LLM_CALL_TIME)
+        if wait > 0:
+            logger.debug("Rate limit: waiting %.2fs before LLM call", wait)
+            await asyncio.sleep(wait)
+        _LAST_LLM_CALL_TIME = time.monotonic()

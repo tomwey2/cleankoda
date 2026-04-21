@@ -3,12 +3,12 @@ import sys
 
 from dotenv import load_dotenv
 
-from app.agent.worker import run_agent_cycle
-from app.core.config import get_env_settings
-from app.core.extensions import db
-from app.core.utils import log_and_validate_env, setup_logging
-from app.web import create_app
-from app.agent.runtime import RuntimeSetting, prepare_runtime
+from src.agent.worker import run_agent_cycle
+from src.core.config import get_env_settings
+from src.core.extensions import db
+from src.core.utils import log_and_validate_env, setup_logging
+from src.web import create_app
+from src.agent.runtime import RuntimeSetting, prepare_runtime
 
 
 DEFAULT_POLLING_INTERVAL_SECONDS = 60
