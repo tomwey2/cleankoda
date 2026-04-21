@@ -48,9 +48,11 @@ async def get_template_context() -> dict:
 
     agent_age = "junior"
     agent_gender = "male"
-    if agent_settings and agent_settings.agent_skill_level and agent_settings.agent_gender:
-        agent_age = agent_settings.agent_skill_level.lower()
-        agent_gender = agent_settings.agent_gender.lower()
+    if agent_settings:
+        if agent_settings.agent_skill_level:
+            agent_age = agent_settings.agent_skill_level.lower()
+        if agent_settings.agent_gender:
+            agent_gender = agent_settings.agent_gender.lower()
     agent_activity = "is-waiting"
 
     if agent_state:
