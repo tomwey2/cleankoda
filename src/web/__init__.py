@@ -21,7 +21,7 @@ def create_app(encryption_key: Fernet) -> Flask:
     app = Flask(__name__, instance_relative_config=True)
 
     # Load static config from module
-    app.config.from_object("app.core.config")
+    app.config.from_object("src.core.config")
 
     # Load dynamic config from environment settings
     env_settings = get_env_settings()
