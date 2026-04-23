@@ -8,176 +8,26 @@ import re
 
 from langchain_core.tools import tool
 
-from src.agent.utils import get_instance_dir, get_workspace
+from src.agent.utils import get_workspace
 
 logger = logging.getLogger(__name__)
 
 
-def _get_full_workspace_path(filepath: str) -> str:
-    """Get full path for a file in the workspace.
-
-    Args:
-        filepath: Relative file path
-
-    Returns:
-        Full absolute path within workspace
-    """
-    return _get_full_path(get_workspace(), filepath)
-
-def _get_full_instance_path(filepath: str) -> str:
-    """Get full path for a file in the instance directory.
-
-    Args:
-        filepath: Relative file path
-
-    Returns:
-        Full absolute path within instance directory
-    """
-    return _get_full_path(get_instance_dir(), filepath)
-
-def _get_full_path(base_path: str, filepath: str) -> str:
-    """Construct and validate a full path within a base directory.
-
-    This function ensures that the resulting path stays within the base directory
-    by removing leading slashes and validating the resolved path.
-
-    Args:
-        base_path: Base directory path
-        filepath: Relative file path (leading slashes will be stripped)
-
-    Returns:
-        Full absolute path if valid, error message if access denied
-    """
-    # Strip leading slashes to prevent absolute path injection
-    clean_path = filepath.lstrip("/")
-    full_path = os.path.join(base_path, clean_path)
-
-    # Resolve symlinks and relative paths to prevent directory traversal
-    full_path_real = os.path.realpath(full_path)
-    path_real = os.path.realpath(base_path)
-
-    # Verify the resolved path is within the base directory
-    if not full_path_real.startswith(path_real):
-        logger.warning(
-            "Path traversal attempt blocked: %s is outside %s",
-            full_path_real,
-            path_real
-        )
-        return f"Access denied target file: {full_path_real} is not in path {path_real}"
-
-    logger.debug("Validated path: %s -> %s", filepath, full_path_real)
-    return full_path
-
-
-def write_to_file_in_workspace(filepath: str, content: str):
-    """Write content to a file in the workspace.
-
-    Creates parent directories if they don't exist.
-
-    Args:
-        filepath: Relative path to the file
-        content: Content to write
-
-    Returns:
-        Success message or error message
-    """
-    try:
-        logger.debug("Writing to workspace file: %s", filepath)
-        full_path = _get_full_workspace_path(filepath)
-
-        # Create parent directories if needed
-        parent_dir = os.path.dirname(full_path)
-        if parent_dir:
-            os.makedirs(parent_dir, exist_ok=True)
-            logger.debug("Ensured directory exists: %s", parent_dir)
-
-        # Write content to file
-        with open(full_path, "w", encoding="utf-8") as f:
-            f.write(content)
-
-        logger.debug("Successfully wrote %d bytes to %s", len(content), full_path)
-        return f"Successfully wrote to {full_path}"
-    except Exception as e:  # pylint: disable=broad-exception-caught
-        logger.error("Failed to write file %s: %s", filepath, str(e))
-        logger.debug("Write error stacktrace:", exc_info=True)
-        return f"ERROR writing file: {str(e)}"
-
-def write_to_file_in_instance_dir(filepath: str, content: str):
-    """Write content to a file in the instance directory.
-
-    Creates parent directories if they don't exist.
-
-    Args:
-        filepath: Relative path to the file
-        content: Content to write
-
-    Returns:
-        Success message or error message
-    """
-    try:
-        logger.debug("Writing to instance file: %s", filepath)
-        full_path = _get_full_instance_path(filepath)
-
-        # Create parent directories if needed
-        parent_dir = os.path.dirname(full_path)
-        if parent_dir:
-            os.makedirs(parent_dir, exist_ok=True)
-            logger.debug("Ensured directory exists: %s", parent_dir)
-
-        # Write content to file
-        with open(full_path, "w", encoding="utf-8") as f:
-            f.write(content)
-
-        logger.debug("Successfully wrote %d bytes to %s", len(content), full_path)
-        return f"Successfully wrote to {full_path}"
-    except Exception as e:  # pylint: disable=broad-exception-caught
-        logger.error("Failed to write instance file %s: %s", filepath, str(e))
-        logger.debug("Write error stacktrace:", exc_info=True)
-        return f"ERROR writing file: {str(e)}"
-
-
-def read_file_in_workspace(filepath: str):
-    """Read the content of a file from the workspace.
-
-    Args:
-        filepath: Relative path to the file
-
-    Returns:
-        File content, empty file message, or error message
-    """
-    try:
-        logger.debug("Reading workspace file: %s", filepath)
-        full_path = _get_full_workspace_path(filepath)
-
-        # Check if file exists
-        if not os.path.exists(full_path):
-            logger.warning("File not found: %s", full_path)
-            return (
-                f"ERROR: File {full_path} does not exist. "
-                + "(Current dir: {os.listdir(WORKSPACE)})"
-            )
-
-        # Read file content
-        with open(full_path, "r", encoding="utf-8") as f:
-            content = f.read()
-
-        if not content:
-            logger.debug("File is empty: %s", full_path)
-            return "(File is empty)"
-
-        logger.debug("Successfully read %d bytes from %s", len(content), full_path)
-        return content
-    except Exception as e:  # pylint: disable=broad-exception-caught
-        logger.error("Failed to read file %s: %s", filepath, str(e))
-        logger.debug("Read error stacktrace:", exc_info=True)
-        return f"ERROR reading file: {str(e)}"
-
-
 # Ignore patterns for directory traversal
 IGNORE_PATTERNS = {
-    ".git", ".gradle", "node_modules", "__pycache__",
-    ".pytest_cache", ".venv", "venv", "build", "dist",
-    "target", ".idea", ".vscode", "*.egg-info"
+    ".git",
+    ".gradle",
+    "node_modules",
+    "__pycache__",
+    ".pytest_cache",
+    ".venv",
+    "venv",
+    "build",
+    "dist",
+    "target",
+    ".idea",
+    ".vscode",
+    "*.egg-info",
 }
 
 
@@ -197,6 +47,7 @@ class _FileListingContext:
         file_list: Accumulated list of matching file paths
         truncated: Flag indicating if max_files limit was reached
     """
+
     workspace: str
     max_files: int
     pattern: str | None
@@ -207,7 +58,7 @@ class _FileListingContext:
 
 
 def _should_skip_directory(
-        root: str, dirs: list[str], max_depth: int | None, start_depth: int
+    root: str, dirs: list[str], max_depth: int | None, start_depth: int
 ) -> bool:
     """Determine if a directory should be skipped during traversal.
 
@@ -228,11 +79,7 @@ def _should_skip_directory(
     dirs[:] = [d for d in dirs if d not in IGNORE_PATTERNS]
 
     if len(dirs) < original_count:
-        logger.debug(
-            "Filtered %d ignored directories from %s",
-            original_count - len(dirs),
-            root
-        )
+        logger.debug("Filtered %d ignored directories from %s", original_count - len(dirs), root)
 
     # Check if current depth exceeds max_depth
     if max_depth is not None:
@@ -250,9 +97,7 @@ def _should_skip_directory(
     return False
 
 
-def _matches_content_pattern(
-        filepath: str, pattern: str, case_sensitive: bool = False
-) -> bool:
+def _matches_content_pattern(filepath: str, pattern: str, case_sensitive: bool = False) -> bool:
     """Check if file content matches the given pattern (grep-like).
 
     Args:
@@ -269,17 +114,11 @@ def _matches_content_pattern(
         file_size = os.path.getsize(filepath)
         if file_size > max_file_size:
             logger.debug(
-                "Skipping file %s (size: %d bytes) - exceeds 10MB limit",
-                filepath,
-                file_size
+                "Skipping file %s (size: %d bytes) - exceeds 10MB limit", filepath, file_size
             )
             return False
     except OSError as e:
-        logger.warning(
-            "Could not get file size for %s: %s",
-            filepath,
-            str(e)
-        )
+        logger.warning("Could not get file size for %s: %s", filepath, str(e))
         return False
 
     try:
@@ -289,17 +128,11 @@ def _matches_content_pattern(
         flags = 0 if case_sensitive else re.IGNORECASE
         return bool(re.search(pattern, content, flags))
     except (IOError, OSError, UnicodeDecodeError) as e:
-        logger.debug(
-            "Could not read file %s for content matching: %s",
-            filepath,
-            str(e)
-        )
+        logger.debug("Could not read file %s for content matching: %s", filepath, str(e))
         return False
     except Exception as e:  # pylint: disable=broad-exception-caught
         logger.warning(
-            "Unexpected error reading file %s for content matching: %s",
-            filepath,
-            str(e)
+            "Unexpected error reading file %s for content matching: %s", filepath, str(e)
         )
         return False
 
@@ -318,11 +151,7 @@ def _process_files_for_listing(root: str, files: list[str], ctx: _FileListingCon
     for file in files:
         # Check if we've reached the file limit
         if len(ctx.file_list) >= ctx.max_files:
-            logger.debug(
-                "Reached max_files limit (%d) at %s",
-                ctx.max_files,
-                root
-            )
+            logger.debug("Reached max_files limit (%d) at %s", ctx.max_files, root)
             ctx.truncated = True
             return
 
@@ -337,13 +166,9 @@ def _process_files_for_listing(root: str, files: list[str], ctx: _FileListingCon
         # Apply content pattern filter if specified
         if ctx.content_pattern:
             full_path = os.path.join(root, file)
-            if not _matches_content_pattern(
-                full_path, ctx.content_pattern, ctx.case_sensitive
-            ):
+            if not _matches_content_pattern(full_path, ctx.content_pattern, ctx.case_sensitive):
                 logger.debug(
-                    "File %s does not match content pattern %s",
-                    rel_path,
-                    ctx.content_pattern
+                    "File %s does not match content pattern %s", rel_path, ctx.content_pattern
                 )
                 continue
 
@@ -374,9 +199,7 @@ def _format_summary_result(dir_summary: dict[str, int]) -> str:
     return "\n".join(result)
 
 
-def _format_file_list_result(
-        file_list: list[str], truncated: bool, max_files: int
-) -> str:
+def _format_file_list_result(file_list: list[str], truncated: bool, max_files: int) -> str:
     """Format file list as a human-readable string.
 
     Args:
@@ -439,20 +262,6 @@ def _validate_directory_access(directory: str, workspace: str) -> str | None:
 
 
 @tool
-def read_file(filepath: str) -> str:
-    """
-    Reads the entire content of a file.
-    
-    Args:
-        filepath: Path to the file to read
-    
-    Returns:
-        Complete file content
-    """
-    return read_file_in_workspace(filepath)
-
-
-@tool
 # pylint: disable=too-many-arguments,too-many-locals,too-many-positional-arguments
 def list_files(
     directory: str = ".",
@@ -461,7 +270,7 @@ def list_files(
     summary: bool = False,
     pattern: str | None = None,
     content_pattern: str | None = None,
-    case_sensitive: bool = False
+    case_sensitive: bool = False,
 ) -> str:
     """
     Lists files in a directory (recursive). Can filter by filename pattern AND/OR by file content.
@@ -478,7 +287,7 @@ def list_files(
         content_pattern: Optional regex pattern to filter files by content (grep-like).
             Examples: "TODO", "def.*test", "import pandas", "@Override"
         case_sensitive: Whether content_pattern matching should be case-sensitive (default: False)
-    
+
     Examples:
         - Find all files containing "TODO": content_pattern="TODO"
         - Find Python files with test functions: pattern="*.py", content_pattern="def.*test"
@@ -494,7 +303,7 @@ def list_files(
             summary,
             pattern,
             content_pattern,
-            case_sensitive
+            case_sensitive,
         )
 
         # Get workspace and validate directory access
@@ -513,7 +322,7 @@ def list_files(
             pattern=pattern,
             content_pattern=content_pattern,
             case_sensitive=case_sensitive,
-            file_list=[]
+            file_list=[],
         )
 
         # Walk directory tree
@@ -536,8 +345,7 @@ def list_files(
         # Format and return results
         if summary:
             logger.debug(
-                "list_files: Returning directory summary for %d directories",
-                len(dir_summary)
+                "list_files: Returning directory summary for %d directories", len(dir_summary)
             )
             return _format_summary_result(dir_summary)
 
@@ -548,16 +356,3 @@ def list_files(
         logger.error("Failed to list files in %s: %s", directory, str(e))
         logger.debug("List files error stacktrace:", exc_info=True)
         return str(e)
-
-
-
-@tool
-def write_to_file(filepath: str, content: str):
-    """
-    Writes content to a file.
-    
-    WARNING: This replaces the ENTIRE file content. If you only want to modify
-    specific lines, read the full file first, make your changes, then write the complete content.
-    """
-
-    return write_to_file_in_workspace(filepath, content)
