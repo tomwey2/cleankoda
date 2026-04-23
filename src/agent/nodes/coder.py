@@ -51,11 +51,11 @@ def create_coder_node(llm, tools, agent_stack):
         if state["current_node"] != "coder":
             logger.info("--- CODER node ---")
         system_message = (
-            load_prompt(f"systemprompt_coder_{agent_stack.lower()}.md", state)
+            load_prompt(f"system_messages/systemprompt_coder_{agent_stack.lower()}.md", state)
             if state["issue_type"] == IssueType.CODING
-            else load_prompt("systemprompt_bugfixer.md", state)
+            else load_prompt("system_messages/systemprompt_bugfixer.md", state)
         )
-        human_message = load_prompt("prompt_coding.md", state)
+        human_message = load_prompt("human_messages/prompt_coding.md", state)
         return await invoke_tool_node(
             node_name="coder",
             state=state,

@@ -54,7 +54,7 @@ def create_explainer_node(llm):
             "tools_used": formatted_tools_used,
         }
         system_message = load_prompt(
-            "systemprompt_explainer.md",
+            "system_messages/systemprompt_explainer.md",
             state | actions,
         )
         response: AIMessage = await llm.ainvoke([SystemMessage(content=system_message)])

@@ -41,7 +41,6 @@ class TesterResult(BaseModel):
     )
 
 
-
 def create_tester_node(llm, tools):
     """
     Factory function that creates the Tester agent node.
@@ -57,11 +56,11 @@ def create_tester_node(llm, tools):
     def _llm_response_hook(state: AgentState, response: AIMessage) -> dict[str, Any]:
         """
         Hook function to process the LLM response and update the state.
-        
+
         Args:
             state: The current agent state.
             response: The AIMessage response from the LLM.
-            
+
         Returns:
             A dictionary containing the updated state.
         """
@@ -80,8 +79,8 @@ def create_tester_node(llm, tools):
         if state["current_node"] != "tester":
             logger.info("--- TESTER node ---")
 
-        system_message = load_prompt("systemprompt_tester.md", state)
-        human_message = load_prompt("prompt_testing.md", state)
+        system_message = load_prompt("system_messages/systemprompt_tester.md", state)
+        human_message = load_prompt("human_messages/prompt_testing.md", state)
 
         return await invoke_tool_node(
             node_name="tester",
