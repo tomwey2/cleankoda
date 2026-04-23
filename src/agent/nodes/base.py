@@ -30,19 +30,19 @@ _RATE_LIMIT_LOCK: asyncio.Lock | None = None
 _LAST_LLM_CALL_TIME: float = 0.0
 
 # Tool call repetition tracking
-EXPLORATION_TOOLS = {"list_files", "read_file"}
+EXPLORATION_TOOLS = {"list_files", "read"}
 MAX_CONSECUTIVE_EXPLORATION_CALLS = 8
 
 
 def _count_consecutive_exploration_calls(messages: list[BaseMessage]) -> int:
     """Count consecutive exploration tool calls from the end of message history.
-    
-    PURPOSE: Prevent endless exploration loops where agent keeps calling 
-    list_files/read_file without making progress. The streak continues ONLY
-    when AI messages contain exploration tools. Only non-exploration tools 
-    (write_to_file, thinking, finish_task) break the streak, indicating 
+
+    PURPOSE: Prevent endless exploration loops where agent keeps calling
+    list_files/read without making progress. The streak continues ONLY
+    when AI messages contain exploration tools. Only non-exploration tools
+    (write, thinking, finish_task) break the streak, indicating
     the agent is actually processing information and moving forward.
-    
+
     Mixed tool calls (exploration + non-exploration) are considered progress
     and break the streak since the agent is thinking/writing, not just exploring.
     """
@@ -104,9 +104,7 @@ async def invoke_tool_node(  # pylint: disable=too-many-arguments,too-many-local
     # On tool call loop (not node switch), append filtered existing messages
     if not is_node_switch:
         existing_messages = state.get("messages", [])
-        filtered_messages = filter_messages_for_llm(
-            existing_messages, max_messages=max_messages
-        )
+        filtered_messages = filter_messages_for_llm(existing_messages, max_messages=max_messages)
         current_messages.extend(filtered_messages)
 
         # Check for excessive exploration tool calls
@@ -114,7 +112,7 @@ async def invoke_tool_node(  # pylint: disable=too-many-arguments,too-many-local
         if exploration_count >= MAX_CONSECUTIVE_EXPLORATION_CALLS:
             logger.warning(
                 "Detected %d consecutive exploration tool calls. Injecting intervention.",
-                exploration_count
+                exploration_count,
             )
             current_messages.append(
                 HumanMessage(
@@ -122,7 +120,7 @@ async def invoke_tool_node(  # pylint: disable=too-many-arguments,too-many-local
                         f"STOP exploring! You've called exploration tools "
                         f"{exploration_count} times in a row. "
                         "You have enough information. Move to the next step: "
-                        "use 'thinking' to diagnose, then 'write_to_file' to fix, "
+                        "use 'thinking' to diagnose, then 'write' to fix, "
                         "or 'finish_task' if done."
                     )
                 )

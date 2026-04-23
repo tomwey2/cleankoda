@@ -6,7 +6,7 @@ from src.agent.services.file_services import write_to_file_in_workspace
 
 
 @tool
-def write_to_file(filepath: str, content: str):
+def write(filepath: str, content: str):
     """
     Writes content to a file.
 

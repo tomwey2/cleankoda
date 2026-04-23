@@ -6,7 +6,7 @@ from src.agent.services.file_services import read_file_in_workspace
 
 
 @tool
-def read_file(filepath: str) -> str:
+def read(filepath: str) -> str:
     """
     Reads the entire content of a file.
 

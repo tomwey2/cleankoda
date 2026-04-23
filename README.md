@@ -90,7 +90,7 @@ The system is built upon a stateful, multi-agent architecture powered by LangGra
 
   - **Explainer:** Builds a structured PR description from the implementation plan plus the task-linked thought and tool-action history stored in SQLAlchemy (`AgentAction`). It uses `prompts/systemprompt_explainer.md` with the variables `plan`, `thoughts`, and `tools_used`, and intentionally does not consume git diff data in this MVP.
 
-* **The Cognitive Loop** (Reasoning): The innermost circle. The agent "thinks," executes a tool (e.g., read_file), analyzes the output, and plans the next move. This is the classic **ReAct pattern** that makes complex problem-solving possible in the first place.
+* **The Cognitive Loop** (Reasoning): The innermost circle. The agent "thinks," executes a tool (e.g., read), analyzes the output, and plans the next move. This is the classic **ReAct pattern** that makes complex problem-solving possible in the first place.
 
 * **Self-Correction Loop** (Quality): This is where true reliability happens. Inspired by TDD (Test-Driven Development), our agent writes code, validates it against tests, and fixes its own bugs—before a human even sees the code. This is CleanKoda’s USP. It distinguishes rigorous Software Engineering from the current "Vibe Coding" approach.
 
