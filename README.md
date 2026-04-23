@@ -17,25 +17,25 @@ CleanKoda is designed to counteract a potential next "software crisis" caused by
 The full [Lean Startup Vision](VISION.md) and a [short video at LinkedIn](https://www.linkedin.com/posts/thomas-weyrath_ai-softwareengineering-futurofwork-activity-7432682072449630208--zRg?utm_source=share&utm_medium=member_desktop&rcm=ACoAADscgC8BiMUyz0spFR0jOVHwfm3BFtIuF_o) 
 
 ### Show Case
-![Show Case](./doc/images/cleankoda-showcase-improve-readme.gif)
+![Show Case](./doc/images/cleankoda-showcase-feature-implementation.gif)
 
 ## Key Features
 
-As a **Proof of Concept (POC)**, the system demonstrates the following advanced capabilities:
+As a **Minimum Viable Product (MVP)**, the system demonstrates the following advanced capabilities:
 
 - **Multi-Agent Architecture:** Uses **LangGraph** to route tasks to specialized sub-agents (`Coder`, `Bugfixer`, `Analyst`, `Tester`, `Explainer`).
 - **Resilient AI Logic:** AI workflows are robustly implemented through design patterns like loops (review & critique) and coordinator/router (hierarchical task decompostion). This enables advanced **self-healing mechanisms** with retry loops and iterative prompting to prevent stalling and minimize hallucinations.
 - **Autonomous Git Operations:** Manages the full Git lifecycle—cloning, branching, committing, pushing, and pull requests—using the **Model Context Protocol (MCP)**.
 - **Explainable PR Descriptions (XAI):** On successful tests, an Explainer node synthesizes the implementation plan with thought and tool-action history from the database to generate a structured PR description.
-- **Task Management Integration:** Connects to external task/issue management systems (e.g. Trello, JIRA) to retrieve assignments and report status updates automatically. This also controls the **Human in the Loop** process.
+- **Issue Tracking System Integration:** Connects to external issue traccking systems (e.g. Trello, JIRA) to retrieve assignments and report status updates automatically. This also controls the **Human in the Loop** process.
 - **Dockerized & Scalable:** Runs in secure, isolated containers (sandbox), allowing for effortless horizontal scaling—simply spin up additional instances to expand your virtual workforce on demand.
 - **LLM Selection:** Choose AI provider (OpenAI, Google, Mistral) and select a large LLMs for complex tasks and a small LLM for simple tasks, ensuring high-quality and precise results at optimized costs.
 - **Workbench Integration:** Integrates workbenches to provide a development environment for the Coding Agent executing unit tests.
 - **Trust-First Strategy:** The Coding Agent initially takes on repetitive tasks until trust in its work is established. Only then are more complex tasks addressed. 
 
-## Future Roadmap: From POC to Professional SaaS
+## Future Roadmap: From MVP to Professional SaaS
 
-This Proof of Concept serves as the technological foundation for an upcoming startup venture. The goal is to evolve the system into a commercial, fully managed SaaS platform that integrates seamlessly into enterprise workflows.
+This Minimum Viable Product serves as the technological foundation for an upcoming startup venture. The goal is to evolve the system into a commercial, fully managed SaaS platform that integrates seamlessly into enterprise workflows.
 
 Key milestones for professionalization include:
 
@@ -202,7 +202,7 @@ Found a bug or have a feature idea? Check our [Contributing Guide](CONTRIBUTING.
 
 <!-- MARKDOWN LINKS & IMAGES -->
 <!-- https://www.markdownguide.org/basic-syntax/#reference-style-links -->
-[Status]: https://img.shields.io/badge/Status-POC-yellow?style=for-the-badge
+[Status]: https://img.shields.io/badge/Status-MVP-green?style=for-the-badge
 [Build]: https://img.shields.io/badge/Built-passing-brightgreen?style=for-the-badge
 [Python]: https://img.shields.io/badge/Python-3776AB?style=for-the-badge&logo=python&logoColor=white
 [Python-url]: https://www.python.org/
