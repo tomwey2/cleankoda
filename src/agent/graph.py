@@ -31,7 +31,7 @@ from src.agent.tools.file_tools import (
 )
 from src.agent.tools.plan_tools import write_plan
 from src.agent.tools.finish_task import finish_task
-from src.agent.tools.run_command import run_command
+from src.agent.tools.bash import bash
 from src.agent.tools.thinking import thinking
 from src.agent.tools.report_test_result import report_test_result
 
@@ -70,7 +70,7 @@ def route_after_tools_tester(state: AgentState):
                 # Unknown result -> treat as failure
                 return "failed"
 
-    # If no 'report_test_result' was present (e.g., only 'run_command' or 'git_add')
+    # If no 'report_test_result' was present (e.g., only 'bash' or 'git_add')
     # then return to the tester (loop) so it can continue.
     return "tester"
 
@@ -132,7 +132,7 @@ def create_workflow(runtime: RuntimeSetting) -> StateGraph:
     ]
     tester_tools = [
         thinking,
-        run_command,
+        bash,
         report_test_result,
     ]
 

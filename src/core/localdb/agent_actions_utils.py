@@ -39,7 +39,7 @@ def create_db_agent_action(db_agent_state_id: int, tool_calls: list[dict], node_
             args = tool_call.get("args", {}) or {}
             tool_arg0_name = ""
             tool_arg0_value = ""
-            if args and tool_name in ["read_file", "write_to_file", "run_command"]:
+            if args and tool_name in ["read_file", "write_to_file", "bash"]:
                 tool_arg0_name, tool_arg0_value = next(iter(args.items()))
 
             last_agent_action = get_last_agent_action()

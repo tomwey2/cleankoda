@@ -52,11 +52,7 @@ def _translate_workspace_path(command: str) -> str:
     # Replace host workspace path with container workspace path
     if agent_workspace in command:
         translated = command.replace(agent_workspace, workbench_workspace)
-        logger.debug(
-            "Translated workspace path: %s -> %s",
-            agent_workspace,
-            workbench_workspace
-        )
+        logger.debug("Translated workspace path: %s -> %s", agent_workspace, workbench_workspace)
         return translated
 
     return command
@@ -64,7 +60,7 @@ def _translate_workspace_path(command: str) -> str:
 
 @tool
 # pylint: disable=too-many-return-statements
-def run_command(command: str) -> str:
+def bash(command: str) -> str:
     """Execute a shell command inside the workbench container."""
     if not DOCKER_CLIENT:
         return "Error: Docker client not initialized. Is the socket mounted?"
@@ -74,8 +70,7 @@ def run_command(command: str) -> str:
 
         if container.status != "running":
             return (
-                f"Error: Container {get_workbench()} is not running "
-                f"(Status: {container.status})."
+                f"Error: Container {get_workbench()} is not running (Status: {container.status})."
             )
 
         # Translate any host workspace paths to container paths

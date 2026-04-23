@@ -124,19 +124,19 @@ The application distinguishes between two workspace paths to support different d
 ### `WORKBENCH_WORKSPACE` (Container Workspace)
 - **Purpose**: Path where commands are executed inside the workbench container
 - **Location**: Always a path inside the Docker workbench container
-- **Used by**: `run_command` tool for executing shell commands
+- **Used by**: `bash` tool for executing shell commands
 - **Default**: Falls back to `WORKSPACE` value if not explicitly set
 - **Example**: `/coding-agent-workspace`
 
 ### Path Translation
 
-The `run_command` tool automatically translates agent workspace paths to container workspace paths:
+The `bash` tool automatically translates agent workspace paths to container workspace paths:
 
 ```python
 # LLM generates command with agent workspace:
 "cd /home/user/.local/workspace && mvn clean test"
 
-# run_command translates to container workspace:
+# bash translates to container workspace:
 "cd /coding-agent-workspace && mvn clean test"
 ```
 
