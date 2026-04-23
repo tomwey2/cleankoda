@@ -17,7 +17,7 @@ CleanKoda is designed to counteract a potential next "software crisis" caused by
 The full [Lean Startup Vision](VISION.md) and a [short video at LinkedIn](https://www.linkedin.com/posts/thomas-weyrath_ai-softwareengineering-futurofwork-activity-7432682072449630208--zRg?utm_source=share&utm_medium=member_desktop&rcm=ACoAADscgC8BiMUyz0spFR0jOVHwfm3BFtIuF_o) 
 
 ### Show Case
-![Show Case](./images/cleankoda-showcase-improve-readme.gif)
+![Show Case](./doc/images/cleankoda-showcase-improve-readme.gif)
 
 ## Key Features
 
@@ -60,7 +60,7 @@ The system interacts with several external services to fulfill the end-to-end wo
 
 The following diagram illustrates the high-level architecture of the system, highlighting the separation of concerns between the Agent and the Workbench:
 
-![Architecture](./images/cleankoda-architecture.png)
+![Architecture](./doc/images/cleankoda-architecture.png)
 
 The core system consists of the following key components:
 
@@ -76,7 +76,7 @@ The core system consists of the following key components:
 ### LangGraph Workflow
 The system is built upon a stateful, multi-agent architecture powered by LangGraph. Instead of a monolithic process, the execution flow is intelligently orchestrated across specialized nodes. After successful test execution, the workflow routes through an Explainer node before Pull Request creation so that the generated PR body includes intent, reasoning, and verification context. The shared AgentState now carries `pr_description` for this handoff into PR creation.
 
-![LangGraph Workflow](./images/workflow_graph.png)
+![LangGraph Workflow](./doc/images/workflow_graph.png)
 
 * **Router Node:** The Routing workflows process inputs and then directs them to context-specific agents. It acts as the entry point. It analyzes the incoming ticket context and determines the optimal execution strategy by selecting the appropriate specialist. Additionally, the Router Node evaluates the complexity of the task and checks if the skill level of the agent is suitable for the task. This establishes the trust-first strategy, ensuring that agents are only assigned tasks they can handle effectively.
 
@@ -160,7 +160,7 @@ docker compose up -d --build
 
 ##### 4.2 Open the Dashboard in browser
 Open the agent dashboard in browser, e.g. http://localhost:5000.
-![Agent Dashboard](./images/web-dashboard.png)
+![Agent Dashboard](./doc/images/web-dashboard.png)
 
 If you want to run the agent without spawning MCP helper processes (e.g., when debugging locally or when MCP tooling is unavailable), set `ENABLE_MCP_SERVERS=false` (or `0`/`no`). The default is `true`, which launches both the Git MCP server and the task-system MCP server so the agent can execute repository and task-side commands.
 
@@ -173,12 +173,12 @@ docker compose down
 #### 5. Configure the Coding Agent
 Open the agent settings in browser, e.g. http://localhost:5000, and fill in the required fields. Press "Save Settings". The credential data are stored in a SQLite database encrypted using the Fernet encryption key.
 
-![Agent Settings](./images/web-settings.png)
+![Agent Settings](./doc/images/web-settings.png)
 
 #### 6. Prepare your Trello Board
 Create new Cards at your Trello board in the list "Backlog" and move one into the list "Sprint Backlog". Here you can see an example:
 
-![Trello Board](./images/trello-board.png)
+![Trello Board](./doc/images/trello-board.png)
 
 #### 7. Agent runs automatically
 The agent runs automatically when a new card is created in the "Sprint Backlog" list. It moves the card to the list "In Progress" and starts the workflow. It will generate or change the code based on the card description and create a pull request to your GitHub repository with a structured markdown description (Objective & Architecture, Developer's Journey, Quality Assurance).
