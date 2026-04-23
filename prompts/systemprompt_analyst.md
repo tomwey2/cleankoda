@@ -27,7 +27,7 @@ You are in **READ-ONLY** mode.
 5. **ARCHITECTURAL FIT:** Ensure the proposed solution fits the existing patterns (e.g., "Don't put logic in Controllers").
 
 # MANDATORY WORKFLOW
-1.  **EXPLORE** the project structure (tool: `list_files`).
+1.  **EXPLORE** the project structure (tool: `dir`).
 2.  **READ** specific relevant files (tool: `read`).
 3.  **ANALYZE** findings (tool: `thinking`).
 {% if issue_type == 'CODING' %}

@@ -30,7 +30,7 @@ _RATE_LIMIT_LOCK: asyncio.Lock | None = None
 _LAST_LLM_CALL_TIME: float = 0.0
 
 # Tool call repetition tracking
-EXPLORATION_TOOLS = {"list_files", "read"}
+EXPLORATION_TOOLS = {"dir", "read"}
 MAX_CONSECUTIVE_EXPLORATION_CALLS = 8
 
 
@@ -38,7 +38,7 @@ def _count_consecutive_exploration_calls(messages: list[BaseMessage]) -> int:
     """Count consecutive exploration tool calls from the end of message history.
 
     PURPOSE: Prevent endless exploration loops where agent keeps calling
-    list_files/read without making progress. The streak continues ONLY
+    dir/read without making progress. The streak continues ONLY
     when AI messages contain exploration tools. Only non-exploration tools
     (write, thinking, finish_task) break the streak, indicating
     the agent is actually processing information and moving forward.

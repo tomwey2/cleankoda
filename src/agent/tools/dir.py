@@ -263,7 +263,7 @@ def _validate_directory_access(directory: str, workspace: str) -> str | None:
 
 @tool
 # pylint: disable=too-many-arguments,too-many-locals,too-many-positional-arguments
-def list_files(
+def dir(
     directory: str = ".",
     max_files: int = 500,
     max_depth: int | None = None,
@@ -295,7 +295,7 @@ def list_files(
     """
     try:
         logger.debug(
-            "list_files: directory=%s, max_files=%d, max_depth=%s, "
+            "dir: directory=%s, max_files=%d, max_depth=%s, "
             "summary=%s, pattern=%s, content_pattern=%s, case_sensitive=%s",
             directory,
             max_files,
@@ -344,12 +344,10 @@ def list_files(
 
         # Format and return results
         if summary:
-            logger.debug(
-                "list_files: Returning directory summary for %d directories", len(dir_summary)
-            )
+            logger.debug("dir: Returning directory summary for %d directories", len(dir_summary))
             return _format_summary_result(dir_summary)
 
-        logger.debug("list_files: Returning file list with %d files", len(ctx.file_list))
+        logger.debug("dir: Returning file list with %d files", len(ctx.file_list))
         return _format_file_list_result(ctx.file_list, ctx.truncated, max_files)
 
     except Exception as e:  # pylint: disable=broad-exception-caught
