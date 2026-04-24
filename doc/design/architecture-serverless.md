@@ -1,53 +1,44 @@
-## CleanKoda's Serverless Architecture on Google Cloud Run
-This document describes the final, scalable serverless architecture for CleanKoda on the Google Cloud Platform (GCP). It solves the problem of the lack of shared disks in the cloud, enables seamless customer onboarding, and optimizes runtime costs through intelligent event routing ("scale-to-zero").
+# Serverless-Architektur von CleanKoda auf Google Cloud Run
 
-## 1. GCP Products at a Glance
-Although we operate entirely serverless, we use two different Google Cloud deployment models for the frontend (dashboard/gateway) and the agent (worker with workbench):
+Dieses Dokument beschreibt die skalierbare Serverless-Architektur für CleanKoda auf der Google Cloud Platform (GCP). Diese Architektur adressiert spezifische Cloud-Herausforderungen (wie das Fehlen gemeinsamer Speicher in der Cloud), ermöglicht ein nahtloses Kunden-Onboarding und optimiert die Betriebskosten durch intelligentes Event-Routing ("Scale-to-Zero"). Die Architektur ergänzt die im README beschriebene Vision eines autonomen, containerisierten KI-Softwareentwicklers.
 
-### 1. The Flask App (frontend/gateway) -> Google Cloud Run Service
-- Why this product? A "service" is designed to respond to incoming web traffic (HTTP requests). It wakes up in milliseconds, delivers the dashboard, accepts webhooks, and automatically scales to multiple instances when there are many visitors.
+## 1. Übersicht der verwendeten GCP-Produkte
 
-### 2. The Agent (worker/fat image) -> Google Cloud Run Job
-- Why this product? A "job" does not listen for web traffic. It is designed for asynchronous AI tasks. A job can run for hours and terminates completely autonomously ("fire and forget") once it has finished its work.
+Obwohl CleanKoda vollständig serverless betrieben wird, kommen zwei unterschiedliche Cloud Run-Bereitstellungsmodelle für das Frontend (Dashboard/Gateway) und den Agenten (Worker mit Workbench) zum Einsatz:
 
-## 2. The Intelligent API Gateway & Event Trigger (Shift-Left)
-To prevent resource-intensive AI agents from running into a void, the stateless Flask app acts as an intelligent gatekeeper. We move the pure check logic ("Is there work?") to the cost-effective frontend. The worker job is only started if there is actual work available at that precise moment.
+### 1.1 Flask-App (Frontend/Gateway) als *Google Cloud Run Service*
+- **Warum dieses Modell?** Ein Cloud Run Service ist darauf ausgelegt, auf eingehenden HTTPS-Traffic zu reagieren. Er erwacht in Millisekunden, liefert das Dashboard aus, nimmt Webhooks entgegen und skaliert automatisch bei hohem Nutzeraufkommen. Da CleanKoda als sicheres und reaktionsschnelles Portal dient, ist dies die optimale Wahl.
 
-We use two automated triggers for this:
+### 1.2 Agent (Worker/Fat Image) als *Google Cloud Run Job*
+- **Warum dieses Modell?** Ein Job wartet nicht auf kontinuierlichen Web-Traffic, sondern ist prädestiniert für asynchrone, rechenintensive KI-Aufgaben. Der LangGraph-basierte Agent kann über längere Zeiträume völlig autonom arbeiten ("Fire-and-Forget") und beendet sich selbstständig, sobald der Code analysiert, geschrieben und der Pull Request erstellt wurde.
 
-### Trigger: Smart Polling the Issue and starting the worker
-We ask the Issue Tracking System periodically if there is a issue the agent should work on. 
+## 2. Intelligentes API-Gateway & Event-Trigger (Shift-Left)
 
-1. The user logs in and sees their dashboard.
-2. Flask makes a tiny, lightning-fast API call to the ticketing system (Jira/Trello). If there are no new tickets in the CleanKoda column, Flask responds with 200 OK. The resource-intensive worker job is not triggered (cost: €0).
-3. If the ticket's status changes, Flask assigns the event to the tenant and immediately fires a targeted worker job that starts the agent.
+Um zu verhindern, dass der ressourcenintensive KI-Agent "leer" anläuft und unnötige Kosten verursacht, fungiert die zustandslose Flask-App als intelligenter Gatekeeper. Die Prüflogik ("Gibt es Arbeit?") wird in das kostengünstige Frontend verlagert (Shift-Left). Der Cloud Run Job des Workers wird erst gestartet, wenn tatsächlich neue Aufgaben aus dem Issue-Tracking-System (z. B. Trello, Jira) vorliegen.
 
-The same applies to GitHub: If the status of a pull request changes (e.g., if a human developer adds a comment to the pull request, such as "Please make the button red"), the agent is called.
+### 2.1 Trigger: Smart Polling des Issue-Trackers
+Das System prüft regelmäßig, ob der Agent Aufgaben bearbeiten soll. Wie im README dargelegt, fügt sich der Agent nahtlos in bestehende Systeme ein:
 
-There are 2 variants:
+1. Der menschliche Benutzer loggt sich ein und sieht sein Dashboard.
+2. Das Flask-Backend fragt blitzschnell das verknüpfte Issue-Tracking-System ab.
+3. Gibt es keine neuen Tickets in der für CleanKoda definierten Spalte, liefert Flask lediglich ein `200 OK`. Es wird kein Worker gestartet, wodurch die Kosten bei exakt €0,00 bleiben.
+4. Ändert sich der Status eines Tickets (oder wird in GitHub ein Pull-Request-Kommentar hinzugefügt), wird das Ereignis dem Mandanten (Tenant) zugeordnet und gezielt ein Worker-Job gestartet.
 
-#### 1. via Frontend Polling: 
-- An invisible JavaScript interval starts (e.g., every 5 minutes).
-- The script makes an unobtrusive API call (AJAX/Fetch) to your Flask app (e.g., /api/trigger-sync).
-- Since this call originates from the logged-in user's browser, the standard Supabase session cookie / JWT token is automatically included!
-- Advantages: No infrastructure overhead: no cloud scheduler, service accounts, OIDC, or JWT signing is required. Everything runs through the user's normal session. RLS works perfectly.
-- The drawback: if the user closes the browser tab or their phone screen turns off, the automation stops immediately. The agent only cleans up the tickets again when the user opens CleanKoda next.
+#### Variante A: Frontend-Polling via Browser
+- Ein unsichtbares JavaScript-Intervall im aktiven Browserfenster des Nutzers sendet periodisch (z. B. alle 5 Minuten) eine unauffällige AJAX-Anfrage an das Flask-Backend (`/api/sync-tasks`).
+- Da der Aufruf aus der Browser-Session des berechtigten Nutzers erfolgt, wird das JWT/Supabase-Token automatisch und sicher mitgeliefert.
+- **Vorteile:** Keine zusätzliche Infrastruktur (wie Cloud Scheduler oder Service Accounts) erforderlich. Die Row Level Security (RLS) in der Datenbank greift perfekt.
+- **Nachteil:** Der Abgleich stoppt, sobald der Browser-Tab geschlossen oder das Smartphone gesperrt wird.
 
-##### 1. The frontend (in your dashboard.html or base.html):
-
-Insert this small script at the very bottom, before the closing </body> tag.
+**Beispiel-Implementierung im Frontend (`dashboard.html` / `base.html`):**
 ```html
 <script>
-    // Führt die Funktion alle 5 Minuten (300.000 Millisekunden) aus
-    const SYNC_INTERVAL_MS = 5 * 60 * 1000; 
-
+    const SYNC_INTERVAL_MS = 5 * 60 * 1000; // 5 Minuten
+    
     function checkTasksInBackground() {
-        // Ein unsichtbarer Call an dein Flask Backend
         fetch('/api/sync-tasks', {
             method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            }
+            headers: { 'Content-Type': 'application/json' }
         })
         .then(response => {
             if (response.ok) {
@@ -57,70 +48,32 @@ Insert this small script at the very bottom, before the closing </body> tag.
         .catch(error => console.error("Sync fehlgeschlagen:", error));
     }
 
-    // Startet den Timer, sobald die Seite geladen ist
-    document.addEventListener('DOMContentLoaded', (event) => {
+    document.addEventListener('DOMContentLoaded', () => {
         setInterval(checkTasksInBackground, SYNC_INTERVAL_MS);
-        // Optional: Direkt beim ersten Laden einmal ausführen
-        // setTimeout(checkTasksInBackground, 2000); 
     });
 </script>
 ```
 
-##### 2. The backend (in your Flask routes.py):
+#### Variante B: Google Cloud Scheduler (via Serverless Cron)
+Zusätzlich kann ein serverless Cronjob über den Google Cloud Scheduler konfiguriert werden, der das Backend zeitgesteuert abfragt. Dies lässt sich auf die Arbeitszeiten des Kunden begrenzen (z. B. Mo-Fr, 08:00 - 18:00 Uhr via `*/5 8-18 * * 1-5`), um Ressourcen zu sparen und trotzdem im Hintergrund autark arbeiten zu können.
 
-This is now super simple because we bypass all the security drama.
+## 3. Technische Umsetzung im Backend (Hybrid-Strategie)
 
-```python
-from flask import jsonify, session
+Wie im README beschrieben, ist CleanKoda für den Betrieb "on premise", lokal und in der Cloud entwickelt worden. Die Flask-App steuert dies über die Umgebungsvariable `DEPLOYMENT_MODE`. Je nach Umgebung wird der Agent lokal (als Docker-Container über die Docker-API) oder in der Cloud (als GCP Cloud Run Job) instanziiert.
 
-@app.route('/api/sync-tasks', methods=['POST'])
-def sync_tasks_api():
-    # 1. Ist der User eingeloggt?
-    user_jwt = session.get("supabase_access_token")
-    if not user_jwt:
-        return jsonify({"error": "Unauthorized"}), 401
+### Schritt 1: Flask ruft den Agenten auf und reicht den Supabase Token weiter
 
-    # 2. Supabase Client GANZ NORMAL (mit RLS) initialisieren
-    options = ClientOptions(headers={"Authorization": f"Bearer {user_jwt}"})
-    supabase = create_client(SUPABASE_URL, SUPABASE_ANON_KEY, options=options)
-    
-    # 3. Nachschauen, ob es ein aktives Task-System für diesen User gibt
-    # RLS blockt automatisch alles Fremde ab!
-    response = supabase.table("task_system").select("id").execute()
-    
-    if response.data:
-        for system in response.data:
-            # 4. Den Worker starten und ihm den normalen JWT übergeben
-            trigger_agent_job(system['id'], user_jwt)
-            
-    return jsonify({"status": "Sync triggered"}), 200
-```
+Dabei wird dem Worker das aktuelle JWT (access_token) der Supabase-Benutzersession als Umgebungsvariable mitgegeben. Da der Token meist nur eine Stunde gültig ist, erbt der Worker just-in-time die strikten Datenzugriffsrechte des Users (Zero-Trust-Ansatz). Die Supabase Row Level Security (RLS) greift infolgedessen zu 100 %.
 
-
-#### 2. via Google Cloud Scheduler
-- Google Cloud Scheduler (a serverless cron job) periodically calls a protected route in the Flask app.
-- Smart Scheduling: To avoid unnecessary API calls at night or on weekends, the scheduler runs according to the customer's defined working hours (e.g., Mon-Fri, 8:00 AM - 6:00 PM via cron syntax */5 8-18 * * 1-5).
-
-
-### Technical Implementation in Code (Flask Backend - Hybrid Setup)
-Flask spawns the worker as soon as actual work has been validated. This is where our hybrid strategy comes into play: The gateway dynamically decides, via an environment variable (DEPLOYMENT_MODE), whether the agent is started via the Google API (SaaS) or via the local Docker environment (on-premises).
-
-#### Schritt 1: Flask ruft den Agenten auf und reicht den Supabase Token weiter
-In deiner Flask-App (wo der User ja bereits über Supabase eingeloggt ist), hast du Zugriff auf seinen aktuellen access_token (JWT). Diesen Token übergibst du als Umgebungsvariable (Override) an den Cloud Run Job.
-Da der JWT nur maximal 1 Stunden gültig ist, treffen wir die Annahme, dass der Worker nicht länger für seine Arbeit braucht. Damit erbt der Worker exakt die Rechte des Users, und die Supabase Row Level Security (RLS) greift zu 100 %. Es wird kein Root-Key benötigt ("Zero Trust" Ansatz).
-
+**Hybrid-Router in Python (Auszug):**
 ```python
 import os
 import docker
 from google.cloud import run_v2
 
 def spawn_agent_worker(project_id, region, target_language, ticket_id, repo_url, tenant_id, pr_feedback=None):
-    """
-    Main router: Decides how the agent is started based on the environment variable.
-    """
     mode = os.environ.get("DEPLOYMENT_MODE", "SERVERLESS")
     
-    # Common environment variables for the agent
     env_vars = {
         "TICKET_ID": ticket_id,
         "REPO_URL": repo_url,
@@ -130,7 +83,6 @@ def spawn_agent_worker(project_id, region, target_language, ticket_id, repo_url,
     if pr_feedback:
         env_vars["PR_FEEDBACK"] = pr_feedback
 
-    # Routing to the corresponding start logic
     if mode == "SERVERLESS":
         return _spawn_gcp_cloud_run_job(project_id, region, target_language, env_vars)
     elif mode == "ON_PREMISE":
@@ -138,14 +90,10 @@ def spawn_agent_worker(project_id, region, target_language, ticket_id, repo_url,
     else:
         raise ValueError(f"Unbekannter DEPLOYMENT_MODE: {mode}")
 
-
 def _spawn_gcp_cloud_run_job(project_id, region, target_language, env_vars):
-    """
-    Option A (Serverless): Spawn an asynchronous Cloud Run Job via the Google API.
-    """
     # Retrieve the current JWT of the logged-in user
     user_access_token = session.get("supabase_access_token")
-
+    
     client = run_v2.JobsClient()
     job_name = f"cleankoda-agent-{target_language}"
     job_path = client.job_path(project_id, region, job_name)
@@ -167,23 +115,6 @@ def _spawn_gcp_cloud_run_job(project_id, region, target_language, env_vars):
     # Start job (“Fire and Forget”)
     operation = client.run_job(request=request)
     return operation.operation.name
-
-
-def _spawn_local_docker_container(target_language, env_vars):
-    """
-    Option B (On-Premise): Spawn a local Docker container using the Docker SDK.
-    """
-    client = docker.from_env()
-    image_name = f"cleankoda-agent-{target_language}:latest"
-    
-    # Container über den lokalen Docker-Daemon starten
-    container = client.containers.run(
-        image=image_name,
-        environment=env_vars,
-        detach=True,
-        remove=True # Wichtig: Container löscht sich nach der Arbeit selbst!
-    )
-    return container.id
 ```
 
 #### Schritt 2: Der Worker nutzt den Token (Supabase Python SDK)
@@ -221,46 +152,42 @@ def run_agent():
     # ... Agenten Logik ...
 ```
 
-## 3. The Worker: The "Fat Image" Pattern
-Since Cloud Run jobs are isolated and do not share disks with other containers, **the agent** (LangGraph) and **the workbench** (programming environment, e.g., Java/Maven) must reside in the same Docker container. We build a specific base image for each target language.
 
-Example: `Dockerfile.java`
+## 4. Der Worker: Das "Fat Image" Pattern
 
+Im Einklang mit der im README beschriebenen Architektur wird der autonome Agent strickt von der Ausführungsumgebung (Workbench) getrennt betrachtet, aber aus Infrastruktur-Gründen im selben Image gebündelt. Da bei Cloud Run Jobs keine übergreifenden Netzwerkfestplatten gemountet werden, nutzen wir das **Fat Image Pattern**. Beide Komponenten werden für das LangGraph-Framework passend in einem einzigen Docker-Image verpackt. So stellen wir sicher, dass "Integrated Build Management & QA" lokal funktioniert, bevor der Code gepusht wird.
+
+Beispielsweise wird für Java-Entwicklungsumgebungen ein spezifisches Base-Image erstellt.
+
+**Beispiel `Dockerfile.java`:**
 ```dockerfile
-  # 1. The Official Python Image
-  FROM python:3.11-slim
+# 1. Das offizielle Python Basis-Image
+FROM python:3.11-slim
 
-  # 2. The Workbench: Install Java 17, Maven and Git
-  RUN apt-get update && apt-get install -y openjdk-17-jdk maven git && apt-get clean
+# 2. Die Workbench: Java 17, Maven und Git installieren
+RUN apt-get update && apt-get install -y openjdk-17-jdk maven git && apt-get clean
 
-  # 3. CleanKoda Code and Dependencies
-  WORKDIR /app
-  COPY ./agent-code /app
-  RUN pip install --no-cache-dir -r requirements.txt
+# 3. Den CleanKoda-Code und Abhängigkeiten kopieren
+WORKDIR /app
+COPY ./agent-code /app
+RUN pip install --no-cache-dir -r requirements.txt
 
-  # 4. The starting signal
-  CMD ["python", "run_agent.py"]
+# 4. Das Startkommando
+CMD ["python", "run_agent.py"]
 ```
 
-## 4. The Stateless Lifecycle ("Fire and Forget") in the Serverless World
+## 5. Zustandsloser Lebenszyklus ("Fire and Forget")
 
-The agent never waits for a human. Waiting consumes processing time. The process is strictly asynchronous and stateless:
+Der autonome Tool-Stack (Analyst, Coder, Tester) darf aus Kosten- und Performancegründen niemals passiv warten. Der Prozess ist daher vollständig zustandslos und asynchron entworfen:
 
-1. Job Creation: Flask starts the job and passes the task parameters (`TICKET_ID`, etc.).
+1. **Job Start:** Flask startet den Job parallel und übergibt die benötigten Variablen (`TICKET_ID`, etc.).
+2. **Lokale Reproduktion:** LangGraph fährt hoch, ruft den Kontext ab, nutzt das Model Context Protocol (MCP) für Git-Operationen und klont den Workspace (`/workspace`).
+3. **Die Selbstheilende Schleife (Healing Loop):** Der Code wird angepasst und fortlaufend in der lokalen Workbench (z. B. `mvn test`) getestet, wie es die "Trust-First"-Strategie von CleanKoda verlangt.
+4. **Erfolgreicher Abschluss:** Nach erfolgreichem Test wird mittels "Explainable PR"-Logik eine verständliche Pull Request zusammengefasst. Anschließend terminiert sich das Skript ordnungsgemäß (`sys.exit(0)`).
+5. **Hard Kill:** In der gleichen Millisekunde veranlasst Google Cloud Run (bzw. Docker mit `--rm`) das Herunterfahren des Containers. Temporäre Arbeitsdaten werden verworfen und die verbrauchte Rechnerleistung skaliert sofort auf Null.
 
-2. Local Execution: LangGraph starts up, knows exactly what to do based on the variables, and clones the code to the local file system (`/workspace`).
+## 6. Zusammenfassende Vorteile dieses Ansatzes
 
-3. The Self-Healing Loop: The agent modifies the code and tests it locally (e.g., `os.system("mvn test")`).
-
-4. Completion & Scale-to-Zero: The agent pushes the pull request to GitHub and enters the status into the Supabase database. Python then reaches script termination (`sys.exit(0)`).
-
-5. Hard Kill: In the millisecond that Python terminates, Google (or the local Docker daemon via `remove=True`) shuts down the container. The temporary code is deleted, and the cost drops to €0.00.
-
-## 5. Advantages of the Approach
-
-- Seamless B2B onboarding: Customers don't need to open firewalls for Jira. An OAuth login is all that's required.
-
-- Unlimited scalability: 100 parallel tickets mean 100 isolated containers managed in parallel by Google.
-
-- Maximum cost control: Thanks to the shift-left approach (Flask checks, agent works), not a single CPU second is wasted waiting for tasks.
-
+- **Nahtloses Enterprise-Onboarding:** Kundenunternehmen müssen für das Agent-System keine internen Jira- oder Trello-Instanzen ans Internet freigeben. Eine ausgehende Token-basierte oder OAuth-Anbindung reicht aus.
+- **Grenzenlose Skalierbarkeit:** Eine Arbeitslast von 100 anstehenden Tickets führt lediglich dazu, dass zeitgleich 100 parallel ablaufende und voneinander isolierte Container innerhalb von Google hochgefahren werden.
+- **Totale Kostenkontrolle ("Scale to Zero"):** Dank des "Shift-Left"-Mechanismus werden Serverressourcen ausschließlich dann verrechnet, wenn der KI-Mitarbeiter auch real an zugewiesenen Aufgaben arbeitet.
