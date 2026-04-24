@@ -72,6 +72,8 @@ The following diagram illustrates the high-level architecture of the system, hig
 
 ## Deployment
 
+👉 *Details see: [`deployment.md`](./doc/deployment.md)*
+
 ## Tech Stack
 
 * **Core:** Python 3.11+
