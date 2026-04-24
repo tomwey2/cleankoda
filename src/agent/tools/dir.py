@@ -263,7 +263,7 @@ def _validate_directory_access(directory: str, workspace: str) -> str | None:
 
 @tool
 # pylint: disable=too-many-arguments,too-many-locals,too-many-positional-arguments
-def dir(
+def ls(
     directory: str = ".",
     max_files: int = 500,
     max_depth: int | None = None,
@@ -295,7 +295,7 @@ def dir(
     """
     try:
         logger.debug(
-            "dir: directory=%s, max_files=%d, max_depth=%s, "
+            "ls: directory=%s, max_files=%d, max_depth=%s, "
             "summary=%s, pattern=%s, content_pattern=%s, case_sensitive=%s",
             directory,
             max_files,

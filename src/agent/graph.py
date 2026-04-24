@@ -24,7 +24,7 @@ from src.agent.runtime import RuntimeSetting
 from src.agent.services.summaries import has_finish_task_call
 from src.agent.state import AgentState
 from src.agent.tools.add_issue_comment import add_issue_comment
-from src.agent.tools.dir import dir
+from src.agent.tools.dir import ls
 from src.agent.tools.read import read
 from src.agent.tools.write import write
 from src.agent.tools.plan_tools import write_plan
@@ -114,7 +114,7 @@ def create_workflow(runtime: RuntimeSetting) -> StateGraph:
     """Creates and configures the main LangGraph workflow."""
     # --- Tool Sets ---
     analyst_tools = [
-        dir,
+        ls,
         read,
         write_plan,
         thinking,
@@ -122,7 +122,7 @@ def create_workflow(runtime: RuntimeSetting) -> StateGraph:
         finish_task,
     ]
     coder_tools = [
-        dir,
+        ls,
         read,
         write,
         thinking,
