@@ -68,11 +68,11 @@ The following diagram illustrates the high-level architecture of the system, hig
 
 ![Architecture](./doc/images/cleankoda-architecture.png)
 
-👉 *Details see: [`software-architecture.md`](./doc/software-architecture.md)*
+👉 *Details see: [`software-architecture.md`](./doc/design/software-architecture.md)*
 
 ## Deployment
 
-👉 *Details see: [`deployment.md`](./doc/deployment.md)*
+👉 *Details see: [`deployment.md`](./doc/design/deployment.md)*
 
 ## Tech Stack
 
