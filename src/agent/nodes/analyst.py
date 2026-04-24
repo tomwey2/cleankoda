@@ -48,8 +48,8 @@ def create_analyst_node(llm: BaseChatModel, tools):
         if state["current_node"] != "analyst":
             logger.info("--- ANALYST node ---")
         # Analyst may need more context for code analysis
-        system_message = load_prompt("systemprompt_analyst.md", state)
-        human_message = load_prompt("prompt_analyzing.md", state)
+        system_message = load_prompt("system_messages/systemprompt_analyst.md", state)
+        human_message = load_prompt("human_messages/prompt_analyzing.md", state)
 
         # Check if plan exists before node call on first run
         if initial_plan_exists is None:

@@ -24,14 +24,12 @@ from src.agent.runtime import RuntimeSetting
 from src.agent.services.summaries import has_finish_task_call
 from src.agent.state import AgentState
 from src.agent.tools.add_issue_comment import add_issue_comment
-from src.agent.tools.file_tools import (
-    list_files,
-    read_file,
-    write_to_file,
-)
+from src.agent.tools.dir import ls
+from src.agent.tools.read import read
+from src.agent.tools.write import write
 from src.agent.tools.plan_tools import write_plan
 from src.agent.tools.finish_task import finish_task
-from src.agent.tools.run_command import run_command
+from src.agent.tools.bash import bash
 from src.agent.tools.thinking import thinking
 from src.agent.tools.report_test_result import report_test_result
 
@@ -70,7 +68,7 @@ def route_after_tools_tester(state: AgentState):
                 # Unknown result -> treat as failure
                 return "failed"
 
-    # If no 'report_test_result' was present (e.g., only 'run_command' or 'git_add')
+    # If no 'report_test_result' was present (e.g., only 'bash' or 'git_add')
     # then return to the tester (loop) so it can continue.
     return "tester"
 
@@ -116,23 +114,23 @@ def create_workflow(runtime: RuntimeSetting) -> StateGraph:
     """Creates and configures the main LangGraph workflow."""
     # --- Tool Sets ---
     analyst_tools = [
-        list_files,
-        read_file,
+        ls,
+        read,
         write_plan,
         thinking,
         add_issue_comment,
         finish_task,
     ]
     coder_tools = [
-        list_files,
-        read_file,
-        write_to_file,
+        ls,
+        read,
+        write,
         thinking,
         finish_task,
     ]
     tester_tools = [
         thinking,
-        run_command,
+        bash,
         report_test_result,
     ]
 

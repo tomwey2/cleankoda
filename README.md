@@ -2,7 +2,7 @@
 
 ![Status][Status] 
 
-[![Python][Python]][Python-url] [![LangChain][LangChain]][LangChain-url] [![Docker][Docker]][Docker-url] [![Flask][Flask]][Flask-url]
+[![Python][Python]][Python-url] [![LangChain][LangChain]][LangChain-url] [![Docker][Docker]][Docker-url] [![Flask][Flask]][Flask-url] [![GCP][GCP]][GCP-url]
 
 **CleanKoda** is an autonomous, containerized AI software developer that operates completely unsupervised to:
 
@@ -17,32 +17,38 @@ CleanKoda is designed to counteract a potential next "software crisis" caused by
 The full [Lean Startup Vision](VISION.md) and a [short video at LinkedIn](https://www.linkedin.com/posts/thomas-weyrath_ai-softwareengineering-futurofwork-activity-7432682072449630208--zRg?utm_source=share&utm_medium=member_desktop&rcm=ACoAADscgC8BiMUyz0spFR0jOVHwfm3BFtIuF_o) 
 
 ### Show Case
-![Show Case](./images/cleankoda-showcase-improve-readme.gif)
+![Show Case](./doc/images/cleankoda-showcase-feature-implementation.gif)
 
 ## Key Features
 
-As a **Proof of Concept (POC)**, the system demonstrates the following advanced capabilities:
+As a **Minimum Viable Product (MVP)**, the system demonstrates the following advanced capabilities:
 
+**Already implemented:**
 - **Multi-Agent Architecture:** Uses **LangGraph** to route tasks to specialized sub-agents (`Coder`, `Bugfixer`, `Analyst`, `Tester`, `Explainer`).
 - **Resilient AI Logic:** AI workflows are robustly implemented through design patterns like loops (review & critique) and coordinator/router (hierarchical task decompostion). This enables advanced **self-healing mechanisms** with retry loops and iterative prompting to prevent stalling and minimize hallucinations.
 - **Autonomous Git Operations:** Manages the full Git lifecycle—cloning, branching, committing, pushing, and pull requests—using the **Model Context Protocol (MCP)**.
 - **Explainable PR Descriptions (XAI):** On successful tests, an Explainer node synthesizes the implementation plan with thought and tool-action history from the database to generate a structured PR description.
-- **Task Management Integration:** Connects to external task/issue management systems (e.g. Trello, JIRA) to retrieve assignments and report status updates automatically. This also controls the **Human in the Loop** process.
+- **Issue Tracking System Integration:** Connects to external issue traccking systems (e.g. Trello, JIRA) to retrieve assignments and report status updates automatically. This also controls the **Human in the Loop** process.
 - **Dockerized & Scalable:** Runs in secure, isolated containers (sandbox), allowing for effortless horizontal scaling—simply spin up additional instances to expand your virtual workforce on demand.
 - **LLM Selection:** Choose AI provider (OpenAI, Google, Mistral) and select a large LLMs for complex tasks and a small LLM for simple tasks, ensuring high-quality and precise results at optimized costs.
 - **Workbench Integration:** Integrates workbenches to provide a development environment for the Coding Agent executing unit tests.
-- **Trust-First Strategy:** The Coding Agent initially takes on repetitive tasks until trust in its work is established. Only then are more complex tasks addressed. 
+- **Trust-First Strategy:** The Coding Agent initially takes on repetitive issues until trust in its work is established. Only then are more complex issues addressed. 
+- **Integrated Build Management & QA:** Implementation of industry-standard build tools (e.g., Maven, Gradle) directly within the agent's environment. Agents will compile code and execute local tests before committing, acting as a quality gate to ensure only functional, bug-free code enters the repository.
 
-## Future Roadmap: From POC to Professional SaaS
+**Currently in progress**
+- **Supabase Integration:** Replace the SQL database with Supabase for better scalability and ease of use.
+- **Google Cloud Integration:** Serverless deployment on Google Cloud Platform.
+- **Gemma 4 as open LLM:** Usage of open source LLM from Google in order to reduce costs and data protection compliant.
 
-This Proof of Concept serves as the technological foundation for an upcoming startup venture. The goal is to evolve the system into a commercial, fully managed SaaS platform that integrates seamlessly into enterprise workflows.
+
+## Future Roadmap: Towards a Professional SaaS
+
+This Minimum Viable Product serves as the technological foundation for an upcoming startup venture. The goal is to evolve the system into a commercial, fully managed SaaS platform that integrates seamlessly into enterprise workflows.
 
 Key milestones for professionalization include:
 
-- [X] **Integrated Build Management & QA:** Implementation of industry-standard build tools (e.g., Maven, Gradle) directly within the agent's environment. Agents will compile code and execute local tests before committing, acting as a quality gate to ensure only functional, bug-free code enters the repository.
 - [ ] **Active Code Reviews:** Agents will evolve from pure contributors to reviewers. They will analyze open Pull Requests, provide constructive feedback on code quality and security, and suggest optimizations—acting as an automated senior developer.
 - [ ] **Collaborative Swarm Intelligence:** Moving beyond isolated tasks, agents will be capable of communicating and collaborating with each other. This "swarm" capability will allow multiple agents to work jointly on complex, large-scale features, ensuring architectural consistency across the codebase.
-- [X] **Choose your preferred LLM** Support of other LLM providers, included open source models that run locally. 
 - [ ] **Skills and Context Engineering** Optimize the agent's input away from rigid, monolithic "Megaprompts" towards dynamic, skill-based prompt architecture, so that the agent only receives the specific context (skills) it needs for the current task.
 - [ ] **RAG & Knowledge Retrieval:** Improve context depth in large-scale codebases through efficient retrieval using additional documents (requirements specifications, architecture documents)
 - [ ] **Memory & Learning Capability** to be able to refer back to past events and **learn** from feedback. CleanKoda learns continuously by analysis of project documentation and builds implicit architectural and domain knowledge.
@@ -54,45 +60,17 @@ Key milestones for professionalization include:
 ## System Architecture
 The **CleanKoda** is designed as a modular, dockerized system that automates the software development lifecycle. The architecture separates the "reasoning engine" (the AI Agent) from the "execution environment" (the Workbench) to ensure security and stability.
 The system interacts with several external services to fulfill the end-to-end workflow:
-- Task Management System (e.g., Trello): Serves as the source of truth for incoming coding tasks. The agent fetches tasks from the backlog and updates their status upon completion.
-- LLM Provider (e.g., Mistral, OpenAI): The inference engine used by the agents to generate code, reason about bugs, and analyze requirements.
+- Issue Tracking System (e.g., Trello): Serves as the source of truth for incoming coding tasks. The agent fetches issues from the todo list and updates their status upon completion.
+- LLM Provider (e.g., Mistral, Gemini, Anthropic): The inference engine used by the agents to generate code, reason about bugs, and analyze requirements.
 - Collaborative Version Control (e.g., GitHub): The destination for the generated code. The agent automatically pushes changes and creates Pull Requests for human review.
 
 The following diagram illustrates the high-level architecture of the system, highlighting the separation of concerns between the Agent and the Workbench:
 
-![Architecture](./images/cleankoda-architecture.png)
+![Architecture](./doc/images/cleankoda-architecture.png)
 
-The core system consists of the following key components:
+👉 *Details see: [`software-architecture.md`](./doc/software-architecture.md)*
 
-1. **AI Coding Agent (Docker Container):** This container acts as the "brain" of the operation. It orchestrates the entire workflow and manages the decision-making process.
-    - Web Application (Flask): Provides a user interface for configuring the agent. It uses SQLAlchemy for persistent data management (e.g., storing configuration states and history).
-    - APScheduler: A background scheduler that triggers the agent's workflow periodically and handles asynchronous task execution, ensuring continuous operation without manual intervention.
-    - LangGraph Workflow with specialist agents: A state machine that routes the development process from the initial task to the final Pull Request. It manages the state and transitions between different agents. A team of distinct AI agents (Coder, Bugfixer, Analyst, Tester, Explainer), each equipped with specific tools to perform granular tasks such as code analysis, writing syntax, test execution, and PR explanation.
-
-2. **Workbench (Docker Container):** This container serves as the "sandbox" or execution environment. It contains all necessary development tools (e.g., Java JDK, Maven) required to build and test the target application. By isolating the build environment, the system ensures that arbitrary code execution does not affect the core agent logic.
-
-3. **Shared Workspace (Docker Volume):** A shared storage volume mounted into both the AI Coding Agent and the Workbench containers. This allows the Agent to write code and the Workbench to compile and test that same code immediately.
-
-### LangGraph Workflow
-The system is built upon a stateful, multi-agent architecture powered by LangGraph. Instead of a monolithic process, the execution flow is intelligently orchestrated across specialized nodes. After successful test execution, the workflow routes through an Explainer node before Pull Request creation so that the generated PR body includes intent, reasoning, and verification context. The shared AgentState now carries `pr_description` for this handoff into PR creation.
-
-![LangGraph Workflow](./images/workflow_graph.png)
-
-* **Router Node:** The Routing workflows process inputs and then directs them to context-specific agents. It acts as the entry point. It analyzes the incoming ticket context and determines the optimal execution strategy by selecting the appropriate specialist. Additionally, the Router Node evaluates the complexity of the task and checks if the skill level of the agent is suitable for the task. This establishes the trust-first strategy, ensuring that agents are only assigned tasks they can handle effectively.
-
-* **Specialist Nodes (Agents):**
-
-  - **Coder:** Focuses on implementing new features and writing complex logic. This includes clean code strategies and a focus on modular, readable, and robust code. One specific form of this is **Bugfixer:**, who is specialized to fix errors with minimal changes to the codebase.
-
-  - **Analyst:** Operates in read-only mode to perform code reviews, answer queries, or map out dependencies.
-
-  - **Tester:** Executes unit tests in order to ensure the code is functioning as expected.
-
-  - **Explainer:** Builds a structured PR description from the implementation plan plus the task-linked thought and tool-action history stored in SQLAlchemy (`AgentAction`). It uses `prompts/systemprompt_explainer.md` with the variables `plan`, `thoughts`, and `tools_used`, and intentionally does not consume git diff data in this MVP.
-
-* **The Cognitive Loop** (Reasoning): The innermost circle. The agent "thinks," executes a tool (e.g., read_file), analyzes the output, and plans the next move. This is the classic **ReAct pattern** that makes complex problem-solving possible in the first place.
-
-* **Self-Correction Loop** (Quality): This is where true reliability happens. Inspired by TDD (Test-Driven Development), our agent writes code, validates it against tests, and fixes its own bugs—before a human even sees the code. This is CleanKoda’s USP. It distinguishes rigorous Software Engineering from the current "Vibe Coding" approach.
+## Deployment
 
 ## Tech Stack
 
@@ -100,8 +78,8 @@ The system is built upon a stateful, multi-agent architecture powered by LangGra
 * **Orchestration:** [LangGraph](https://langchain-ai.github.io/langgraph/)
 * **AI Model:** ChatMistralAI, ChatOpenAI, ChatGoogleGenerativeAI via LangChain
 * **Protocol:** [Model Context Protocol (MCP)](https://modelcontextprotocol.io/) (Git Server)
-* **Infrastructure:** Docker & [UV (Package Manager)](https://docs.astral.sh/uv/)
-* **Backend:** [Flask](https://en.wikipedia.org/wiki/Flask_(web_framework)), [SQLAlchemy](https://en.wikipedia.org/wiki/SQLAlchemy), APScheduler
+* **Infrastructure:** Docker & [UV (Package Manager)](https://docs.astral.sh/uv/), Google Cloud Platform (GCP)
+* **Backend:** [Flask](https://en.wikipedia.org/wiki/Flask_(web_framework)), [SQLAlchemy](https://en.wikipedia.org/wiki/SQLAlchemy)
 
 ---
 
@@ -111,10 +89,10 @@ The system is built upon a stateful, multi-agent architecture powered by LangGra
 
 * **Docker** installed on your machine.
 * A **Mistral AI API Key** or **OpenAI API Key** or **Google AI API Key** (requires a subscription/credits).
-* A **GitHub Personal Access Token** (Classic) with `repo` scope.
 * A **Trello Board**, for example with the Trello Agile Sprint Board Template (free account available)
 * A **Trello API Key and Token** 
 * A personal **GitHub repository** with a example program. You can copy my example repository to try it out: "calculator-spring-docker-jenkins".
+* A **GitHub Personal Access Token** (Classic) with `repo` scope in order to create pull requests.
 
 ### Prepare your running environment
 
@@ -160,7 +138,7 @@ docker compose up -d --build
 
 ##### 4.2 Open the Dashboard in browser
 Open the agent dashboard in browser, e.g. http://localhost:5000.
-![Agent Dashboard](./images/web-dashboard.png)
+![Agent Dashboard](./doc/images/web-dashboard.png)
 
 If you want to run the agent without spawning MCP helper processes (e.g., when debugging locally or when MCP tooling is unavailable), set `ENABLE_MCP_SERVERS=false` (or `0`/`no`). The default is `true`, which launches both the Git MCP server and the task-system MCP server so the agent can execute repository and task-side commands.
 
@@ -173,12 +151,12 @@ docker compose down
 #### 5. Configure the Coding Agent
 Open the agent settings in browser, e.g. http://localhost:5000, and fill in the required fields. Press "Save Settings". The credential data are stored in a SQLite database encrypted using the Fernet encryption key.
 
-![Agent Settings](./images/web-settings.png)
+![Agent Settings](./doc/images/web-settings.png)
 
 #### 6. Prepare your Trello Board
 Create new Cards at your Trello board in the list "Backlog" and move one into the list "Sprint Backlog". Here you can see an example:
 
-![Trello Board](./images/trello-board.png)
+![Trello Board](./doc/images/trello-board.png)
 
 #### 7. Agent runs automatically
 The agent runs automatically when a new card is created in the "Sprint Backlog" list. It moves the card to the list "In Progress" and starts the workflow. It will generate or change the code based on the card description and create a pull request to your GitHub repository with a structured markdown description (Objective & Architecture, Developer's Journey, Quality Assurance).
@@ -197,12 +175,9 @@ If the coding agent made a mistake, please let me know, e.g. on LinkedIn.
 ## Contributing
 Found a bug or have a feature idea? Check our [Contributing Guide](CONTRIBUTING.md) to get started.
 
-## POC Results
-[Results of the First POC](doc/poc/poc-results-01.md)
-
 <!-- MARKDOWN LINKS & IMAGES -->
 <!-- https://www.markdownguide.org/basic-syntax/#reference-style-links -->
-[Status]: https://img.shields.io/badge/Status-POC-yellow?style=for-the-badge
+[Status]: https://img.shields.io/badge/Status-MVP-green?style=for-the-badge
 [Build]: https://img.shields.io/badge/Built-passing-brightgreen?style=for-the-badge
 [Python]: https://img.shields.io/badge/Python-3776AB?style=for-the-badge&logo=python&logoColor=white
 [Python-url]: https://www.python.org/
@@ -212,3 +187,5 @@ Found a bug or have a feature idea? Check our [Contributing Guide](CONTRIBUTING.
 [Docker-url]: https://www.docker.com/
 [Flask]: https://img.shields.io/badge/Flask-000000?style=for-the-badge&logo=Flask&logoColor=white
 [Flask-url]: https://www.flask.palletsprojects.com/
+[GCP]: https://img.shields.io/badge/GCP-4285F4?style=for-the-badge&logo=google-cloud&logoColor=white
+[GCP-url]: https://cloud.google.com/

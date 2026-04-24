@@ -27,7 +27,7 @@ To demonstrate that the containerized AI Agent can:
 ### Initial State
 *Screenshot showing the Task App with the two open tickets before the run.*
 
-![Task App List of Tasks](./images/task_app_before.png)
+![Task App List of Tasks](../images/task_app_before.png)
 
 ---
 
@@ -41,7 +41,7 @@ The Agent picked up task **ID-2**. The **Router Node** identified this as an ana
 #### Visual Proof
 
 **Ticket Comment**
-![Ticket Comment Task ID-2](../../images/task1_in_review.png)
+![Ticket Comment Task ID-2](./task1_in_review.png)
 
 
 ### Phase 2: Implementation & Testing
@@ -55,15 +55,15 @@ Upon completing the analysis, the Agent picked up task **ID-3**. The **Router No
 #### Visual Proof
 
 **Ticket Comment**
-![Ticket Comment Task ID-3](../../images/task2_in_review.png)
+![Ticket Comment Task ID-3](./task2_in_review.png)
 
 **GitHub Pull Request:**
 
-![GitHub Pull Request](./images/github_pr_2.png)
+![GitHub Pull Request](./github_pr_2.png)
 
-![GitHub Pull Request](../../images/github_pr_4.png)
+![GitHub Pull Request](./github_pr_4.png)
 
-![GitHub Pull Request](../../images/github_pr_5.png)
+![GitHub Pull Request](./github_pr_5.png)
 
 ---
 

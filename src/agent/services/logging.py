@@ -23,7 +23,7 @@ def safe_truncate(value: Any, length: int = 100) -> str:
 def _get_tool_call_info(tool_call: dict) -> str:
     name = tool_call.get("name", "unknown")
     args = tool_call.get("args", {}) or {}
-    if name in ["read_file", "write_to_file", "run_command"]:
+    if name in ["read", "write", "bash"]:
         params = list(args.values())
         return f"{name} {params[0]}"
     return f"{name}"
@@ -53,7 +53,7 @@ def log_agent_response(  # pylint: disable=unused-argument
                 if thought:
                     logger.info("Thinking: %s%s", thought[:50], "..." if len(thought) > 50 else "")
             for key, value in args.items():
-                if name == "write_to_file" and key == "content":
+                if name == "write" and key == "content":
                     out_value = safe_truncate(value, arg_limit)
                 else:
                     out_value = value

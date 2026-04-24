@@ -6,31 +6,11 @@ Dieses Dokument bietet einen strategischen High-Level-Überblick über die Archi
 CleanKoda ist ein KI-gestütztes Tool, das Software-Tickets (Issues) autonom analysiert, Code-Anpassungen vornimmt und diese als Pull-Requests in Repositories (z. B. GitHub, Bitbucket) zur Verfügung stellt. 
 Die Architektur basiert auf der strikten Trennung zwei logischer Kernkomponenten:
 - **Das User Frontend & Steuerungs-Backend (Flask):** Zuständig für das Web-Dashboard, die Verwaltung von Zugangsdaten, Billing, und die Orchestrierung der Agenten-Jobs.
-- **Die isolierte Agenten-Engine:** Die eigentliche „Arbeiter-Umgebung“, in welcher der Code geklont wird und die LLMs (z. B. OpenAI, Anthropic) iterativ über LangGraph/LangChain an der Lösung arbeiten.
+- **Die isolierte Agenten-Engine:** Die eigentliche „Arbeiter-Umgebung“, in welcher der Code geklont wird und die LLMs (z. B. Mistral, Gemini, Anthropic) iterativ über LangGraph/LangChain an der Lösung arbeiten.
 
 ### 2. High-Level Komponenten-Diagramm
 
-```mermaid
-flowchart TD
-    User([Entwickler / User]) -->|Web UI| WebApp[Flask Web-App & Dashboard]
-    
-    subgraph "CleanKoda Core"
-    WebApp -->|Speichert Settings & Jobs| DB[(Supabase PostgreSQL)]
-    DB -->|RLS & Auth| WebApp
-    WebApp -->|Triggert Job| Orchestrator{Job Orchestration}
-    end
-    
-    subgraph "Agent Environment"
-    Orchestrator -->|Startet Agent| AgentEngine[Agent / LLM Engine]
-    AgentEngine <-->|Read/Write| Workspace[(Lokaler Workspace / /tmp)]
-    AgentEngine -->|Status Updates| DB
-    end
-    
-    subgraph "Third Party APIs"
-    AgentEngine <-->|Prompts & Code| LLM(LLM Provider: OpenAI/Gemini)
-    AgentEngine <-->|Pull/Push, Issues| Git(GitHub / Bitbucket / Jira)
-    end
-```
+![Architecture](../images/cleankoda-architecture.png)
 
 ### 3. Deployment Modelle (Die Hybride Strategie)
 Die Architektur ist so konzipiert, dass **exakt dieselbe Codebasis** zerschnitten und in völlig unterschiedlichen Umgebungen betrieben werden kann. Dies ermöglicht sowohl einen effizienten SaaS-Betrieb als auch eine Unternehmensintegration.

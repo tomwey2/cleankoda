@@ -263,9 +263,9 @@ Tester's messages = [SystemMessage, HumanMessage with summary]
 ### Pattern 2: Tool Call Loop
 
 ```
-Tester calls run_command → messages += [AIMessage, ToolMessage]
+Tester calls bash → messages += [AIMessage, ToolMessage]
                          ↓
-Tester calls run_command again → filtered messages used as context
+Tester calls bash again → filtered messages used as context
                                 ↓
 messages = [SystemMessage, HumanMessage, ToolMessage, AIMessage, ToolMessage]
 ```
