@@ -1,8 +1,8 @@
-## Pricing Plans
+# Pricing Plans
 
 Die Preisgestaltung von CleanKoda ist darauf ausgelegt, mit deinen Anforderungen zu wachsen – von den ersten Experimenten im Hobby-Projekt bis zur Skalierung für ganze Entwicklerteams. Die hier aufgeführten Einschränkungen bilden gleichzeitig die technischen *Guardrails* der Plattform.
 
-### START FREE
+## START FREE
 *Dein virtueller Junior-Entwickler für kleine private Projekte und zum Ausprobieren.*
 
 Der perfekte Einstieg, um die Fähigkeiten der CleanKoda-Agenten völlig risikofrei zu testen. Ideal, um Code evaluieren oder erste kleine Pull-Requests generieren zu lassen.
@@ -17,7 +17,7 @@ Der perfekte Einstieg, um die Fähigkeiten der CleanKoda-Agenten völlig risikof
 
 ---
 
-### PRO
+## PRO
 *Mehr Power und Intelligenz für ambitionierte Solo-Entwickler und Freelancer.*
 
 Hebe deine Produktivität auf das nächste Level. Lass die KI komplexe Bugfixes und weitreichende Features in mittelgroßen Repositories autonom implementieren – direkt angetrieben von den intelligentesten Premium-Modellen am Markt.
@@ -31,7 +31,7 @@ Hebe deine Produktivität auf das nächste Level. Lass die KI komplexe Bugfixes 
 
 ---
 
-### TEAM
+## TEAM
 *Der KI-Kollege für effiziente und wachsende Entwickler-Teams.*
 
 Optimiert für nahtlose Team-Kollaboration. Verknüpfe Firmen-Repositories aus GitHub/Bitbucket und teile die CleanKoda-Kontingente unter deinen Entwicklern auf, um den Issue-Backlog gemeinsam rasant abzuarbeiten.
@@ -45,7 +45,7 @@ Optimiert für nahtlose Team-Kollaboration. Verknüpfe Firmen-Repositories aus G
 
 ---
 
-### ENTERPRISE
+## ENTERPRISE
 *Maßgeschneiderte Skalierbarkeit und Kontrolle für große Unternehmen.*
 
 Die kompromisslose Lösung für Enterprise-Codebases. In diesem Plan wird CleanKoda vollständig auf den eigenen Servern des Kunden (On-Premise) deployed, um höchste Datenschutzrichtlinien zu erfüllen. Ideal für Organisationen, die dutzende Repositories verwalten und den Agenten im großen Stil als virtuelles, parallelisiertes Entwicklerteam betreiben möchten.
