@@ -14,7 +14,7 @@
 Containerization using Docker makes it possible to run the CleanKoda anywhere and secure: in the cloud as managed Service (SaaS), on premise in the company network (as Enterprise Edition), or even locally on your computer. 
 
 CleanKoda is designed to counteract a potential next "software crisis" caused by declining demand for entry-level professionals (see recent studies of Stanford, ETH Zurich and Indeed). It focuses on brownfield projects—the maintenance of complex, existing enterprise systems—to automate repetitive tasks. Its "trust-first" approach begins with low-risk tasks such as bug fixing and unit test development. The goal is to deliver maintainable and clean code changes so that the human experts are significantly relieved of routine work and can focus on high-level tasks.
-The full [Lean Startup Vision](VISION.md) and a [short video at LinkedIn](https://www.linkedin.com/posts/thomas-weyrath_ai-softwareengineering-futurofwork-activity-7432682072449630208--zRg?utm_source=share&utm_medium=member_desktop&rcm=ACoAADscgC8BiMUyz0spFR0jOVHwfm3BFtIuF_o) 
+The full [Lean Startup Vision](./doc/business/vision.md) and a [short video at LinkedIn](https://www.linkedin.com/posts/thomas-weyrath_ai-softwareengineering-futurofwork-activity-7432682072449630208--zRg?utm_source=share&utm_medium=member_desktop&rcm=ACoAADscgC8BiMUyz0spFR0jOVHwfm3BFtIuF_o) 
 
 ### Show Case
 ![Show Case](./doc/images/cleankoda-showcase-feature-implementation.gif)
