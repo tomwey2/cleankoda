@@ -1,4 +1,4 @@
-## Database & Multi-tenancy (Supabase)
+# Database & Multi-tenancy (Supabase)
 
 Um eine zustandslose Architektur zu gewährleisten, ersetzt Supabase (serverloses PostgreSQL) lokale Datenbanken vollständig.
 
@@ -7,17 +7,19 @@ Issues:
 - [Google Cloud: Implementation of multi-tenancy in Supabase #180](https://github.com/tomwey2/cleankoda/issues/180)
 - [Google Cloud: Secure BYOK (Bring Your Own Key) management with Supabase & pgcrypto #182](https://github.com/tomwey2/cleankoda/issues/182)
 
-### Key Features
+## Key Features
 
-**1. Auth & Identity:** Supabase verwaltet das Anmeldesystem (JWT-Token) sicher und skalierbar: Supabase übernimmt das gesamte Anmeldesystem (z. B. „Mit GitHub anmelden“ oder „Mit Google anmelden“). Flask muss keine Passwörter speichern. Wir verwenden die sicheren JWT-Token (JSON Web Tokens) von Supabase, um Benutzersitzungen im Dashboard zu verwalten.
+**1. Auth & Identity:** Supabase verwaltet das Anmeldesystem (JWT-Token) sicher und skalierbar: Supabase übernimmt das gesamte Anmeldesystem (z. B. "E-Mail/Passwort", "Mit GitHub anmelden" oder "Mit Google anmelden"). Flask muss keine Passwörter speichern. Wir verwenden die sicheren JWT-Token (JSON Web Tokens) von Supabase, um Benutzersitzungen im Dashboard zu verwalten.
 
 **2. Multi-tenancy (RLS):** Jeder Tabelle ist eine Mandanten-ID (tenant_id) zugewiesen. Die Zeilenebenensicherheit (Row Level Security, RLS) von Supabase stellt auf Datenbankebene sicher, dass ein Benutzer nur Zeilen lesen oder bearbeiten kann, deren Mandanten-ID mit seiner eigenen Benutzer-ID übereinstimmt. Selbst im Falle eines Fehlers in unserem Flask-Backend kann Kunde A niemals die Daten von Kunde B einsehen.
 
 **3. Operations Dashboard:** Die Weboberfläche von Supabase Studio dient als direktes Administrationspanel. CleanKoda benötigt kein eigenes Administrationspanel. Supabase Studio (Weboberfläche) fungiert als Kontrollzentrum: Hier sehen Sie sofort neue Registrierungen, aktive Agentenaufträge, verbundene Repositories und können im Falle von Supportanfragen direkt die Protokolle (Tabelle „agent_logs“) eines bestimmten Auftrags einsehen.
 
-### Datamodel
+## Datamodel
 
-Das relationale Datenmodell baut vollständig auf Supabase (PostgreSQL) auf und ist strukturiert, um die Kernfunktionen der Applikation und des Agenten zu unterstützen. Die vollständige Definition des Datenmodells befindet sich in der Datei [`datamodel.sql`](./datamodel.sql).
+Das relationale Datenmodell baut vollständig auf Supabase (PostgreSQL) auf und ist strukturiert, um die Kernfunktionen der Applikation und des Agenten zu unterstützen. 
+
+👉 Die vollständige Definition des Datenmodells befindet sich in der Datei [`datamodel.sql`](./datamodel.sql).
 
 Die wichtigsten Tabellen des Datenmodells umfassen:
 
@@ -69,7 +71,7 @@ erDiagram
     agent_states ||--o{ agent_actions : "contains"
 ```
 
-#### Multi-tenancy
+## Multi-tenancy
 
 Die Mandantenfähigkeit (Multi-tenancy) ist ein zentraler Architekturbaustein. Da alle Benutzer auf dieselbe physische Datenbank zugreifen (Shared Database, Shared Schema Ansatz), muss eine strikte Datenisolierung gewährleistet sein.
 
@@ -80,11 +82,11 @@ Die Mandantenfähigkeit (Multi-tenancy) ist ein zentraler Architekturbaustein. D
 
 **Wie Supabase die Mandantenfähigkeit unterstützt:**
 
-1. **Row Level Security (RLS):** Da Supabase auf PostgreSQL basiert, lassen sich Sicherheitsrichtlinien direkt auf Ebene einzelner Tabellenzeilen definieren. Im Datenmodell erhält jede mandantenbezogene Tabelle eine `tenant_id` Spalte.
+1. **Row Level Security (RLS):** Da Supabase auf PostgreSQL basiert, lassen sich Sicherheitsrichtlinien direkt auf Ebene einzelner Tabellenzeilen definieren. Im Datenmodell erhält jede mandantenbezogene Tabelle eine `user_id` Spalte.
 2. **Datenbank-Kontext durch JWT:** Bei Datenbankanfragen baut Supabase den Sicherheitskontext automatisch anhand des übergebenen JWT-Tokens des Benutzers auf (z.B. über die Funktion `auth.uid()`).
-3. **Fail-Safe Policies:** Eine RLS-Policy verknüpft diese Komponenten in der Datenbank. Eine Policy wie `USING (tenant_id = auth.uid())` wirkt als unsichtbarer Türsteher. Selbst wenn das Backend eine unzureichend gefilterte Abfrage absetzt, liefert die Datenbank ausschließlich die Zeilen des authentifizierten Mandanten zurück. Dies bildet ein unverzichtbares Sicherheitsnetz für das Gesamtsystem.
+3. **Fail-Safe Policies:** Eine RLS-Policy verknüpft diese Komponenten in der Datenbank. Eine Policy wie `USING (user_id = auth.uid())` wirkt als unsichtbarer Türsteher. Selbst wenn das Backend eine unzureichend gefilterte Abfrage absetzt, liefert die Datenbank ausschließlich die Zeilen des authentifizierten Mandanten zurück. Dies bildet ein unverzichtbares Sicherheitsnetz für das Gesamtsystem.
 
-### Authentication
+## Authentication
 
 CleanKoda delegiert die gesamte Authentifizierung und das Identitätsmanagement an **Supabase Auth**. Die Flask-Applikation speichert selbst keine Passwörter und implementiert keine eigene Krypto-Sicherheit für den Login.
 
