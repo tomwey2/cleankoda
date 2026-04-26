@@ -80,31 +80,31 @@ def credentials_new_selection():
     # List of available credential types
     credential_types = [
         {
-            "id": "github",
+            "id": "GITHUB",
             "name": "GitHub PAT",
             "icon": "bi-github",
             "description": "Personal Access Token for GitHub",
         },
         {
-            "id": "jira",
+            "id": "JIRA",
             "name": "Jira Basic Auth",
             "icon": "bi-bezier",
             "description": "Email and API Token for Jira",
         },
         {
-            "id": "trello",
+            "id": "TRELLO",
             "name": "Trello Key",
             "icon": "bi-trello",
             "description": "API Key and Token for Trello",
         },
         {
-            "id": "llm",
+            "id": "LLM",
             "name": "LLM Provider API Key",
             "icon": "bi-cpu",
             "description": "API Key for Mistral, OpenAI, Anthropic, etc.",
         },
         {
-            "id": "basic_auth",
+            "id": "BASIC_AUTH",
             "name": "Basic Auth",
             "icon": "bi-person",
             "description": "Basic Auth for username and password",
