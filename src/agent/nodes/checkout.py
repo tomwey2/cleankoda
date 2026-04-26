@@ -10,7 +10,7 @@ from git import Repo
 from src.agent.services.git_workspace import checkout_branch, get_current_branch
 from src.agent.state import AgentState
 from src.agent.utils import get_workspace
-from src.core.localdb.models import AgentSettingsDb
+from src.core.database.models import AgentSettingsDb
 from src.core.types import IssueType
 
 logger = logging.getLogger(__name__)

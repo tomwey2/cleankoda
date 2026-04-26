@@ -9,7 +9,7 @@ from typing import Any, Dict
 
 from flask import request
 
-from src.core.localdb.models import AgentSettingsDb
+from src.core.database.models import AgentSettingsDb
 from src.web.schemas.settings_schema import (
     LLMConfigSchema,
     SettingsFormSchema,

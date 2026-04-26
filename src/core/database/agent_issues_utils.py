@@ -8,7 +8,7 @@ from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 
 from src.core.extensions import db
-from src.core.localdb.models import AgentStatesDb
+from src.core.database.models import AgentStatesDb
 
 logger = logging.getLogger(__name__)
 

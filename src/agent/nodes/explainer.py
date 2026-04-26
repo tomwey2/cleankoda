@@ -15,7 +15,7 @@ from sqlalchemy import select
 from src.agent.services.prompts import load_prompt
 from src.agent.state import AgentState
 from src.core.extensions import db
-from src.core.localdb.models import AgentActionDb, AgentStatesDb
+from src.core.database.models import AgentActionDb, AgentStatesDb
 
 logger = logging.getLogger(__name__)
 

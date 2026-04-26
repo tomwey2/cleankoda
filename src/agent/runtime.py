@@ -14,7 +14,7 @@ from src.agent.services.llm_factory import get_llm
 from src.agent.system_mappings import MCP_SYSTEM_DEFINITIONS
 from src.agent.utils import get_workbench, get_workspace
 from src.core.config import get_env_settings
-from src.core.localdb.models import AgentSettingsDb
+from src.core.database.models import AgentSettingsDb
 from src.core.types import AgentStack
 
 logger = logging.getLogger(__name__)

@@ -18,12 +18,12 @@ from src.agent.runtime import RuntimeSetting
 from src.agent.services.graph_assets import save_graph_as_mermaid, save_graph_as_png
 from src.agent.utils import get_workspace, save_state_to_instance
 from src.core.config import get_env_settings
-from src.core.localdb.agent_issues_utils import (
+from src.core.database.agent_issues_utils import (
     update_db_agent_state,
     read_db_agent_state,
     delete_db_agent_state,
 )
-from src.core.localdb.agent_actions_utils import create_db_agent_action
+from src.core.database.agent_actions_utils import create_db_agent_action
 from src.agent.state import AgentState
 from src.core.types import IssueStateType
 

@@ -11,7 +11,7 @@ from src.core.its.github_client import get_project_id_sync
 from src.core.config import get_env_settings
 from src.core.constants import LLM_PROVIDER_API_ENV
 from src.core.extensions import db
-from src.core.localdb.models import AgentSettingsDb
+from src.core.database.models import AgentSettingsDb
 from src.web.mappers import settings_mapper
 from src.web.schemas.settings_schema import SettingsFormSchema
 from src.core.types import IssueTrackingSystemType

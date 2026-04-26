@@ -11,7 +11,7 @@ import logging
 from src.core.its.issue_tracking_system import IssueTrackingSystem
 from src.core.its.github_its import GitHubIts
 from src.core.its.trello_its import TrelloIts
-from src.core.localdb.models import AgentSettingsDb
+from src.core.database.models import AgentSettingsDb
 from src.core.types import IssueTrackingSystemType
 
 logger = logging.getLogger(__name__)

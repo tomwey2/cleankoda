@@ -2,7 +2,7 @@
 
 import logging
 
-from src.core.localdb.agent_issues_utils import read_db_agent_state, update_db_agent_state
+from src.core.database.agent_issues_utils import read_db_agent_state, update_db_agent_state
 
 logger = logging.getLogger(__name__)
 

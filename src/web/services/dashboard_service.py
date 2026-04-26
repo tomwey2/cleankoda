@@ -7,9 +7,9 @@ separating concerns from the route handlers.
 import logging
 import markdown
 
-from src.core.localdb.agent_actions_utils import read_db_agent_actions
-from src.core.localdb.agent_issues_utils import read_db_agent_state, update_db_agent_state
-from src.core.localdb.models import AgentActionDb, AgentSettingsDb, AgentStatesDb
+from src.core.database.agent_actions_utils import read_db_agent_actions
+from src.core.database.agent_issues_utils import read_db_agent_state, update_db_agent_state
+from src.core.database.models import AgentActionDb, AgentSettingsDb, AgentStatesDb
 from src.core.its.its_factory import create_issue_tracking_system
 from src.web.services import settings_service
 from src.core.types import PlanState, IssueStateType

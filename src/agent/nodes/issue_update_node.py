@@ -15,7 +15,7 @@ from src.core.its.its_factory import create_issue_tracking_system
 from src.core.its.issue_tracking_system import IssueTrackingSystem
 from src.agent.services.summaries import get_agent_summary_entries
 from src.agent.state import AgentState
-from src.core.localdb.models import AgentSettingsDb
+from src.core.database.models import AgentSettingsDb
 from src.core.types import IssueStateType
 
 AGENT_DEFAULT_COMMENT = "Issue completed by AI Agent."

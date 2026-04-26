@@ -21,7 +21,7 @@ from langchain_openai import ChatOpenAI
 from pydantic import SecretStr
 
 from src.core.config import get_env_settings
-from src.core.localdb.models import AgentSettingsDb
+from src.core.database.models import AgentSettingsDb
 
 logger = logging.getLogger(__name__)
 

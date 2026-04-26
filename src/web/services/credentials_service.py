@@ -9,7 +9,7 @@ from typing import List, Optional
 import uuid
 
 from src.core.extensions import db
-from src.core.localdb.models import User, UserCredential
+from src.core.database.models import User, UserCredential
 
 logger = logging.getLogger(__name__)
 

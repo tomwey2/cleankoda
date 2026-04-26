@@ -2,9 +2,9 @@ import logging
 from sqlalchemy.exc import IntegrityError
 
 from src.core.extensions import db
-from src.core.localdb.models import AgentActionDb, AgentStatesDb
+from src.core.database.models import AgentActionDb, AgentStatesDb
 from sqlalchemy import select
-from src.core.localdb.agent_issues_utils import read_db_agent_state
+from src.core.database.agent_issues_utils import read_db_agent_state
 
 logger = logging.getLogger(__name__)
 

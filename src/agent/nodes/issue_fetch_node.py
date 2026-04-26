@@ -19,7 +19,7 @@ from src.core.issue_utils import (
     fetch_issue_from_state,
 )
 from src.agent.state import AgentState
-from src.core.localdb.models import AgentSettingsDb
+from src.core.database.models import AgentSettingsDb
 from src.core.types import IssueStateType
 
 logger = logging.getLogger(__name__)
