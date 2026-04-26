@@ -29,7 +29,7 @@ from src.agent.services.pull_request import (
 from src.web.services import dashboard_service, settings_service
 from src.web.services.dashboard_service import PlanReviewError, process_plan_review
 from src.core.types import PlanState
-from src.core.services import credentials_service, users_service
+from src.core.services import credentials_service, users_service, agent_settings_service
 
 logger = logging.getLogger(__name__)
 
@@ -45,23 +45,27 @@ def landing():
 @web_bp.route("/dashboard", methods=["GET"])
 async def dashboard():
     """Handles the main dashboard page."""
-    context = await dashboard_service.get_template_context()
+    user_id = users_service.get_current_user_id()
+    context = await dashboard_service.get_template_context(user_id)
     return render_template("dashboard.html", **context)
 
 
 @web_bp.route("/settings", methods=["GET", "POST"])
 def settings():
     """Handles the settings page."""
-    agent_settings = settings_service.get_or_create_settings()
+    user_id = users_service.get_current_user_id()
+    agent_settings = agent_settings_service.get_or_create_agent_settings(user_id)
 
     if request.method == "POST":
-        success, error_msg = settings_service.validate_and_save(agent_settings)
-        if success:
+        try:
+            user_id = users_service.get_current_user_id()
+            settings_service.save_settings(user_id, agent_settings)
             flash("Settings saved successfully!", "success")
-        else:
-            flash(f"Error saving settings: {error_msg}", "danger")
+        except Exception as e:  # pylint: disable=broad-exception-caught
+            logger.exception("Failed to save settings")
+            flash(f"Error saving settings: {str(e)}", "danger")
         # Re-fetch settings to show updated values
-        agent_settings = settings_service.get_or_create_settings()
+        agent_settings = agent_settings_service.get_or_create_agent_settings(user_id)
 
     context = settings_service.get_template_context(agent_settings)
     return render_template("settings.html", **context)
@@ -247,12 +251,13 @@ def get_pr_formatted(owner: str, repo: str, repo_pr_number: int):
 @web_bp.route("/issue/review_plan", methods=["POST"])
 async def review_plan():
     """Updates the plan state of the current issue."""
+    user_id = users_service.get_current_user_id()
     data = request.json or {}
     new_state = PlanState.from_string(data.get("plan_state"))
     rejection_reason = data.get("rejection_reason")
 
     try:
-        result = await process_plan_review(new_state, rejection_reason)
+        result = await process_plan_review(user_id, new_state, rejection_reason)
         return jsonify(result)
     except PlanReviewError as exc:
         return jsonify({"error": str(exc)}), exc.status_code

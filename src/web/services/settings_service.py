@@ -19,19 +19,7 @@ from src.core.types import IssueTrackingSystemType
 logger = logging.getLogger(__name__)
 
 
-def get_or_create_settings() -> AgentSettingsDb:
-    """Retrieve existing settings or create a new one with defaults.
-
-    Returns:
-        AgentSettings instance (may be transient if newly created).
-    """
-    settings = AgentSettingsDb.query.first()
-    if not settings:
-        settings = AgentSettingsDb()
-    return settings
-
-
-def save_settings(schema: SettingsFormSchema, settings: AgentSettingsDb) -> AgentSettingsDb:
+def save_settings(user_id: str, agent_settings: AgentSettingsDb) -> AgentSettingsDb:
     """Save settings from validated schema to database.
 
     Args:
@@ -44,18 +32,20 @@ def save_settings(schema: SettingsFormSchema, settings: AgentSettingsDb) -> Agen
     Raises:
         ValueError: If GitHub project ID cannot be fetched.
     """
-    settings_mapper.schema_to_model(schema, settings)
+
+    schema = settings_mapper.form_to_schema()
+    settings_mapper.schema_to_model(schema, agent_settings)
 
     is_github_issue_system = schema.its_type == IssueTrackingSystemType.GITHUB
     if is_github_issue_system and schema.its_config:
-        _fetch_github_project_id(schema, settings)
+        _fetch_github_project_id(schema, agent_settings)
 
-    if not settings.id:
-        db.session.add(settings)
+    if not agent_settings.id:
+        db.session.add(agent_settings)
 
     db.session.commit()
-    logger.info("Settings saved for settings id=%s", settings.id)
-    return settings
+    logger.info("Settings saved for settings id=%s", agent_settings.id)
+    return agent_settings
 
 
 def _fetch_github_project_id(schema: SettingsFormSchema, setting: AgentSettingsDb) -> None:
@@ -175,21 +165,3 @@ def _check_missing_provider_env(provider: str) -> Optional[str]:
         return None
 
     return env_name
-
-
-def validate_and_save(setting: AgentSettingsDb) -> Tuple[bool, Optional[str]]:
-    """Validate form data and save settings.
-
-    Args:
-        setting: AgentSettings to update.
-
-    Returns:
-        Tuple of (success, error_message).
-    """
-    try:
-        schema = settings_mapper.form_to_schema()
-        save_settings(schema, setting)
-        return True, None
-    except ValueError as e:
-        logger.warning("Validation error saving settings: %s", e)
-        return False, str(e)

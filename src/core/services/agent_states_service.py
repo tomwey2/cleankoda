@@ -14,7 +14,7 @@ logger = logging.getLogger(__name__)
 
 
 def get_agent_state_by_id(
-    id: int | None = None, issue_id: str | None = None
+    user_id: str, id: int | None = None, issue_id: str | None = None
 ) -> AgentStatesDb | None:  # pylint: disable=redefined-builtin
     """Load the saved issue from the database."""
     logger.debug("Reading issue from database with id: %s, issue_id: %s", id, issue_id)
@@ -24,7 +24,11 @@ def get_agent_state_by_id(
 
     # Priority 2: search by issue_id
     elif issue_id is not None:
-        stmt = select(AgentStatesDb).where(AgentStatesDb.issue_id == issue_id)
+        stmt = (
+            select(AgentStatesDb)
+            .filter_by(user_id=user_id)
+            .where(AgentStatesDb.issue_id == issue_id)
+        )
         agent_state = db.session.execute(stmt).scalar_one_or_none()
 
     # Priority 3 (Fallback): get the first issue
@@ -32,6 +36,7 @@ def get_agent_state_by_id(
     else:
         stmt = (
             select(AgentStatesDb)
+            .filter_by(user_id=user_id)
             .where(AgentStatesDb.issue_is_active.is_(True))
             .order_by(AgentStatesDb.id.asc())
             .limit(1)
@@ -45,11 +50,12 @@ def get_agent_state_by_id(
     return agent_state
 
 
-def save_agent_state(issue_id: str, issue_name: str) -> AgentStatesDb:
+def save_agent_state(user_id: str, issue_id: str, issue_name: str) -> AgentStatesDb:
     """insert issue into sqlalchemy database"""
     logger.debug("Creating issue in database: %s (%s)", issue_id, issue_name)
     try:
         new_issue = AgentStatesDb(
+            user_id=user_id,
             issue_id=issue_id,
             issue_name=issue_name,
         )
@@ -60,22 +66,22 @@ def save_agent_state(issue_id: str, issue_name: str) -> AgentStatesDb:
     except IntegrityError as e:
         # Happens if issue_id (unique=True) is already assigned
         db.session.rollback()
-        logging.error("Error creating issue: %s", e)
+        logging.error("Error creating issue: %s for user %s: %s", new_issue, user_id, e)
         return None
     except Exception as e:  # pylint: disable=broad-exception-caught
         db.session.rollback()
-        logging.error("Error creating issue: %s", e)
+        logging.error("Error creating issue: %s for user %s: %s", new_issue, user_id, e)
         return None
 
 
-def update_agent_state(issue_id: str, **kwargs: Any) -> AgentStatesDb | None:
+def update_agent_state(user_id: str, issue_id: str, **kwargs: Any) -> AgentStatesDb | None:
     """
     Updates any fields of an issue.
     Call e.g.: update_issue(1, issue_name="New", status="Done", priority=5)
     """
-    agent_state = get_agent_state_by_id(issue_id=issue_id)
+    agent_state = get_agent_state_by_id(user_id=user_id, issue_id=issue_id)
     if not agent_state:
-        agent_state = save_agent_state(issue_id, "")
+        agent_state = save_agent_state(user_id, issue_id, "")
 
     if not agent_state:
         return None
@@ -97,7 +103,8 @@ def update_agent_state(issue_id: str, **kwargs: Any) -> AgentStatesDb | None:
 
     try:
         logger.debug(
-            "Updating issue %d (%s) in database with values: %s",
+            "Updating user %s issue %d (%s) in database with values: %s",
+            agent_state.user_id,
             agent_state.id,
             agent_state.issue_id,
             kwargs,
@@ -110,15 +117,15 @@ def update_agent_state(issue_id: str, **kwargs: Any) -> AgentStatesDb | None:
         return None
 
 
-def delete_agent_state(issue_id: str) -> bool:
+def delete_agent_state(user_id: str, issue_id: str) -> bool:
     """
     Removes the issue mapping from the database.
     Returns True if a record was deleted, False otherwise.
     """
-    issue = get_agent_state_by_id(issue_id=issue_id)
+    issue = get_agent_state_by_id(user_id=user_id, issue_id=issue_id)
 
     if issue:
-        logger.debug("Deleting issue from database: %s", issue_id)
+        logger.debug("Deleting issue from database: %s for user %s: %s", issue_id, user_id)
         db.session.delete(issue)
         db.session.commit()
         return True

@@ -53,6 +53,7 @@ class UserCredentialDb(db.Model):
 
     id = db.Column(db.Integer, primary_key=True)
 
+    # Foreign key to User
     # Supabase UUIDs are typically stored as String(36) in SQLAlchemy.
     user_id = db.Column(
         db.String(36), db.ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True
@@ -98,6 +99,11 @@ class AgentSettingsDb(db.Model):
     __tablename__ = "agent_settings"
 
     id = db.Column(db.Integer, primary_key=True)
+
+    # Foreign key to User
+    user_id = db.Column(
+        db.String(36), db.ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True
+    )
 
     # Common settings
     polling_interval_seconds = db.Column(db.Integer, nullable=False, default=60)
@@ -155,6 +161,11 @@ class AgentStatesDb(db.Model):
     __tablename__ = "agent_states"
 
     id = db.Column(db.Integer, primary_key=True)
+
+    # Foreign key to User
+    user_id = db.Column(
+        db.String(36), db.ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True
+    )
 
     # Issue ID from the external issue system
     issue_id = db.Column(db.String(100), nullable=False, unique=True, index=True)
@@ -225,10 +236,17 @@ class AgentActionDb(db.Model):
     __tablename__ = "agent_actions"
 
     id = db.Column(db.Integer, primary_key=True)
-    # Foreign key to Issue
+
+    # Foreign key to User
+    user_id = db.Column(
+        db.String(36), db.ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+
+    # Foreign key to AgentState
     state_id = db.Column(
         db.Integer, db.ForeignKey("agent_states.id", ondelete="CASCADE"), nullable=True
     )
+
     # Current node of the agent ("issue_fetch", "coder", "tester", "issue_update")
     node_name = db.Column(db.String(50), nullable=True)
     # Tool used by the agent

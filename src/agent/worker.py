@@ -26,6 +26,7 @@ from src.core.services.agent_states_service import (
     delete_agent_state,
 )
 from src.core.services.agent_actions_service import create_agent_action
+from src.core.services.users_service import get_current_user_id
 
 logger = logging.getLogger(__name__)
 
@@ -89,12 +90,14 @@ async def run_agent_cycle(runtime: RuntimeSetting) -> None:
 
 
 def _persist_state_to_database(current_state: AgentState) -> None:
+    user_id = get_current_user_id()
     if current_state["current_node"] == "issue_fetch" and current_state["issue_from_todo"]:
         # if the issue is taken from todo state then delete the it in the
         # database (if exist)
-        delete_agent_state(current_state["issue_id"])
+        delete_agent_state(user_id=user_id, issue_id=current_state["issue_id"])
 
     agent_state = update_agent_state(
+        user_id=user_id,
         issue_id=current_state["issue_id"],
         issue_name=current_state["issue_name"],
         issue_description=current_state["issue_description"],
@@ -111,6 +114,7 @@ def _persist_state_to_database(current_state: AgentState) -> None:
         user_message=current_state["user_message"],
     )
     create_agent_action(
+        user_id=user_id,
         agent_state_id=agent_state.id,
         tool_calls=current_state["current_tool_calls"],
         node_name=current_state["current_node"],
@@ -118,7 +122,8 @@ def _persist_state_to_database(current_state: AgentState) -> None:
 
 
 def _restore_state_from_database(state: AgentState) -> AgentState:
-    agent_state = get_agent_state_by_id()  # get the current entry
+    user_id = get_current_user_id()
+    agent_state = get_agent_state_by_id(user_id)  # get the current entry
     if agent_state:
         state["issue_id"] = agent_state.issue_id
         state["issue_name"] = agent_state.issue_name

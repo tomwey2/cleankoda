@@ -7,11 +7,14 @@ separating concerns from the route handlers.
 import logging
 import markdown
 
-from src.core.services.agent_actions_service import get_agent_actions_by_issue_id
-from src.core.services.agent_states_service import get_agent_state_by_id, update_agent_state
 from src.core.database.models import AgentActionDb, AgentSettingsDb, AgentStatesDb
 from src.core.its.its_factory import create_issue_tracking_system
-from src.web.services import settings_service
+from src.core.services import (
+    agent_actions_service,
+    agent_states_service,
+    agent_settings_service,
+    users_service,
+)
 from src.core.types import PlanState, IssueStateType
 
 logger = logging.getLogger(__name__)
@@ -31,14 +34,16 @@ class PlanReviewError(Exception):
         self.status_code = status_code
 
 
-async def get_template_context() -> dict:
+async def get_template_context(user_id: str) -> dict:
     """Build complete template context for dashboard page.
 
     Returns:
         Dictionary with all template variables.
     """
-    agent_settings: AgentSettingsDb | None = settings_service.get_or_create_settings()
-    agent_state: AgentStatesDb | None = get_agent_state_by_id()
+    agent_settings: AgentSettingsDb | None = agent_settings_service.get_or_create_agent_settings(
+        user_id
+    )
+    agent_state: AgentStatesDb | None = agent_states_service.get_agent_state_by_id(user_id)
 
     plan_content = ""
     plan_exists = False
@@ -56,7 +61,9 @@ async def get_template_context() -> dict:
     agent_activity = "is-waiting"
 
     if agent_state:
-        agent_actions = get_agent_actions_by_issue_id(agent_state.issue_id)
+        agent_actions = agent_actions_service.get_agent_actions_by_issue_id(
+            user_id, agent_state.issue_id
+        )
         # logger.info("current node: %s", agent_state.current_node)
         plan_content = (
             markdown.markdown(agent_state.plan_content) if agent_state.plan_content else ""
@@ -95,27 +102,27 @@ async def get_template_context() -> dict:
     }
 
 
-def _get_its():
+def _get_its(user_id: str):
     """Creates and returns a issue provider from the current agent settings."""
-    agent_settings: AgentSettingsDb = settings_service.get_or_create_settings()
+    agent_settings: AgentSettingsDb = agent_settings_service.get_or_create_agent_settings(user_id)
     return create_issue_tracking_system(agent_settings)
 
 
-async def add_plan_rejection_comment(issue_id: str, rejection_reason: str) -> None:
+async def add_plan_rejection_comment(user_id: str, issue_id: str, rejection_reason: str) -> None:
     """Adds a comment to the issue with the rejection reason.
 
     Raises:
         Exception: If adding the comment fails.
     """
     logger.info("Adding rejection comment to issue %s", issue_id)
-    its = _get_its()
+    its = _get_its(user_id)
     await its.add_comment(issue_id, rejection_reason)
 
 
-async def move_issue_to_in_progress(issue_id: str) -> bool:
+async def move_issue_to_in_progress(user_id: str, issue_id: str) -> bool:
     """Moves the issue to the state in progress."""
     logger.info("Moving issue %s to in progress", issue_id)
-    its = _get_its()
+    its = _get_its(user_id)
     await its.move_issue_to_named_state(issue_id, state_name=its.get_state_in_progress())
     return True
 
@@ -146,7 +153,7 @@ def _validate_plan_review_input(new_state: PlanState, rejection_reason: str | No
         raise PlanReviewError("A rejection reason is required.")
 
 
-def _rollback_issue_state(issue_id: str, original_state: PlanState) -> bool:
+def _rollback_issue_state(user_id: str, issue_id: str, original_state: PlanState) -> bool:
     """Attempt to rollback issue state to original value.
 
     Args:
@@ -157,7 +164,9 @@ def _rollback_issue_state(issue_id: str, original_state: PlanState) -> bool:
         True if rollback succeeded, False otherwise.
     """
     try:
-        rollback_issue = update_agent_state(issue_id, plan_state=original_state)
+        rollback_issue = agent_states_service.update_agent_state(
+            user_id=user_id, issue_id=issue_id, plan_state=original_state
+        )
         if not rollback_issue:
             logger.error("Failed to rollback issue state for issue %s", issue_id)
             return False
@@ -167,7 +176,9 @@ def _rollback_issue_state(issue_id: str, original_state: PlanState) -> bool:
         return False
 
 
-async def process_plan_review(new_state: PlanState, rejection_reason: str | None) -> dict:
+async def process_plan_review(
+    user_id: str, new_state: PlanState, rejection_reason: str | None
+) -> dict:
     """Handle plan review transitions and side-effects.
 
     Args:
@@ -184,7 +195,7 @@ async def process_plan_review(new_state: PlanState, rejection_reason: str | None
     _validate_plan_review_input(new_state, rejection_reason)
     rejection_reason = (rejection_reason or "").strip()
 
-    agent_state = get_agent_state_by_id()
+    agent_state = agent_states_service.get_agent_state_by_id(user_id)
     if not agent_state:
         raise PlanReviewError("No active issue found in database.", status_code=HTTP_NOT_FOUND)
 
@@ -201,21 +212,25 @@ async def process_plan_review(new_state: PlanState, rejection_reason: str | None
 
     try:
         # Update issue state first
-        updated_agent_state = update_agent_state(agent_state.issue_id, plan_state=new_state.value)
+        updated_agent_state = agent_states_service.update_agent_state(
+            user_id=user_id, issue_id=agent_state.issue_id, plan_state=new_state.value
+        )
         if not updated_agent_state:
             raise PlanReviewError("Failed to update issue", status_code=HTTP_INTERNAL_SERVER_ERROR)
 
         # Add rejection comment if needed
         if new_state == PlanState.REJECTED and rejection_reason:
             try:
-                await add_plan_rejection_comment(updated_agent_state.issue_id, rejection_reason)
+                await add_plan_rejection_comment(
+                    user_id, updated_agent_state.issue_id, rejection_reason
+                )
             except Exception as exc:
                 logger.exception(
                     "Failed to add rejection comment to issue %s. Rolling back state change.",
                     updated_agent_state.issue_id,
                 )
                 # Rollback the state change
-                _rollback_issue_state(agent_state.issue_id, original_plan_state)
+                _rollback_issue_state(user_id, agent_state.issue_id, original_plan_state)
                 raise PlanReviewError(
                     "Failed to add rejection comment. Plan state has been rolled back.",
                     status_code=HTTP_INTERNAL_SERVER_ERROR,
@@ -223,14 +238,14 @@ async def process_plan_review(new_state: PlanState, rejection_reason: str | None
 
         # Move issue to in progress
         try:
-            moved = await move_issue_to_in_progress(updated_agent_state.issue_id)
+            moved = await move_issue_to_in_progress(user_id, updated_agent_state.issue_id)
         except Exception as exc:
             logger.exception(
                 "Failed to move issue %s to in progress. Rolling back state change.",
                 updated_agent_state.issue_id,
             )
             # Rollback the state change
-            _rollback_issue_state(agent_state.issue_id, original_plan_state)
+            _rollback_issue_state(user_id, agent_state.issue_id, original_plan_state)
             raise PlanReviewError(
                 "Failed to move issue to in progress. Plan state has been rolled back.",
                 status_code=HTTP_INTERNAL_SERVER_ERROR,
@@ -254,7 +269,7 @@ async def process_plan_review(new_state: PlanState, rejection_reason: str | None
         logger.exception("Unexpected error in process_plan_review")
         # Attempt rollback if we have an original state
         if "original_plan_state" in locals():
-            _rollback_issue_state(agent_state.issue_id, original_plan_state)
+            _rollback_issue_state(user_id, agent_state.issue_id, original_plan_state)
         raise PlanReviewError(
             "An unexpected error occurred. Plan state has been rolled back.",
             status_code=HTTP_INTERNAL_SERVER_ERROR,
