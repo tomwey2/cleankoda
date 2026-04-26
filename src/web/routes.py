@@ -26,9 +26,10 @@ from src.agent.services.pull_request import (
     format_pr_review_message,
     get_latest_pr_review_status,
 )
-from src.web.services import dashboard_service, settings_service, credentials_service
+from src.web.services import dashboard_service, settings_service
 from src.web.services.dashboard_service import PlanReviewError, process_plan_review
 from src.core.types import PlanState
+from src.core.services import credentials_service, users_service
 
 logger = logging.getLogger(__name__)
 
@@ -69,7 +70,7 @@ def settings():
 @web_bp.route("/credentials", methods=["GET"])
 def credentials_overview():
     """Handles the credentials overview page."""
-    user_id = credentials_service.get_current_user_id()
+    user_id = users_service.get_current_user_id()
     credentials = credentials_service.get_credentials_for_user(user_id)
     return render_template("credentials_overview.html", credentials=credentials)
 
@@ -116,7 +117,7 @@ def credentials_new_selection():
 @web_bp.route("/credentials/new/<credential_type>", methods=["GET", "POST"])
 def credentials_new_form(credential_type: str):
     """Handles the credential creation form for a specific type."""
-    user_id = credentials_service.get_current_user_id()
+    user_id = users_service.get_current_user_id()
 
     if request.method == "POST":
         try:
@@ -135,7 +136,7 @@ def credentials_new_form(credential_type: str):
 @web_bp.route("/credentials/<int:credential_id>/edit", methods=["GET", "POST"])
 def credentials_edit(credential_id: int):
     """Handles editing an existing credential."""
-    user_id = credentials_service.get_current_user_id()
+    user_id = users_service.get_current_user_id()
     credential = credentials_service.get_credential_by_id(user_id, credential_id)
     if not credential:
         flash("Credential not found.", "danger")
@@ -160,7 +161,7 @@ def credentials_edit(credential_id: int):
 @web_bp.route("/credentials/<int:credential_id>/delete", methods=["POST"])
 def credentials_delete(credential_id: int):
     """Handles deleting a credential."""
-    user_id = credentials_service.get_current_user_id()
+    user_id = users_service.get_current_user_id()
     success = credentials_service.delete_credential(user_id, credential_id)
     if success:
         flash("Credential deleted successfully!", "success")

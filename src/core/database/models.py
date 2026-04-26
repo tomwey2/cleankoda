@@ -45,7 +45,7 @@ class UserDb(db.Model):
     )
 
     def __repr__(self):
-        return f"<User(id='{self.id}', plan='{self.subscription_plan}', active={self.is_active})>"
+        return f"<UserDb(id='{self.id}', plan='{self.subscription_plan}', active={self.is_active})>"
 
 
 class UserCredentialDb(db.Model):
@@ -78,11 +78,13 @@ class UserCredentialDb(db.Model):
     # Optional, but very practical relationship for access from the user object:
     # `user.credentials` directly returns all of the user's keys as a list.
     user = db.relationship(
-        "User", backref=db.backref("credentials", cascade="all, delete-orphan", lazy="select")
+        "UserDb", backref=db.backref("credentials", cascade="all, delete-orphan", lazy="select")
     )
 
     def __repr__(self):
-        return f"<UserCredential(id={self.id}, name='{self.name}', type='{self.credential_type}')>"
+        return (
+            f"<UserCredentialDb(id={self.id}, name='{self.name}', type='{self.credential_type}')>"
+        )
 
 
 class AgentSettingsDb(db.Model):
