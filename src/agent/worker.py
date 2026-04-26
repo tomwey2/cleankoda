@@ -18,14 +18,14 @@ from src.agent.runtime import RuntimeSetting
 from src.agent.services.graph_assets import save_graph_as_mermaid, save_graph_as_png
 from src.agent.utils import get_workspace, save_state_to_instance
 from src.core.config import get_env_settings
-from src.core.database.agent_issues_utils import (
-    update_db_agent_state,
-    read_db_agent_state,
-    delete_db_agent_state,
-)
-from src.core.database.agent_actions_utils import create_db_agent_action
 from src.agent.state import AgentState
 from src.core.types import IssueStateType
+from src.core.services.agent_states_service import (
+    get_agent_state_by_id,
+    update_agent_state,
+    delete_agent_state,
+)
+from src.core.services.agent_actions_service import create_agent_action
 
 logger = logging.getLogger(__name__)
 
@@ -92,9 +92,9 @@ def _persist_state_to_database(current_state: AgentState) -> None:
     if current_state["current_node"] == "issue_fetch" and current_state["issue_from_todo"]:
         # if the issue is taken from todo state then delete the it in the
         # database (if exist)
-        delete_db_agent_state(current_state["issue_id"])
+        delete_agent_state(current_state["issue_id"])
 
-    db_agent_state = update_db_agent_state(
+    agent_state = update_agent_state(
         issue_id=current_state["issue_id"],
         issue_name=current_state["issue_name"],
         issue_description=current_state["issue_description"],
@@ -110,29 +110,29 @@ def _persist_state_to_database(current_state: AgentState) -> None:
         working_state=current_state["working_state"],
         user_message=current_state["user_message"],
     )
-    create_db_agent_action(
-        db_agent_state_id=db_agent_state.id,
+    create_agent_action(
+        agent_state_id=agent_state.id,
         tool_calls=current_state["current_tool_calls"],
         node_name=current_state["current_node"],
     )
 
 
 def _restore_state_from_database(state: AgentState) -> AgentState:
-    db_agent_state = read_db_agent_state()
-    if db_agent_state:
-        state["issue_id"] = db_agent_state.issue_id
-        state["issue_name"] = db_agent_state.issue_name
-        state["issue_description"] = db_agent_state.issue_description
-        state["issue_type"] = db_agent_state.issue_type
-        state["issue_state"] = IssueStateType.from_string(db_agent_state.issue_state)
-        state["issue_url"] = db_agent_state.issue_url
-        state["issue_skill_level"] = db_agent_state.issue_skill_level
-        state["issue_skill_level_reasoning"] = db_agent_state.issue_skill_level_reasoning
-        state["issue_is_active"] = db_agent_state.issue_is_active
-        state["repo_branch_name"] = db_agent_state.repo_branch_name
-        state["repo_pr_url"] = db_agent_state.repo_pr_url
-        state["plan_content"] = db_agent_state.plan_content
-        state["plan_state"] = db_agent_state.plan_state
-        state["working_state"] = db_agent_state.working_state
-        state["user_message"] = db_agent_state.user_message
+    agent_state = get_agent_state_by_id()  # get the current entry
+    if agent_state:
+        state["issue_id"] = agent_state.issue_id
+        state["issue_name"] = agent_state.issue_name
+        state["issue_description"] = agent_state.issue_description
+        state["issue_type"] = agent_state.issue_type
+        state["issue_state"] = IssueStateType.from_string(agent_state.issue_state)
+        state["issue_url"] = agent_state.issue_url
+        state["issue_skill_level"] = agent_state.issue_skill_level
+        state["issue_skill_level_reasoning"] = agent_state.issue_skill_level_reasoning
+        state["issue_is_active"] = agent_state.issue_is_active
+        state["repo_branch_name"] = agent_state.repo_branch_name
+        state["repo_pr_url"] = agent_state.repo_pr_url
+        state["plan_content"] = agent_state.plan_content
+        state["plan_state"] = agent_state.plan_state
+        state["working_state"] = agent_state.working_state
+        state["user_message"] = agent_state.user_message
     return state

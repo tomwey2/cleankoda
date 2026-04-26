@@ -13,7 +13,9 @@ from src.core.database.models import AgentStatesDb
 logger = logging.getLogger(__name__)
 
 
-def read_db_agent_state(id: int | None = None, issue_id: str | None = None) -> AgentStatesDb | None:  # pylint: disable=redefined-builtin
+def get_agent_state_by_id(
+    id: int | None = None, issue_id: str | None = None
+) -> AgentStatesDb | None:  # pylint: disable=redefined-builtin
     """Load the saved issue from the database."""
     logger.debug("Reading issue from database with id: %s, issue_id: %s", id, issue_id)
     agent_state = None
@@ -43,7 +45,7 @@ def read_db_agent_state(id: int | None = None, issue_id: str | None = None) -> A
     return agent_state
 
 
-def create_db_issue(issue_id: str, issue_name: str) -> AgentStatesDb:
+def save_agent_state(issue_id: str, issue_name: str) -> AgentStatesDb:
     """insert issue into sqlalchemy database"""
     logger.debug("Creating issue in database: %s (%s)", issue_id, issue_name)
     try:
@@ -66,14 +68,14 @@ def create_db_issue(issue_id: str, issue_name: str) -> AgentStatesDb:
         return None
 
 
-def update_db_agent_state(issue_id: str, **kwargs: Any) -> AgentStatesDb | None:
+def update_agent_state(issue_id: str, **kwargs: Any) -> AgentStatesDb | None:
     """
     Updates any fields of an issue.
     Call e.g.: update_issue(1, issue_name="New", status="Done", priority=5)
     """
-    agent_state = read_db_agent_state(issue_id=issue_id)
+    agent_state = get_agent_state_by_id(issue_id=issue_id)
     if not agent_state:
-        agent_state = create_db_issue(issue_id, "")
+        agent_state = save_agent_state(issue_id, "")
 
     if not agent_state:
         return None
@@ -108,12 +110,12 @@ def update_db_agent_state(issue_id: str, **kwargs: Any) -> AgentStatesDb | None:
         return None
 
 
-def delete_db_agent_state(issue_id: str) -> bool:
+def delete_agent_state(issue_id: str) -> bool:
     """
     Removes the issue mapping from the database.
     Returns True if a record was deleted, False otherwise.
     """
-    issue = read_db_agent_state(issue_id=issue_id)
+    issue = get_agent_state_by_id(issue_id=issue_id)
 
     if issue:
         logger.debug("Deleting issue from database: %s", issue_id)

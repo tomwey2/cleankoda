@@ -7,8 +7,8 @@ separating concerns from the route handlers.
 import logging
 import markdown
 
-from src.core.database.agent_actions_utils import read_db_agent_actions
-from src.core.database.agent_issues_utils import read_db_agent_state, update_db_agent_state
+from src.core.services.agent_actions_service import get_agent_actions_by_issue_id
+from src.core.services.agent_states_service import get_agent_state_by_id, update_agent_state
 from src.core.database.models import AgentActionDb, AgentSettingsDb, AgentStatesDb
 from src.core.its.its_factory import create_issue_tracking_system
 from src.web.services import settings_service
@@ -38,7 +38,7 @@ async def get_template_context() -> dict:
         Dictionary with all template variables.
     """
     agent_settings: AgentSettingsDb | None = settings_service.get_or_create_settings()
-    agent_state: AgentStatesDb | None = read_db_agent_state()
+    agent_state: AgentStatesDb | None = get_agent_state_by_id()
 
     plan_content = ""
     plan_exists = False
@@ -56,7 +56,7 @@ async def get_template_context() -> dict:
     agent_activity = "is-waiting"
 
     if agent_state:
-        agent_actions = read_db_agent_actions(agent_state.issue_id)
+        agent_actions = get_agent_actions_by_issue_id(agent_state.issue_id)
         # logger.info("current node: %s", agent_state.current_node)
         plan_content = (
             markdown.markdown(agent_state.plan_content) if agent_state.plan_content else ""
@@ -157,7 +157,7 @@ def _rollback_issue_state(issue_id: str, original_state: PlanState) -> bool:
         True if rollback succeeded, False otherwise.
     """
     try:
-        rollback_issue = update_db_agent_state(issue_id, plan_state=original_state)
+        rollback_issue = update_agent_state(issue_id, plan_state=original_state)
         if not rollback_issue:
             logger.error("Failed to rollback issue state for issue %s", issue_id)
             return False
@@ -184,7 +184,7 @@ async def process_plan_review(new_state: PlanState, rejection_reason: str | None
     _validate_plan_review_input(new_state, rejection_reason)
     rejection_reason = (rejection_reason or "").strip()
 
-    agent_state = read_db_agent_state()
+    agent_state = get_agent_state_by_id()
     if not agent_state:
         raise PlanReviewError("No active issue found in database.", status_code=HTTP_NOT_FOUND)
 
@@ -201,9 +201,7 @@ async def process_plan_review(new_state: PlanState, rejection_reason: str | None
 
     try:
         # Update issue state first
-        updated_agent_state = update_db_agent_state(
-            agent_state.issue_id, plan_state=new_state.value
-        )
+        updated_agent_state = update_agent_state(agent_state.issue_id, plan_state=new_state.value)
         if not updated_agent_state:
             raise PlanReviewError("Failed to update issue", status_code=HTTP_INTERNAL_SERVER_ERROR)
 
