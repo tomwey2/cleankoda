@@ -9,7 +9,7 @@ from typing import List, Optional
 import uuid
 
 from src.core.extensions import db
-from src.core.database.models import User, UserCredential
+from src.core.database.models import UserDb, UserCredentialDb
 
 logger = logging.getLogger(__name__)
 
@@ -24,10 +24,10 @@ def get_current_user_id() -> str:
     Returns:
         String representing the user ID.
     """
-    first_user = User.query.first()
+    first_user = UserDb.query.first()
     if not first_user:
         mock_id = str(uuid.uuid4())
-        first_user = User(id=mock_id, first_name="Mock", last_name="User")
+        first_user = UserDb(id=mock_id, first_name="Mock", last_name="User")
         db.session.add(first_user)
         db.session.commit()
         logger.info("Created mock user with ID: %s", mock_id)
@@ -36,7 +36,7 @@ def get_current_user_id() -> str:
     return first_user.id
 
 
-def get_credentials_for_user(user_id: str) -> List[UserCredential]:
+def get_credentials_for_user(user_id: str) -> List[UserCredentialDb]:
     """Retrieve all credentials for a given user.
 
     Args:
@@ -45,10 +45,10 @@ def get_credentials_for_user(user_id: str) -> List[UserCredential]:
     Returns:
         List of UserCredential objects.
     """
-    return UserCredential.query.filter_by(user_id=user_id).all()
+    return UserCredentialDb.query.filter_by(user_id=user_id).all()
 
 
-def get_credential_by_id(user_id: str, credential_id: int) -> Optional[UserCredential]:
+def get_credential_by_id(user_id: str, credential_id: int) -> Optional[UserCredentialDb]:
     """Retrieve a specific credential for a user.
 
     Args:
@@ -58,10 +58,10 @@ def get_credential_by_id(user_id: str, credential_id: int) -> Optional[UserCrede
     Returns:
         UserCredential or None.
     """
-    return UserCredential.query.filter_by(user_id=user_id, id=credential_id).first()
+    return UserCredentialDb.query.filter_by(user_id=user_id, id=credential_id).first()
 
 
-def save_credential(user_id: str, data: dict) -> UserCredential:
+def save_credential(user_id: str, data: dict) -> UserCredentialDb:
     """Create or update a user credential.
 
     Args:
@@ -78,7 +78,7 @@ def save_credential(user_id: str, data: dict) -> UserCredential:
         if not credential:
             raise ValueError(f"Credential {credential_id} not found for user {user_id}")
     else:
-        credential = UserCredential(user_id=user_id)
+        credential = UserCredentialDb(user_id=user_id)
         db.session.add(credential)
 
     # Map fields

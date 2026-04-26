@@ -14,7 +14,7 @@ from src.core.types import IssueTrackingSystemType
 DEFAULT_TRELLO_BASE_URL = "https://api.trello.com/1"
 
 
-class User(db.Model):
+class UserDb(db.Model):
     __tablename__ = "users"
 
     # The ID is a string (36) to directly adopt the UUID from Supabase auth.users.
@@ -48,7 +48,7 @@ class User(db.Model):
         return f"<User(id='{self.id}', plan='{self.subscription_plan}', active={self.is_active})>"
 
 
-class UserCredential(db.Model):
+class UserCredentialDb(db.Model):
     __tablename__ = "user_credentials"
 
     id = db.Column(db.Integer, primary_key=True)
