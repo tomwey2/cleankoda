@@ -35,6 +35,7 @@ def form_to_schema() -> SettingsFormSchema:
         its_state_in_progress=request.form.get("its_state_in_progress"),
         its_state_in_review=request.form.get("its_state_in_review"),
         its_state_done=request.form.get("its_state_done"),
+        its_credential_id=request.form.get("its_credential_id"),
     )
 
     llm_config = LLMConfigSchema(
@@ -99,6 +100,7 @@ def _apply_its_config(its_schema: ItsConfigSchema, settings: AgentSettingsDb) ->
     settings.its_state_in_progress = its_schema.its_state_in_progress
     settings.its_state_in_review = its_schema.its_state_in_review
     settings.its_state_done = its_schema.its_state_done
+    settings.its_credential_id = its_schema.its_credential_id
 
 
 def model_to_form_data(settings: AgentSettingsDb) -> Dict[str, Any]:
@@ -120,6 +122,7 @@ def model_to_form_data(settings: AgentSettingsDb) -> Dict[str, Any]:
         "its_state_in_progress": settings.its_state_in_progress,
         "its_state_in_review": settings.its_state_in_review,
         "its_state_done": settings.its_state_done,
+        "its_credential_id": settings.its_credential_id,
         "repo_type": settings.repo_type,
         "repo_url": settings.repo_url,
         "llm_provider": settings.llm_provider,

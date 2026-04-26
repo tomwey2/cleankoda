@@ -107,6 +107,17 @@
                                         </div>
                                         <div class="card-body">
                                             <div class="mb-3">
+                                                <label for="its_credential_id" class="form-label">Trello Credential</label>
+                                                <select class="form-select" id="its_credential_id" name="its_credential_id">
+                                                    <option value="">-- Select Credential --</option>
+                                                    {% for cred in trello_credentials %}
+                                                    <option value="{{ cred.id }}" {% if form_data.its_credential_id == cred.id %}selected{% endif %}>
+                                                        {{ cred.name }}
+                                                    </option>
+                                                    {% endfor %}
+                                                </select>
+                                            </div>
+                                            <div class="mb-3">
                                                 <label for="its_base_url" class="form-label">Base URL</label>
                                                 <input type="text" class="form-control" id="its_base_url"
                                                     name="its_base_url"

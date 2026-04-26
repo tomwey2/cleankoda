@@ -141,7 +141,7 @@ def credentials_new_form(credential_type: str):
 def credentials_edit(credential_id: int):
     """Handles editing an existing credential."""
     user_id = users_service.get_current_user_id()
-    credential = credentials_service.get_credential_by_id(user_id, credential_id)
+    credential = credentials_service.get_credential_by_id(credential_id)
     if not credential:
         flash("Credential not found.", "danger")
         return redirect(url_for("web.credentials_overview"))

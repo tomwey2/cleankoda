@@ -22,6 +22,7 @@ class ItsConfigSchema(BaseModel):
     its_state_in_progress: Optional[str] = Field(default=None, description="In-progress state")
     its_state_in_review: Optional[str] = Field(default=None, description="In-review state")
     its_state_done: Optional[str] = Field(default=None, description="Done state")
+    its_credential_id: Optional[int] = Field(default=None, description="Credential ID")
 
     @field_validator("its_container_id", mode="before")
     @classmethod
@@ -30,6 +31,17 @@ class ItsConfigSchema(BaseModel):
         if v == "":
             return None
         return v
+
+    @field_validator("its_credential_id", mode="before")
+    @classmethod
+    def parse_its_credential_id(cls, v) -> Optional[int]:
+        """Parse credential id, defaulting to None on error or empty string."""
+        if not v or v == "":
+            return None
+        try:
+            return int(v)
+        except (ValueError, TypeError):
+            return None
 
 
 class LLMConfigSchema(BaseModel):

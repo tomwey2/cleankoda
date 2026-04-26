@@ -12,6 +12,7 @@ from src.core.config import get_env_settings
 from src.core.constants import LLM_PROVIDER_API_ENV
 from src.core.extensions import db
 from src.core.database.models import AgentSettingsDb
+from src.core.services import credentials_service
 from src.web.mappers import settings_mapper
 from src.web.schemas.settings_schema import SettingsFormSchema
 from src.core.types import IssueTrackingSystemType
@@ -135,6 +136,9 @@ def get_template_context(settings: AgentSettingsDb) -> Dict[str, Any]:
         agent_gender = settings.agent_gender.lower()
     agent_image = f"{agent_age}-{agent_gender}-is-waiting.png"
 
+    all_credentials = credentials_service.get_credentials_for_user(settings.user_id)
+    trello_credentials = [c for c in all_credentials if c.credential_type == "TRELLO"]
+
     return {
         "settings": settings,
         "form_data": form_data,
@@ -142,6 +146,7 @@ def get_template_context(settings: AgentSettingsDb) -> Dict[str, Any]:
         "missing_provider_env": missing_env,
         "show_ollama_warning": show_ollama_warning,
         "agent_image": agent_image,
+        "trello_credentials": trello_credentials,
     }
 
 

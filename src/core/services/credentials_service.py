@@ -25,17 +25,16 @@ def get_credentials_for_user(user_id: str) -> List[UserCredentialDb]:
     return UserCredentialDb.query.filter_by(user_id=user_id).all()
 
 
-def get_credential_by_id(user_id: str, credential_id: int) -> Optional[UserCredentialDb]:
+def get_credential_by_id(credential_id: int) -> Optional[UserCredentialDb]:
     """Retrieve a specific credential for a user.
 
     Args:
-        user_id: The ID of the user.
         credential_id: The ID of the credential.
 
     Returns:
         UserCredential or None.
     """
-    return UserCredentialDb.query.filter_by(user_id=user_id, id=credential_id).first()
+    return UserCredentialDb.query.filter_by(id=credential_id).first()
 
 
 def save_credential(user_id: str, data: dict) -> UserCredentialDb:
@@ -51,7 +50,7 @@ def save_credential(user_id: str, data: dict) -> UserCredentialDb:
     credential_id = data.get("id")
 
     if credential_id:
-        credential = get_credential_by_id(user_id, int(credential_id))
+        credential = get_credential_by_id(int(credential_id))
         if not credential:
             raise ValueError(f"Credential {credential_id} not found for user {user_id}")
     else:
@@ -89,7 +88,7 @@ def delete_credential(user_id: str, credential_id: int) -> bool:
     Returns:
         True if deleted, False if not found.
     """
-    credential = get_credential_by_id(user_id, credential_id)
+    credential = get_credential_by_id(credential_id)
     if not credential:
         return False
 
