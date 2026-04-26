@@ -14,8 +14,6 @@ from src.core.types import IssueTrackingSystemType
 class ItsConfigSchema(BaseModel):
     """Schema for Trello configuration form data."""
 
-    its_api_key: Optional[str] = Field(default=None, description="API key")
-    its_api_token: Optional[str] = Field(default=None, description="API token")
     its_base_url: Optional[str] = Field(default=None, description="Base URL")
     its_container_id: Optional[str] = Field(default=None, description="Container ID")
     its_parent_id: Optional[str] = Field(default=None, description="Parent ID")
@@ -25,7 +23,7 @@ class ItsConfigSchema(BaseModel):
     its_state_in_review: Optional[str] = Field(default=None, description="In-review state")
     its_state_done: Optional[str] = Field(default=None, description="Done state")
 
-    @field_validator("its_api_key", "its_api_token", "its_container_id", mode="before")
+    @field_validator("its_container_id", mode="before")
     @classmethod
     def empty_str_to_none(cls, v: Optional[str]) -> Optional[str]:
         """Convert empty strings to None."""

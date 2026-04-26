@@ -28,8 +28,6 @@ def form_to_schema() -> SettingsFormSchema:
 
     # Always parse all provider configs from form
     its_config = ItsConfigSchema(
-        its_api_key=request.form.get("its_api_key"),
-        its_api_token=request.form.get("its_api_token"),
         its_base_url=request.form.get("its_base_url", "https://api.trello.com/1"),
         its_container_id=request.form.get("its_container_id"),
         its_state_backlog=request.form.get("its_state_backlog"),
@@ -95,8 +93,6 @@ def _apply_its_config(its_schema: ItsConfigSchema, settings: AgentSettingsDb) ->
     """Apply Trello configuration from schema to model."""
 
     settings.its_container_id = its_schema.its_container_id
-    settings.its_api_key = its_schema.its_api_key
-    settings.its_token = its_schema.its_api_token
     settings.its_base_url = its_schema.its_base_url
     settings.its_state_backlog = its_schema.its_state_backlog
     settings.its_state_todo = its_schema.its_state_todo
@@ -117,8 +113,6 @@ def model_to_form_data(settings: AgentSettingsDb) -> Dict[str, Any]:
     form_data: Dict[str, Any] = {
         "agent_skill_level": settings.agent_skill_level,
         "agent_gender": settings.agent_gender,
-        "its_api_key": settings.its_api_key,
-        "its_api_token": settings.its_token,
         "its_container_id": settings.its_container_id,
         "its_base_url": settings.its_base_url,
         "its_state_backlog": settings.its_state_backlog,

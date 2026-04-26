@@ -27,6 +27,7 @@ from src.core.services.agent_states_service import (
 )
 from src.core.services.agent_actions_service import create_agent_action
 from src.core.services.users_service import get_current_user_id
+from src.core.services.credentials_service import get_credential_by_id
 
 logger = logging.getLogger(__name__)
 
@@ -45,15 +46,15 @@ async def run_agent_cycle(runtime: RuntimeSetting) -> None:
             await stack.enter_async_context(git_mcp)
 
             if runtime.mcp_system_def["command"]:
-                active_issue_system = runtime.agent_settings.get_active_issue_system()
-                if active_issue_system:
+                if runtime.agent_settings.its_credential_id:
+                    credential = get_credential_by_id(runtime.agent_settings.its_credential_id)
                     issue_mcp = McpServerClient(
                         runtime.mcp_system_def["command"][0],
                         runtime.mcp_system_def["command"][1:],
                         env={
-                            "TRELLO_API_KEY": active_issue_system.its_api_key,
-                            "TRELLO_TOKEN": active_issue_system.its_token,
-                            "TRELLO_BASE_URL": active_issue_system.its_base_url,
+                            "TRELLO_API_KEY": credential.api_key,
+                            "TRELLO_TOKEN": credential.api_token,
+                            "TRELLO_BASE_URL": runtime.agent_settings.its_base_url,
                         },
                     )
                     await stack.enter_async_context(issue_mcp)

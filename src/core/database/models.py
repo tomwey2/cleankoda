@@ -113,8 +113,11 @@ class AgentSettingsDb(db.Model):
 
     # Issue tracking system: e.g., "TRELLO", "JIRA", "GITHUB ISSUES"
     its_type = db.Column(db.String(50), nullable=False, default=IssueTrackingSystemType.TRELLO)
-    its_api_key = db.Column(EncryptedString, nullable=True)
-    its_token = db.Column(EncryptedString, nullable=True)
+    its_credential_id = db.Column(
+        db.Integer,
+        db.ForeignKey("user_credentials.id", ondelete="SET NULL"),
+        nullable=True,
+    )
     its_base_url = db.Column(db.String(200), nullable=True)
     its_container_id = db.Column(db.String(100), nullable=True)
     its_parent_id = db.Column(db.String(100), nullable=True)
