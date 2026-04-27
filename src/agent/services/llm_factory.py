@@ -20,24 +20,30 @@ from langchain_ollama import ChatOllama
 from langchain_openai import ChatOpenAI
 from pydantic import SecretStr
 
-from src.core.config import get_env_settings
-from src.core.database.models import AgentSettingsDb
+from src.core.database.models import AgentSettingsDb, UserCredentialDb
+from src.core.services.credentials_service import get_credential_by_id
 
 logger = logging.getLogger(__name__)
 
 
-def _create_openai_llm(model: str, temperature: float) -> BaseChatModel:
-    api_key = get_env_settings().require_llm_api_key("openai")
+def _create_openai_llm(
+    model: str, temperature: float, credential: UserCredentialDb
+) -> BaseChatModel:
+    api_key = credential.api_key
     return ChatOpenAI(model=model, temperature=temperature, api_key=SecretStr(api_key))
 
 
-def _create_mistral_llm(model: str, temperature: float) -> BaseChatModel:
-    api_key = get_env_settings().require_llm_api_key("mistral")
+def _create_mistral_llm(
+    model: str, temperature: float, credential: UserCredentialDb
+) -> BaseChatModel:
+    api_key = credential.api_key
     return ChatMistralAI(model_name=model, temperature=temperature, api_key=SecretStr(api_key))
 
 
-def _create_google_llm(model: str, temperature: float) -> BaseChatModel:
-    api_key = get_env_settings().require_llm_api_key("google")
+def _create_google_llm(
+    model: str, temperature: float, credential: UserCredentialDb
+) -> BaseChatModel:
+    api_key = credential.api_key
     return ChatGoogleGenerativeAI(
         model=model,
         temperature=temperature,
@@ -46,18 +52,23 @@ def _create_google_llm(model: str, temperature: float) -> BaseChatModel:
     )
 
 
-def _create_openrouter_llm(model: str, temperature: float) -> BaseChatModel:
-    api_key = get_env_settings().require_llm_api_key("openrouter")
+def _create_openrouter_llm(
+    model: str, temperature: float, credential: UserCredentialDb
+) -> BaseChatModel:
+    api_key = credential.api_key
+    base_url = credential.base_url
     return ChatOpenAI(
         model=model,
         temperature=temperature,
-        base_url="https://openrouter.ai/api/v1",
+        base_url=base_url,
         api_key=SecretStr(api_key),
     )
 
 
-def _create_anthropic_llm(model: str, temperature: float) -> BaseChatModel:
-    api_key = get_env_settings().require_llm_api_key("anthropic")
+def _create_anthropic_llm(
+    model: str, temperature: float, credential: UserCredentialDb
+) -> BaseChatModel:
+    api_key = credential.api_key
     return ChatAnthropic(
         model=model,
         temperature=temperature,
@@ -65,9 +76,11 @@ def _create_anthropic_llm(model: str, temperature: float) -> BaseChatModel:
     )
 
 
-def _create_ollama_llm(model: str, temperature: float) -> BaseChatModel:
-    base_url = get_env_settings().ollama_base_url
-    api_key = get_env_settings().ollama_api_key
+def _create_ollama_llm(
+    model: str, temperature: float, credential: UserCredentialDb
+) -> BaseChatModel:
+    base_url = credential.base_url
+    api_key = credential.api_key
     logger.info("Using Ollama base URL: %s", base_url)
     return ChatOllama(
         model=model,
@@ -78,13 +91,13 @@ def _create_ollama_llm(model: str, temperature: float) -> BaseChatModel:
 
 
 LLM_PROVIDERS: Dict[str, Callable[[str, float], BaseChatModel]] = {
-    "openai": _create_openai_llm,
-    "mistral": _create_mistral_llm,
-    "google": _create_google_llm,
-    "gemini": _create_google_llm,
-    "openrouter": _create_openrouter_llm,
-    "ollama": _create_ollama_llm,
-    "anthropic": _create_anthropic_llm,
+    "OPENAI": _create_openai_llm,
+    "MISTRAL": _create_mistral_llm,
+    "GOOGLE": _create_google_llm,
+    "GEMINI": _create_google_llm,
+    "OPENROUTER": _create_openrouter_llm,
+    "OLLAMA": _create_ollama_llm,
+    "ANTHROPIC": _create_anthropic_llm,
 }
 
 
@@ -98,8 +111,8 @@ def get_llm(agent_settings: AgentSettingsDb, large: bool = True) -> BaseChatMode
     :raises ValueError: If provider is not specified, model is not specified,
                        or provider is unknown.
     """
-    provider = agent_settings.llm_provider
-    if not provider:
+    credential = get_credential_by_id(agent_settings.llm_credential_id)
+    if not credential.credential_type:
         raise ValueError("llm_provider not specified")
 
     model = agent_settings.llm_model_large if large else agent_settings.llm_model_small
@@ -109,14 +122,14 @@ def get_llm(agent_settings: AgentSettingsDb, large: bool = True) -> BaseChatMode
     temperature_value = agent_settings.llm_temperature
     temperature = float(temperature_value or 0.0)
 
-    provider_factory = LLM_PROVIDERS.get(provider)
+    provider_factory = LLM_PROVIDERS.get(credential.credential_type)
     if not provider_factory:
-        raise ValueError(f"Unknown LLM provider: {provider}")
+        raise ValueError(f"Unknown LLM provider: {credential.credential_type}")
 
     logger.debug(
         "Creating LLM: provider=%s, model=%s, temperature=%s",
-        provider,
+        credential.credential_type,
         model,
         temperature,
     )
-    return provider_factory(model, temperature)
+    return provider_factory(model, temperature, credential)
