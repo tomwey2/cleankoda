@@ -64,6 +64,8 @@ def save_credential(user_id: str, data: dict) -> UserCredentialDb:
         credential.name = data["name"]
     if "username_or_email" in data:
         credential.username_or_email = data["username_or_email"]
+    if "base_url" in data:
+        credential.base_url = data["base_url"]
 
     # Encrypted fields
     if "password" in data and data["password"]:

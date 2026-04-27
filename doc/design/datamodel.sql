@@ -71,6 +71,9 @@ CREATE TABLE user_credentials (
     -- da diese Information ohne das Passwort nutzlos für Angreifer ist.
     username_or_email VARCHAR(100),
 
+    -- Base URL for the credential (e.g., for Ollama)
+    base_url VARCHAR(200),
+
     -- Hier liegen die verschlüsselten Daten (mit pgcrypto)
     password BYTEA,
     api_key BYTEA,

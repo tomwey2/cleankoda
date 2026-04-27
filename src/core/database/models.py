@@ -62,6 +62,7 @@ class UserCredentialDb(db.Model):
     credential_type = db.Column(db.String(50), nullable=False)
     name = db.Column(db.String(100), nullable=False)
     username_or_email = db.Column(db.String(100), nullable=True)
+    base_url = db.Column(db.String(200), nullable=True)
 
     # The encrypted BYTEA fields from Supabase are mapped via the EncryptedString.
     password = db.Column(EncryptedString, nullable=True)
