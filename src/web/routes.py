@@ -102,16 +102,40 @@ def credentials_new_selection():
             "description": "API Key and Token for Trello",
         },
         {
-            "id": "LLM",
-            "name": "LLM Provider API Key",
+            "id": "MISTRAL",
+            "name": "Mistral API Key",
             "icon": "bi-cpu",
-            "description": "API Key for Mistral, OpenAI, Anthropic, etc.",
+            "description": "API Key for Mistral",
+        },
+        {
+            "id": "GEMINI",
+            "name": "Gemini API Key",
+            "icon": "bi-cpu",
+            "description": "API Key for Gemini",
+        },
+        {
+            "id": "OPENAI",
+            "name": "OpenAI API Key",
+            "icon": "bi-cpu",
+            "description": "API Key for OpenAI",
+        },
+        {
+            "id": "ANTHROPIC",
+            "name": "Anthropic API Key",
+            "icon": "bi-cpu",
+            "description": "API Key for Anthropic",
         },
         {
             "id": "OLLAMA",
             "name": "Local LLM with Ollama",
             "icon": "bi-cpu",
             "description": "Ollama API Key",
+        },
+        {
+            "id": "OPENROUTER",
+            "name": "OpenRouter API Key",
+            "icon": "bi-cpu",
+            "description": "OpenRouter API Key",
         },
         {
             "id": "BASIC_AUTH",
