@@ -5,7 +5,7 @@ separating concerns from the route handlers and database operations.
 """
 
 import logging
-from typing import Any, Dict, Optional, Tuple
+from typing import Any, Dict, Optional
 
 from src.core.its.github_client import get_project_id_sync
 from src.core.config import get_env_settings
@@ -20,7 +20,7 @@ from src.core.types import IssueTrackingSystemType
 logger = logging.getLogger(__name__)
 
 
-def save_settings(user_id: str, agent_settings: AgentSettingsDb) -> AgentSettingsDb:
+def save_settings(agent_settings: AgentSettingsDb) -> AgentSettingsDb:
     """Save settings from validated schema to database.
 
     Args:

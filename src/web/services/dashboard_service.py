@@ -13,7 +13,6 @@ from src.core.services import (
     agent_actions_service,
     agent_states_service,
     agent_settings_service,
-    users_service,
 )
 from src.core.types import PlanState, IssueStateType
 

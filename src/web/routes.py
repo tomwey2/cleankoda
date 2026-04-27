@@ -58,8 +58,7 @@ def settings():
 
     if request.method == "POST":
         try:
-            user_id = users_service.get_current_user_id()
-            settings_service.save_settings(user_id, agent_settings)
+            settings_service.save_settings(agent_settings)
             flash("Settings saved successfully!", "success")
         except Exception as e:  # pylint: disable=broad-exception-caught
             logger.exception("Failed to save settings")
