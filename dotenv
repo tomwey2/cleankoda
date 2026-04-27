@@ -18,9 +18,6 @@ WORKBENCH=cleankoda-workbench
 INSTANCE_DIR=./src/instance
 ENCRYPTION_KEY=your_encryption_key_here
 
-# GitHub Credentials
-GITHUB_TOKEN=your_github_token_here
-
 # LLM API keys (only set if you want to use them)
 #MISTRAL_API_KEY=your_mistral_api_key_here
 #GOOGLE_API_KEY=your_google_api_key_here
