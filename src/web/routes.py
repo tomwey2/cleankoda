@@ -108,6 +108,12 @@ def credentials_new_selection():
             "description": "API Key for Mistral, OpenAI, Anthropic, etc.",
         },
         {
+            "id": "OLLAMA",
+            "name": "Local LLM with Ollama",
+            "icon": "bi-cpu",
+            "description": "Ollama API Key",
+        },
+        {
             "id": "BASIC_AUTH",
             "name": "Basic Auth",
             "icon": "bi-person",
