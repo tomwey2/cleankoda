@@ -41,6 +41,11 @@ def save_settings(agent_settings: AgentSettingsDb) -> AgentSettingsDb:
     if is_github_issue_system and schema.its_config:
         _fetch_github_project_id(schema, agent_settings)
 
+    if agent_settings.llm_credential_id:
+        cred = credentials_service.get_credential_by_id(agent_settings.llm_credential_id)
+        if cred:
+            agent_settings.llm_provider = cred.credential_type
+
     if not agent_settings.id:
         db.session.add(agent_settings)
 
@@ -139,6 +144,16 @@ def get_template_context(settings: AgentSettingsDb) -> Dict[str, Any]:
     all_credentials = credentials_service.get_credentials_for_user(settings.user_id)
     trello_credentials = [c for c in all_credentials if c.credential_type == "TRELLO"]
     github_credentials = [c for c in all_credentials if c.credential_type == "GITHUB"]
+    llm_credential_types = [
+        "MISTRAL",
+        "GOOGLE",
+        "OPENAI",
+        "ANTHROPIC",
+        "OLLAMA",
+        "OPENROUTER",
+        "GEMINI",
+    ]
+    llm_credentials = [c for c in all_credentials if c.credential_type in llm_credential_types]
 
     return {
         "settings": settings,
@@ -149,6 +164,7 @@ def get_template_context(settings: AgentSettingsDb) -> Dict[str, Any]:
         "agent_image": agent_image,
         "trello_credentials": trello_credentials,
         "github_credentials": github_credentials,
+        "llm_credentials": llm_credentials,
     }
 
 

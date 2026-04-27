@@ -138,7 +138,12 @@ class AgentSettingsDb(db.Model):
     repo_url = db.Column(db.String(200))
 
     # LLM system: e.g., "OPENAI", "ANTHROPIC", "GOOGLE"
-    llm_provider = db.Column(db.String(50), nullable=False)
+    llm_provider = db.Column(db.String(50), nullable=True)
+    llm_credential_id = db.Column(
+        db.Integer,
+        db.ForeignKey("user_credentials.id", ondelete="SET NULL"),
+        nullable=True,
+    )
     llm_model_large = db.Column(db.String(100), nullable=True)
     llm_model_small = db.Column(db.String(100), nullable=True)
     llm_temperature = db.Column(db.String(16), nullable=True)

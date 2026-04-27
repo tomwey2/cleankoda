@@ -40,6 +40,7 @@ def form_to_schema() -> SettingsFormSchema:
 
     llm_config = LLMConfigSchema(
         llm_provider=request.form.get("llm_provider", ""),
+        llm_credential_id=request.form.get("llm_credential_id"),
         llm_model_large=request.form.get("llm_model_large"),
         llm_model_small=request.form.get("llm_model_small"),
         llm_temperature=request.form.get("llm_temperature"),
@@ -87,6 +88,7 @@ def schema_to_model(schema: SettingsFormSchema, settings: AgentSettingsDb) -> Ag
 def _apply_llm_config(llm_schema: LLMConfigSchema, settings: AgentSettingsDb) -> None:
     """Apply LLM configuration from schema to model."""
     settings.llm_provider = llm_schema.llm_provider
+    settings.llm_credential_id = llm_schema.llm_credential_id
     settings.llm_model_large = llm_schema.llm_model_large
     settings.llm_model_small = llm_schema.llm_model_small
     settings.llm_temperature = llm_schema.llm_temperature
@@ -129,6 +131,7 @@ def model_to_form_data(settings: AgentSettingsDb) -> Dict[str, Any]:
         "repo_url": settings.repo_url,
         "repo_credential_id": settings.repo_credential_id,
         "llm_provider": settings.llm_provider,
+        "llm_credential_id": settings.llm_credential_id,
         "llm_model_large": settings.llm_model_large,
         "llm_model_small": settings.llm_model_small,
         "llm_temperature": settings.llm_temperature,

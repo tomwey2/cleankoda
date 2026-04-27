@@ -47,18 +47,30 @@ class ItsConfigSchema(BaseModel):
 class LLMConfigSchema(BaseModel):
     """Schema for LLM configuration form data."""
 
-    llm_provider: str = Field(default="mistral", description="LLM provider name")
+    llm_provider: Optional[str] = Field(default=None, description="LLM provider name")
+    llm_credential_id: Optional[int] = Field(default=None, description="LLM Credential ID")
     llm_model_large: Optional[str] = Field(default=None, description="Large model name")
     llm_model_small: Optional[str] = Field(default=None, description="Small model name")
     llm_temperature: Optional[str] = Field(default=None, description="LLM temperature")
 
     @field_validator("llm_provider", mode="before")
     @classmethod
-    def default_provider(cls, v: Optional[str]) -> str:
-        """Default to mistral if empty."""
+    def default_provider(cls, v: Optional[str]) -> Optional[str]:
+        """Return provider or None if empty."""
         if not v or v == "":
-            return "mistral"
+            return None
         return v
+
+    @field_validator("llm_credential_id", mode="before")
+    @classmethod
+    def parse_llm_credential_id(cls, v) -> Optional[int]:
+        """Parse llm credential id, defaulting to None on error or empty string."""
+        if not v or v == "":
+            return None
+        try:
+            return int(v)
+        except (ValueError, TypeError):
+            return None
 
     @field_validator("llm_model_large", "llm_model_small", "llm_temperature", mode="before")
     @classmethod
