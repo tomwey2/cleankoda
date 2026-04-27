@@ -129,6 +129,11 @@ class AgentSettingsDb(db.Model):
 
     # Repo system: e.g., "GITHUB", "BITBUCKET"
     repo_type = db.Column(db.String(50), nullable=False, default="GITHUB")
+    repo_credential_id = db.Column(
+        db.Integer,
+        db.ForeignKey("user_credentials.id", ondelete="SET NULL"),
+        nullable=True,
+    )
     repo_url = db.Column(db.String(200))
 
     # LLM system: e.g., "OPENAI", "ANTHROPIC", "GOOGLE"
