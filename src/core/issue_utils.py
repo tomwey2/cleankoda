@@ -4,11 +4,10 @@ import logging
 from datetime import datetime
 
 
-from src.core.its.issue_tracking_system import (  # pylint: disable=unused-import
+from src.core.its.issue_tracking_system import (
     IssueTrackingSystem,
     Issue,
 )
-from src.agent.services.pull_request import check_pr_exists_for_branch
 
 logger = logging.getLogger(__name__)
 
@@ -65,7 +64,6 @@ async def fetch_review_comments(
     issue_id: str,
     in_progress_state_name: str,
     in_review_state_name: str,
-    repo_branch_name: str,
 ) -> list:
     """
     Fetch comments from review if issue was returned from review to in-progress.
@@ -84,12 +82,6 @@ async def fetch_review_comments(
     # if issue was in review and returned to in-progress,
     # fetch comments between review and move to in-progress
     all_comments = await its.get_comments(issue_id)
-
-    if its.get_type() == "github":
-        # For GitHub, only return last comment if a PR exists for the branch
-        if repo_branch_name and check_pr_exists_for_branch(repo_branch_name):
-            return all_comments[-1:] if all_comments else []
-        return []
 
     latest_move = await get_latest_move_to_in_progress(
         its, issue_id, in_review_state_name, in_progress_state_name

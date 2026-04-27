@@ -16,8 +16,9 @@ from src.agent.services.summaries import (
 from src.agent.services.pull_request import create_or_update_pr
 from src.agent.state import AgentState, AgentSummary
 from src.agent.utils import get_workspace
-from src.core.config import get_env_settings
 from src.core.types import IssueType
+from src.core.database.models import AgentSettingsDb, UserCredentialDb
+from src.core.services.credentials_service import get_credential_by_id
 
 logger = logging.getLogger(__name__)
 
@@ -30,25 +31,41 @@ ROLE_PREFIX_MAP = {
 }
 
 
-def create_pull_request_node():
+def create_pull_request_node(agent_settings: AgentSettingsDb):
     """Create a pull request node"""
+    repo_credential: UserCredentialDb | None = get_credential_by_id(
+        agent_settings.repo_credential_id
+    )
+    if not repo_credential:
+        raise ValueError("No repo credential found")
 
     async def pull_request_node(state: AgentState) -> Dict[str, Any]:
         if state["current_node"] != "pull_request":
             logger.info("--- PULL REQUEST node ---")
-        success, summary_entries, repo_pr_url, repo_pr_number = _create_or_update_pr(state)
+
+        repo_pr_url, repo_pr_number = None, None
+        success, summary_entries = _commit_and_push(repo_credential, state)
         if success:
-            logger.info("Pull request created/updated successfully")
-        else:
-            logger.error("Pull request creation/update failed")
+            success, summary_entries, repo_pr_url, repo_pr_number = _create_or_update_pr(
+                repo_credential, state
+            )
+
+        user_message = (
+            "Review the pull request. If you approve it, move the task to 'done'.\n"
+            + "If you reject it, comment the task and move it to 'in progress'."
+        )
+
+        if not success:
+            user_message = (
+                "Pull request creation/update failed. Please review the logs and try again."
+            )
 
         return {
             "current_node": "pull_request",
             "agent_summary": summary_entries,
             "repo_pr_url": repo_pr_url,
             "repo_pr_number": repo_pr_number,
-            "user_message": "Review the pull request. If you approve it, move the task to 'done'.\n"
-            + "If you reject it, comment the task and move it to 'in progress'.",
+            "user_message": user_message,
         }
 
     return pull_request_node
@@ -62,7 +79,7 @@ def _append_summary(
     return summary_entries
 
 
-def _create_or_update_pr(state: AgentState):
+def _commit_and_push(repo_credential: UserCredentialDb, state: AgentState):
     summary_entries = list(state.get("agent_summary") or [])
 
     has_changes = git_has_changes(get_workspace())
@@ -87,47 +104,48 @@ def _create_or_update_pr(state: AgentState):
 
     if failure_detected:
         summary_entries = _append_summary(summary_entries, state, "PR", failure_reason)
-        return False, summary_entries, None, None
+        return False, summary_entries
 
-    push_success, push_msg = git_push(
-        work_dir=get_workspace(), token=get_env_settings().github_token
-    )
+    push_success, push_msg = git_push(work_dir=get_workspace(), token=repo_credential.api_token)
     if not push_success:
         logger.error("Git push failed: %s", push_msg)
         failure_reason = f"Pull request failed: git push failed ({push_msg})"
         summary_entries = _append_summary(summary_entries, state, "PR", failure_reason)
-        return False, summary_entries, None, None
+        return False, summary_entries
+
+    return True, summary_entries
+
+
+def _create_or_update_pr(repo_credential: UserCredentialDb, state: AgentState):
+    summary_entries = list(state.get("agent_summary") or [])
 
     pr_title, pr_body = _build_pr_inputs(state)
     pr_success, pr_msg, repo_pr_url = create_or_update_pr(
         title=pr_title,
         body=pr_body,
+        token=repo_credential.api_token,
     )
     if not pr_success:
-        logger.error("PR creation/update failed: %s", pr_msg)
         summary_entries = _append_summary(
             summary_entries,
             state,
             "PR",
             f"Pull request creation/update failed: {pr_msg}",
         )
+        logger.error("Pull request creation failed: %s", pr_msg)
         return False, summary_entries, None, None
 
-    logger.info("Git workflow completed successfully: %s", pr_msg)
     if not repo_pr_url:
-        logger.warning("PR creation succeeded but no URL was returned")
         summary_entries = _append_summary(
             summary_entries,
             state,
             "PR",
             "Pull request missing URL despite success",
         )
+        logger.warning("PR creation succeeded but no URL was returned")
         return False, summary_entries, None, None
 
-    issue_id = state.get("issue_id")
-    repo_pr_number = None
-    if issue_id and repo_pr_url:
-        repo_pr_number = _extract_repo_pr_number_from_url(repo_pr_url)
+    repo_pr_number = _extract_repo_pr_number_from_url(repo_pr_url)
 
     summary_entries = _append_summary(
         summary_entries,
@@ -135,6 +153,7 @@ def _create_or_update_pr(state: AgentState):
         "PR",
         f"Pull request available at\n\n {repo_pr_url}",
     )
+    logger.info("Pull request created/updated successfully")
     return True, summary_entries, repo_pr_url, repo_pr_number
 
 

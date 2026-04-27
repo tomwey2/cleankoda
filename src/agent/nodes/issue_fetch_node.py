@@ -19,8 +19,10 @@ from src.core.issue_utils import (
     fetch_issue_from_state,
 )
 from src.agent.state import AgentState
-from src.core.database.models import AgentSettingsDb
+from src.core.database.models import AgentSettingsDb, UserCredentialDb
 from src.core.types import IssueStateType
+from src.core.services.credentials_service import get_credential_by_id
+
 
 logger = logging.getLogger(__name__)
 
@@ -28,6 +30,11 @@ logger = logging.getLogger(__name__)
 def create_issue_fetch_node(agent_settings: AgentSettingsDb):
     """Creates an issue fetch node for the agent graph."""
     its = create_issue_tracking_system(agent_settings)
+    repo_credential: UserCredentialDb | None = get_credential_by_id(
+        agent_settings.repo_credential_id
+    )
+    if not repo_credential:
+        raise ValueError("No repo credential found")
 
     async def issue_fetch(state: AgentState) -> dict:  # pylint: disable=unused-argument
         """
@@ -62,9 +69,8 @@ def create_issue_fetch_node(agent_settings: AgentSettingsDb):
                     issue.id,
                     its.get_state_in_progress(),
                     its.get_state_in_review(),
-                    state["repo_branch_name"],
                 )
-                pr_review_message = _fetch_pr_review_info(state, issue.id)
+                pr_review_message = _fetch_pr_review_info(repo_credential, state, issue.id)
 
             if issue_is_active and issue_from_todo:
                 # if the issue is new and has the state "todo" then move it to "in progress"
@@ -128,7 +134,9 @@ async def _resolve_issue(issue_id: str | None, its: IssueTrackingSystem) -> Issu
     return issue
 
 
-def _fetch_pr_review_info(state: AgentState, issue_id: str) -> str:
+def _fetch_pr_review_info(
+    repo_credential: UserCredentialDb, state: AgentState, issue_id: str
+) -> str:
     """
     Fetch PR review info if a PR exists for the issue.
 
@@ -143,13 +151,15 @@ def _fetch_pr_review_info(state: AgentState, issue_id: str) -> str:
     repo_branch_name = state["repo_branch_name"]
     pr = None
     if repo_branch_name:
-        pr = get_latest_open_pr_for_branch(repo_branch_name)
+        pr = get_latest_open_pr_for_branch(repo_branch_name, repo_credential.api_token)
 
     if not pr:
         logger.info("No PR found for issue %s", issue_id)
         return ""
 
-    is_approved, rejection_reviews, code_comments = get_latest_pr_review_status(pr.number)
+    is_approved, rejection_reviews, code_comments = get_latest_pr_review_status(
+        pr.number, token=repo_credential.api_token
+    )
 
     if is_approved:
         logger.info("PR #%d for issue %s is approved", pr.number, issue_id)

@@ -67,20 +67,17 @@ class PRReviewComment:
     created_at: str
 
 
-def get_latest_open_pr_for_branch(repo_branch_name: str) -> Optional[PullRequest]:
+def get_latest_open_pr_for_branch(repo_branch_name: str, token: str) -> Optional[PullRequest]:
     """
     Get the latest open pull request for the given branch.
 
     Args:
         repo_branch_name: The name of the branch to check
+        token: GitHub token
 
     Returns:
         PullRequest object if an open PR exists, None otherwise
     """
-    token = get_env_settings().github_token
-    if not token:
-        logger.warning("GITHUB_TOKEN not set, cannot fetch PR")
-        return None
 
     try:
         owner, repo = get_github_repo_info()
@@ -114,21 +111,14 @@ def get_latest_open_pr_for_branch(repo_branch_name: str) -> Optional[PullRequest
                     updated_at=pr_data["updated_at"],
                 )
                 logger.info(
-                    "Found PR #%d for branch '%s': %s",
-                    pr.number,
-                    repo_branch_name,
-                    pr.title
+                    "Found PR #%d for branch '%s': %s", pr.number, repo_branch_name, pr.title
                 )
                 return pr
 
             logger.info("No open PR found for branch '%s'", repo_branch_name)
             return None
 
-        logger.warning(
-            "PR fetch failed with status %d: %s",
-            response.status_code,
-            response.text
-        )
+        logger.warning("PR fetch failed with status %d: %s", response.status_code, response.text)
         return None
 
     except Exception as e:  # pylint: disable=broad-exception-caught
@@ -136,34 +126,32 @@ def get_latest_open_pr_for_branch(repo_branch_name: str) -> Optional[PullRequest
         return None
 
 
-def check_pr_exists_for_branch(repo_branch_name: str) -> bool:
+def check_pr_exists_for_branch(repo_branch_name: str, token: str) -> bool:
     """
     Check if a pull request exists for the given branch.
 
     Args:
         repo_branch_name: The name of the branch to check
+        token: GitHub token
 
     Returns:
         True if a PR exists for this branch, False otherwise
     """
-    return get_latest_open_pr_for_branch(repo_branch_name) is not None
+    return get_latest_open_pr_for_branch(repo_branch_name, token) is not None
 
 
-def create_or_update_pr(title: str, body: str) -> tuple[bool, str, Optional[str]]:
+def create_or_update_pr(title: str, body: str, token: str) -> tuple[bool, str, Optional[str]]:
     """
     Creates or updates a GitHub Pull Request.
 
     Args:
         title: PR title
         body: PR body/description
+        token: GitHub token
 
     Returns:
         Tuple of (success, message, repo_pr_url)
     """
-    token = get_env_settings().github_token
-    if not token:
-        logger.error("GITHUB_TOKEN missing for PR creation")
-        return False, "ERROR: GITHUB_TOKEN missing", None
 
     try:
         context = build_github_context(token)
@@ -446,9 +434,7 @@ def fetch_pr_review_comments(
                 )
                 for c in comments_data
             ]
-            logger.info(
-                "Fetched %d review comments for PR #%d", len(comments), repo_pr_number
-            )
+            logger.info("Fetched %d review comments for PR #%d", len(comments), repo_pr_number)
             return comments
 
         logger.warning(
