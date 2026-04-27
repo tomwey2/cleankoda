@@ -138,6 +138,7 @@ def get_template_context(settings: AgentSettingsDb) -> Dict[str, Any]:
 
     all_credentials = credentials_service.get_credentials_for_user(settings.user_id)
     trello_credentials = [c for c in all_credentials if c.credential_type == "TRELLO"]
+    github_credentials = [c for c in all_credentials if c.credential_type == "GITHUB"]
 
     return {
         "settings": settings,
@@ -147,6 +148,7 @@ def get_template_context(settings: AgentSettingsDb) -> Dict[str, Any]:
         "show_ollama_warning": show_ollama_warning,
         "agent_image": agent_image,
         "trello_credentials": trello_credentials,
+        "github_credentials": github_credentials,
     }
 
 

@@ -81,6 +81,7 @@ class SettingsFormSchema(BaseModel):
     agent_gender: Optional[str] = Field(default=None, description="Agent gender")
     repo_type: str = Field(default="GITHUB", description="Repository type")
     repo_url: Optional[str] = Field(default=None, description="GitHub repository URL")
+    repo_credential_id: Optional[int] = Field(default=None, description="Repo Credential ID")
 
     its_config: ItsConfigSchema = Field(
         default_factory=ItsConfigSchema, description="Issue tracking system configuration"
@@ -117,3 +118,14 @@ class SettingsFormSchema(BaseModel):
         if isinstance(v, str):
             return v.lower() in ("true", "1", "on", "yes")
         return bool(v)
+
+    @field_validator("repo_credential_id", mode="before")
+    @classmethod
+    def parse_repo_credential_id(cls, v) -> Optional[int]:
+        """Parse repo credential id, defaulting to None on error or empty string."""
+        if not v or v == "":
+            return None
+        try:
+            return int(v)
+        except (ValueError, TypeError):
+            return None

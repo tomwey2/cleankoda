@@ -202,6 +202,17 @@
                                     </select>
                                 </div>
                                 <div class="mb-3">
+                                    <label for="repo_credential_id" class="form-label">GitHub Credential</label>
+                                    <select class="form-select" id="repo_credential_id" name="repo_credential_id">
+                                        <option value="">-- Select Credential --</option>
+                                        {% for cred in github_credentials %}
+                                        <option value="{{ cred.id }}" {% if form_data.repo_credential_id == cred.id %}selected{% endif %}>
+                                            {{ cred.name }}
+                                        </option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
+                                <div class="mb-3">
                                     <label for="repo_url" class="form-label">Repository URL</label>
                                     <input type="text" class="form-control" id="repo_url" name="repo_url"
                                         value="{{ settings.repo_url }}" placeholder="https://github.com/org/repo.git">

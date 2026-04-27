@@ -53,6 +53,7 @@ def form_to_schema() -> SettingsFormSchema:
         is_active="is_active" in request.form,
         repo_type=request.form.get("repo_type"),
         repo_url=request.form.get("repo_url"),
+        repo_credential_id=request.form.get("repo_credential_id"),
         its_config=its_config,
         llm_config=llm_config,
     )
@@ -75,6 +76,7 @@ def schema_to_model(schema: SettingsFormSchema, settings: AgentSettingsDb) -> Ag
     settings.is_active = schema.is_active
     settings.repo_type = schema.repo_type
     settings.repo_url = schema.repo_url
+    settings.repo_credential_id = schema.repo_credential_id
 
     _apply_llm_config(schema.llm_config, settings)
     _apply_its_config(schema.its_config, settings)
@@ -125,6 +127,7 @@ def model_to_form_data(settings: AgentSettingsDb) -> Dict[str, Any]:
         "its_credential_id": settings.its_credential_id,
         "repo_type": settings.repo_type,
         "repo_url": settings.repo_url,
+        "repo_credential_id": settings.repo_credential_id,
         "llm_provider": settings.llm_provider,
         "llm_model_large": settings.llm_model_large,
         "llm_model_small": settings.llm_model_small,
