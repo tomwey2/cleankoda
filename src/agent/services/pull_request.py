@@ -13,7 +13,6 @@ from src.agent.services.git_workspace import (
     parse_github_owner_repo,
 )
 from src.agent.utils import get_workspace
-from src.core.config import get_env_settings
 
 logger = logging.getLogger(__name__)
 
@@ -315,26 +314,22 @@ def get_github_repo_info_with_branch() -> tuple[Optional[str], Optional[str], Op
 
 def fetch_pr_reviews(
     repo_pr_number: int,
+    repo_token: str,
     owner: Optional[str] = None,
     repo: Optional[str] = None,
-    token: Optional[str] = None,
 ) -> List[PRReview]:
     """
     Fetch all reviews for a pull request.
 
     Args:
         repo_pr_number: The PR number to fetch reviews for
+        repo_token: GitHub token
         owner: Repository owner (optional, derived from git if not provided)
         repo: Repository name (optional, derived from git if not provided)
-        token: GitHub token (optional, uses GITHUB_TOKEN env var if not provided)
 
     Returns:
         List of PRReview objects
     """
-    token = token or get_env_settings().github_token
-    if not token:
-        logger.warning("GITHUB_TOKEN not set, cannot fetch PR reviews")
-        return []
 
     try:
         if not owner or not repo:
@@ -344,7 +339,7 @@ def fetch_pr_reviews(
             return []
 
         headers = {
-            "Authorization": f"token {token}",
+            "Authorization": f"token {repo_token}",
             "Accept": "application/vnd.github.v3+json",
         }
 
@@ -380,26 +375,22 @@ def fetch_pr_reviews(
 
 def fetch_pr_review_comments(
     repo_pr_number: int,
+    token: str,
     owner: Optional[str] = None,
     repo: Optional[str] = None,
-    token: Optional[str] = None,
 ) -> List[PRReviewComment]:
     """
     Fetch line-level code review comments for a pull request.
 
     Args:
         repo_pr_number: The PR number to fetch comments for
+        token: GitHub token
         owner: Repository owner (optional, derived from git if not provided)
         repo: Repository name (optional, derived from git if not provided)
-        token: GitHub token (optional, uses GITHUB_TOKEN env var if not provided)
 
     Returns:
         List of PRReviewComment objects
     """
-    token = token or get_env_settings().github_token
-    if not token:
-        logger.warning("GITHUB_TOKEN not set, cannot fetch PR review comments")
-        return []
 
     try:
         if not owner or not repo:
@@ -451,9 +442,9 @@ def fetch_pr_review_comments(
 
 def get_latest_pr_review_status(
     repo_pr_number: int,
+    repo_token: str,
     owner: Optional[str] = None,
     repo: Optional[str] = None,
-    token: Optional[str] = None,
 ) -> tuple[bool, List[PRReview], List[PRReviewComment]]:
     """
     Get the latest review status for a pull request.
@@ -473,8 +464,8 @@ def get_latest_pr_review_status(
         - rejection_reviews: List of reviews with CHANGES_REQUESTED state
         - code_comments: List of line-level code review comments
     """
-    reviews = fetch_pr_reviews(repo_pr_number, owner, repo, token)
-    comments = fetch_pr_review_comments(repo_pr_number, owner, repo, token)
+    reviews = fetch_pr_reviews(repo_pr_number, repo_token, owner, repo)
+    comments = fetch_pr_review_comments(repo_pr_number, repo_token, owner, repo)
 
     if not reviews:
         return True, [], comments
@@ -509,7 +500,7 @@ def fetch_pr_details(
     owner: str,
     repo: str,
     repo_pr_number: int,
-    token: Optional[str] = None,
+    token: str,
 ) -> Optional[PullRequest]:
     """
     Fetch basic PR details from GitHub.
@@ -518,15 +509,11 @@ def fetch_pr_details(
         owner: Repository owner
         repo: Repository name
         repo_pr_number: The PR number to fetch
-        token: GitHub token (optional, uses GITHUB_TOKEN env var if not provided)
+        token: GitHub token
 
     Returns:
         PullRequest object or None if not found
     """
-    token = token or get_env_settings().github_token
-    if not token:
-        logger.warning("GITHUB_TOKEN not set, cannot fetch PR details")
-        return None
 
     try:
         headers = {

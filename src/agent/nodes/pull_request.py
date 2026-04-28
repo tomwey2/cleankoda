@@ -4,15 +4,12 @@ import logging
 from typing import Any, Dict
 
 from src.agent.services.git_workspace import (
-    commit as git_commit,
-    has_changes as git_has_changes,
-    push as git_push,
-    stage_all as git_stage_all,
+    git_commit,
+    git_has_changes,
+    git_push,
+    git_stage_all,
 )
-from src.agent.services.summaries import (
-    append_agent_summary,
-    build_agent_summary_markdown,
-)
+from src.agent.services.summaries import append_agent_summary, build_agent_summary_markdown
 from src.agent.services.pull_request import create_or_update_pr
 from src.agent.state import AgentState, AgentSummary
 from src.agent.utils import get_workspace
@@ -106,7 +103,9 @@ def _commit_and_push(repo_credential: UserCredentialDb, state: AgentState):
         summary_entries = _append_summary(summary_entries, state, "PR", failure_reason)
         return False, summary_entries
 
-    push_success, push_msg = git_push(work_dir=get_workspace(), token=repo_credential.api_token)
+    push_success, push_msg = git_push(
+        work_dir=get_workspace(), repo_token=repo_credential.api_token
+    )
     if not push_success:
         logger.error("Git push failed: %s", push_msg)
         failure_reason = f"Pull request failed: git push failed ({push_msg})"

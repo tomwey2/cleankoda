@@ -12,19 +12,19 @@ from typing import Any, Optional
 
 import httpx
 
-from src.core.config import get_env_settings
 from src.core.database.models import AgentSettingsDb
+from src.core.services.credentials_service import get_repo_token
 
 logger = logging.getLogger(__name__)
 
 GITHUB_GRAPHQL_ENDPOINT = "/graphql"
 
 
-def _get_github_token(agent_settings: Optional[AgentSettingsDb] = None) -> str:
+def _get_github_token(agent_settings: AgentSettingsDb) -> str:
     """Get GitHub token from config or environment variable.
 
     Args:
-        agent_settings: Optional agent configuration containing token.
+        agent_settings: Agent configuration containing token.
 
     Returns:
         GitHub PAT token.
@@ -32,12 +32,7 @@ def _get_github_token(agent_settings: Optional[AgentSettingsDb] = None) -> str:
     Raises:
         ValueError: If no token is available.
     """
-    if agent_settings:
-        issue_system = agent_settings.get_issue_system("GITHUB")
-        if issue_system and issue_system.its_token:
-            return issue_system.its_token
-
-    token = get_env_settings().github_token
+    token = get_repo_token(agent_settings.repo_credential_id)
     if not token:
         raise ValueError(
             "GitHub token not configured. Set GITHUB_TOKEN environment variable "
@@ -679,105 +674,3 @@ async def create_draft_issue(
         "url": "",
         "column": column_name,
     }
-
-
-def get_project_id_sync(
-    owner: str,
-    project_number: str,
-    base_url: str = "https://api.github.com",
-    api_token: Optional[str] = None,
-) -> str:
-    """
-    Synchronous version of get_project_id for use during configuration save.
-
-    Args:
-        owner: The user or organization that owns the project.
-        project_number: The project number.
-        base_url: GitHub API base URL.
-        api_token: Optional GitHub PAT. Falls back to GITHUB_TOKEN env var.
-
-    Returns:
-        The project node ID.
-
-    Raises:
-        RuntimeError: If the project is not found.
-    """
-    if api_token:
-        token = api_token
-    else:
-        token = _get_github_token()
-    url = f"{base_url.rstrip('/')}{GITHUB_GRAPHQL_ENDPOINT}"
-
-    headers = {
-        "Authorization": f"Bearer {token}",
-        "Content-Type": "application/json",
-        "Accept": "application/json",
-    }
-
-    query_user = """
-    query($owner: String!, $number: Int!) {
-        user(login: $owner) {
-            projectV2(number: $number) {
-                id
-                title
-            }
-        }
-    }
-    """
-
-    try:
-        project_number_int = int(project_number)
-    except (TypeError, ValueError) as exc:
-        raise RuntimeError("Project number must be an integer") from exc
-
-    variables = {"owner": owner, "number": project_number_int}
-
-    with httpx.Client() as client:
-        response = client.post(
-            url,
-            headers=headers,
-            json={"query": query_user, "variables": variables},
-            timeout=30.0,
-        )
-
-    if response.status_code == 200:
-        data = response.json()
-        if "errors" not in data:
-            project = data.get("data", {}).get("user", {}).get("projectV2")
-            if project:
-                logger.info("Found user project: %s (id: %s)", project["title"], project["id"])
-                return project["id"]
-
-    query_org = """
-    query($owner: String!, $number: Int!) {
-        organization(login: $owner) {
-            projectV2(number: $number) {
-                id
-                title
-            }
-        }
-    }
-    """
-
-    with httpx.Client() as client:
-        response = client.post(
-            url,
-            headers=headers,
-            json={"query": query_org, "variables": variables},
-            timeout=30.0,
-        )
-
-    if response.status_code != 200:
-        raise RuntimeError(f"GitHub API request failed: {response.text}")
-
-    data = response.json()
-    if "errors" in data:
-        error_messages = [e.get("message", str(e)) for e in data["errors"]]
-        raise RuntimeError(f"GitHub API errors: {'; '.join(error_messages)}")
-
-    project = data.get("data", {}).get("organization", {}).get("projectV2")
-    if project:
-        logger.info("Found org project: %s (id: %s)", project["title"], project["id"])
-        return project["id"]
-
-    raise RuntimeError(f"GitHub Project #{project_number} not found for owner '{owner}'")

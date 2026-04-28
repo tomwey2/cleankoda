@@ -21,7 +21,6 @@ class EnvironmentSettings:  # pylint: disable=too-many-instance-attributes
     method to create an instance from the current environment.
 
     Most settings are optional and validated at use time via helper methods
-    like require_github_token() or require_llm_api_key(). This allows tests
     and features that don't need certain credentials to run without them.
 
     Attributes:
@@ -43,7 +42,6 @@ class EnvironmentSettings:  # pylint: disable=too-many-instance-attributes
         workbench_workspace: Path to workspace inside the workbench container. This
             is where commands are executed and defaults to the workspace value.
         agent_stack: Preferred agent stack (backend/frontend) override.
-        github_repo_url: Default GitHub repository URL.
         enable_mcp_servers: Whether to enable MCP servers.
         llm_calls_per_second: LLM calls per second.
         deployment_mode: Deployment mode (ON_PREMISE or SERVERLESS).
@@ -55,7 +53,7 @@ class EnvironmentSettings:  # pylint: disable=too-many-instance-attributes
     deployment_mode: str
 
     # GitHub integration (optional, validated at use time)
-    github_token: str | None = None
+    #    github_token: str | None = None
 
     # LLM API Keys (all optional, validated at use time)
     openai_api_key: str | None = None
@@ -73,7 +71,6 @@ class EnvironmentSettings:  # pylint: disable=too-many-instance-attributes
     workbench: str = ""
     workbench_workspace: str = ""
     agent_stack: str = ""
-    github_repo_url: str = ""
     enable_mcp_servers: bool = True
     llm_calls_per_second: float = 0.0
 
@@ -116,7 +113,7 @@ class EnvironmentSettings:  # pylint: disable=too-many-instance-attributes
             encryption_key=encryption_key,
             workspace=workspace,
             workbench_workspace=workbench_workspace,
-            github_token=os.environ.get("GITHUB_TOKEN"),
+            #            github_token=os.environ.get("GITHUB_TOKEN"),
             openai_api_key=os.environ.get("OPENAI_API_KEY"),
             mistral_api_key=os.environ.get("MISTRAL_API_KEY"),
             google_api_key=os.environ.get("GOOGLE_API_KEY"),
@@ -129,7 +126,6 @@ class EnvironmentSettings:  # pylint: disable=too-many-instance-attributes
             instance_dir=os.environ.get("INSTANCE_DIR", "/coding-agent/app/instance"),
             workbench=os.environ.get("WORKBENCH", "workbench-backend"),
             agent_stack=os.environ.get("AGENT_STACK", ""),
-            github_repo_url=os.environ.get("GITHUB_REPO_URL", ""),
             enable_mcp_servers=enable_mcp_servers,
             llm_calls_per_second=llm_calls_per_second,
             deployment_mode=deployment_mode,
@@ -150,25 +146,6 @@ class EnvironmentSettings:  # pylint: disable=too-many-instance-attributes
         db_dir = Path(self.instance_dir) if self.instance_dir else base_dir / "instance"
         db_dir = db_dir.resolve()
         return f"sqlite:///{db_dir / 'agent.db'}"
-
-    def require_github_token(self) -> str:
-        """Get GitHub token or raise if not configured.
-
-        Use this method when GitHub functionality is required. This allows
-        tests and features that don't use GitHub to run without a token.
-
-        Returns:
-            GitHub token string.
-
-        Raises:
-            ValueError: If GITHUB_TOKEN is not set with helpful context.
-        """
-        if not self.github_token:
-            raise ValueError(
-                "GITHUB_TOKEN is required for this operation. "
-                "Set the GITHUB_TOKEN environment variable or configure it in settings."
-            )
-        return self.github_token
 
     def require_encryption_key(self) -> str:
         """Get encryption key or raise if not configured.

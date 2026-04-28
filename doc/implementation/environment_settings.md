@@ -49,14 +49,6 @@ When your code requires specific settings, use validation helpers:
 ```python
 from app.core.config import get_env_settings
 
-def github_operation():
-    settings = get_env_settings()
-    
-    # Raises ValueError with helpful message if not set
-    token = settings.require_github_token()
-    
-    # Use token for GitHub API calls...
-```
 
 ### Caching Settings in Functions
 
@@ -70,7 +62,6 @@ def complex_operation():
     
     workspace = env.workspace
     workbench = env.workbench
-    token = env.require_github_token()
     
     # Use cached settings...
 ```
@@ -158,16 +149,6 @@ WORKBENCH_WORKSPACE=/coding-agent-workspace
 ```
 
 ## Validation Helper Methods
-
-### `require_github_token() -> str`
-
-Validates that GitHub token is configured. Use when GitHub functionality is required.
-
-```python
-token = settings.require_github_token()
-```
-
-**Raises:** `ValueError` if `GITHUB_TOKEN` is not set.
 
 ### `require_encryption_key() -> str`
 
@@ -284,55 +265,6 @@ The `frozen=True` parameter makes `EnvironmentSettings` immutable:
 
 ## Migration Guide
 
-### From Direct Environment Access
-
-**Before:**
-```python
-import os
-
-def my_function():
-    token = os.environ.get("GITHUB_TOKEN")
-    if not token:
-        raise ValueError("GITHUB_TOKEN not set")
-    # Use token...
-```
-
-**After:**
-```python
-from app.core.config import get_env_settings
-
-def my_function():
-    settings = get_env_settings()
-    token = settings.require_github_token()
-    # Use token...
-```
-
-### From Module-Level Constants
-
-**Before:**
-```python
-# config.py
-import os
-GITHUB_TOKEN = os.environ.get("GITHUB_TOKEN")
-
-# other_module.py
-from config import GITHUB_TOKEN
-
-def my_function():
-    # Use GITHUB_TOKEN...
-```
-
-**After:**
-```python
-# other_module.py
-from app.core.config import get_env_settings
-
-def my_function():
-    settings = get_env_settings()
-    token = settings.require_github_token()
-    # Use token...
-```
-
 ## Common Pitfalls
 
 ### Don't Cache Settings Globally
@@ -388,23 +320,6 @@ def my_function():
 
 ### Don't Silently Ignore Missing Settings
 
-**Bad:**
-```python
-def my_function():
-    settings = get_env_settings()
-    token = settings.github_token or "default-token"  # DON'T DO THIS
-    # Use token...
-```
-
-**Good:**
-```python
-def my_function():
-    settings = get_env_settings()
-    token = settings.require_github_token()  # DO THIS - explicit validation
-    # Use token...
-```
-
-**Why:** Silent fallbacks hide configuration errors.
 
 ## See Also
 

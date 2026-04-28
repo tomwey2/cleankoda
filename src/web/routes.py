@@ -216,7 +216,11 @@ def get_pr_json(owner: str, repo: str, repo_pr_number: int):
     Returns:
         JSON response with PR details, reviews, and comments
     """
-    pr = fetch_pr_details(owner, repo, repo_pr_number)
+    user_id = users_service.get_current_user_id()
+    agent_settings = agent_settings_service.get_or_create_agent_settings(user_id)
+    repo_token = credentials_service.get_repo_token(agent_settings.repo_credential_id)
+
+    pr = fetch_pr_details(owner, repo, repo_pr_number, repo_token)
     if not pr:
         return jsonify({"error": f"PR #{repo_pr_number} not found"}), 404
 
@@ -249,12 +253,16 @@ def get_pr_formatted(owner: str, repo: str, repo_pr_number: int):
     Returns:
         Plain text response with formatted PR review feedback
     """
-    pr = fetch_pr_details(owner, repo, repo_pr_number)
+    user_id = users_service.get_current_user_id()
+    agent_settings = agent_settings_service.get_or_create_agent_settings(user_id)
+    repo_token = credentials_service.get_repo_token(agent_settings.repo_credential_id)
+
+    pr = fetch_pr_details(owner, repo, repo_pr_number, repo_token)
     if not pr:
         return Response(f"PR #{repo_pr_number} not found", status=404, mimetype="text/plain")
 
     is_approved, rejection_reviews, code_comments = get_latest_pr_review_status(
-        repo_pr_number, owner, repo
+        repo_pr_number, repo_token, owner, repo
     )
 
     lines = [

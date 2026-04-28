@@ -158,7 +158,7 @@ def _fetch_pr_review_info(
         return ""
 
     is_approved, rejection_reviews, code_comments = get_latest_pr_review_status(
-        pr.number, token=repo_credential.api_token
+        pr.number, repo_credential.api_token
     )
 
     if is_approved:

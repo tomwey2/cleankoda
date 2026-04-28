@@ -98,3 +98,8 @@ def delete_credential(user_id: str, credential_id: int) -> bool:
     db.session.commit()
     logger.info("Deleted credential ID %s for user %s", credential_id, user_id)
     return True
+
+
+def get_repo_token(credential_id: int) -> str | None:
+    credential = get_credential_by_id(credential_id)
+    return credential.api_token if credential else None
