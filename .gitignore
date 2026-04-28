@@ -8,6 +8,7 @@ workflow_graph.mmd
 .zed
 .vscode/*
 !.vscode/launch.json
+*.log*
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
