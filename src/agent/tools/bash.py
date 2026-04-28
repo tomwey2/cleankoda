@@ -61,7 +61,11 @@ def _translate_workspace_path(command: str) -> str:
 @tool
 # pylint: disable=too-many-return-statements
 def bash(command: str) -> str:
-    """Execute a shell command inside the workbench container."""
+    """
+    Execute a shell command inside the workbench container.
+    You are ALREADY in the repository root folder (/coding-agent-workspace).
+    Do NOT use cd to navigate there.
+    """
     if not DOCKER_CLIENT:
         return "Error: Docker client not initialized. Is the socket mounted?"
 
@@ -75,8 +79,6 @@ def bash(command: str) -> str:
 
         # Translate any host workspace paths to container paths
         translated_command = _translate_workspace_path(command)
-
-        logger.info("Executing in workbench: %s", translated_command)
 
         exec_result = container.exec_run(
             ["bash", "-lc", translated_command],
