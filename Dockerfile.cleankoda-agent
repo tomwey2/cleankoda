@@ -32,7 +32,7 @@ RUN mkdir -p /coding-agent/servers && \
 
 # 5. Code kopieren
 COPY run_agent.py ./
-COPY app ./app
+COPY src ./src
 COPY prompts ./prompts
 
 # 6. Git Dummy-Config (damit der Agent committen kann)

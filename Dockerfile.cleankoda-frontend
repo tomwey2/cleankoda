@@ -22,7 +22,7 @@ RUN uv sync --frozen --no-install-project
 
 # 3. Code kopieren
 COPY run_web.py ./
-COPY app ./app
+COPY src ./src
 COPY prompts ./prompts
 
 # 4. Startbefehl
