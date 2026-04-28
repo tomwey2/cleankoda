@@ -125,7 +125,7 @@ def delete_agent_state(user_id: str, issue_id: str) -> bool:
     issue = get_agent_state_by_id(user_id=user_id, issue_id=issue_id)
 
     if issue:
-        logger.debug("Deleting issue from database: %s for user %s: %s", issue_id, user_id)
+        logger.debug("Deleting issue from database: %s for user %s", issue_id, user_id)
         db.session.delete(issue)
         db.session.commit()
         return True
