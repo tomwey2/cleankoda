@@ -111,16 +111,8 @@ The `dotenv` file of this repository can be used as template for your own `.env`
 
 > **Attention: never commit any sensitive information to a open repository! Therefore, the .env file is added to the .gitignore file. Do not change this!**
 
-You can provide the API key for each of providers you want to support. You can later select/switch the provider in the Dashboard of the Coding Agent.
-Supported providers:
-
-|Provider |Key environment variable|Additional config|
-|---------|------------------------|-----------------|
-|Mistral  |`MISTRAL_API_KEY`       | -               |
-|OpenAI   |`OPENAI_API_KEY`        | -               |
-|Google   |`GOOGLE_API_KEY`        | -               |
-|Anthropic|`ANTHROPIC_API_KEY`     | -               |
-|Ollama   |`OLLAMA_API_KEY` (optional for local setups)|`OLLAMA_BASE_URL` - default http://host.docker.internal:11434|
+In the agent settings you can provide the API key for each of providers you want to support. 
+Supported providers: MISTRAL, OPENAI, GOOGLE, ANTHROPIC and OLLAMA (local).
 
 Other options:
 

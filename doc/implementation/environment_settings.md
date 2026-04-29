@@ -81,14 +81,6 @@ These are validated in `EnvironmentSettings.from_env()` and will raise `ValueErr
 
 All other settings are optional and validated when used:
 
-- `GITHUB_TOKEN` - GitHub Personal Access Token
-- `OPENAI_API_KEY` - OpenAI API key
-- `MISTRAL_API_KEY` - Mistral AI API key
-- `GOOGLE_API_KEY` - Google/Gemini API key
-- `OPENROUTER_API_KEY` - OpenRouter API key
-- `ANTHROPIC_API_KEY` - Anthropic Claude API key
-- `OLLAMA_API_KEY` - Ollama API key (optional even for Ollama)
-- `OLLAMA_BASE_URL` - Ollama server URL (default: `http://host.docker.internal:11434`)
 - `SECRET_KEY` - Flask secret key (default: development key)
 - `DATABASE_URL` - Database connection URL (default: sqlite in instance/)
 - `INSTANCE_DIR` - Flast instance Directory used for sqlite database (default: instance/)

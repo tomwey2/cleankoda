@@ -27,14 +27,6 @@ class EnvironmentSettings:  # pylint: disable=too-many-instance-attributes
         encryption_key: Fernet encryption key for database encryption (required).
         workspace: Path to the agent's coding workspace (required). This is where
             the agent operates and may be a host path when running locally.
-        github_token: GitHub Personal Access Token for API access (optional).
-        openai_api_key: OpenAI API key for LLM access (optional).
-        mistral_api_key: Mistral AI API key for LLM access (optional).
-        google_api_key: Google AI/Gemini API key for LLM access (optional).
-        openrouter_api_key: OpenRouter API key for LLM access (optional).
-        anthropic_api_key: Anthropic Claude API key for LLM access (optional).
-        ollama_api_key: Ollama API key (optional).
-        ollama_base_url: Base URL for Ollama server.
         secret_key: Flask secret key for session management.
         database_url: Database connection URL (optional, uses sqlite default).
         instance_dir: Directory for sqlite database files and other instance data.
@@ -52,19 +44,7 @@ class EnvironmentSettings:  # pylint: disable=too-many-instance-attributes
     workspace: str
     deployment_mode: str
 
-    # GitHub integration (optional, validated at use time)
-    #    github_token: str | None = None
-
-    # LLM API Keys (all optional, validated at use time)
-    openai_api_key: str | None = None
-    mistral_api_key: str | None = None
-    google_api_key: str | None = None
-    openrouter_api_key: str | None = None
-    anthropic_api_key: str | None = None
-    ollama_api_key: str | None = None
-
     # Configuration with defaults
-    ollama_base_url: str = "http://host.docker.internal:11434"
     secret_key: str = "a-default-secret-key-for-development"
     database_url: str | None = None
     instance_dir: str = "/coding-agent/app/instance"
@@ -113,14 +93,6 @@ class EnvironmentSettings:  # pylint: disable=too-many-instance-attributes
             encryption_key=encryption_key,
             workspace=workspace,
             workbench_workspace=workbench_workspace,
-            #            github_token=os.environ.get("GITHUB_TOKEN"),
-            openai_api_key=os.environ.get("OPENAI_API_KEY"),
-            mistral_api_key=os.environ.get("MISTRAL_API_KEY"),
-            google_api_key=os.environ.get("GOOGLE_API_KEY"),
-            openrouter_api_key=os.environ.get("OPENROUTER_API_KEY"),
-            anthropic_api_key=os.environ.get("ANTHROPIC_API_KEY"),
-            ollama_api_key=os.environ.get("OLLAMA_API_KEY"),
-            ollama_base_url=os.environ.get("OLLAMA_BASE_URL", "http://host.docker.internal:11434"),
             secret_key=os.environ.get("SECRET_KEY", "a-default-secret-key-for-development"),
             database_url=os.environ.get("DATABASE_URL"),
             instance_dir=os.environ.get("INSTANCE_DIR", "/coding-agent/app/instance"),
@@ -161,63 +133,3 @@ class EnvironmentSettings:  # pylint: disable=too-many-instance-attributes
                 "ENCRYPTION_KEY is required. Set the ENCRYPTION_KEY environment variable."
             )
         return self.encryption_key
-
-    def require_llm_api_key(self, provider: str) -> str:
-        """Get LLM API key for a specific provider or raise if not configured.
-
-        Args:
-            provider: LLM provider name (e.g., "openai", "mistral", "google").
-
-        Returns:
-            API key string for the specified provider.
-
-        Raises:
-            ValueError: If the API key for the provider is not set.
-        """
-        provider_lower = provider.lower()
-
-        # Mapping of provider to (api_key, env_var_name, is_optional)
-        key_mapping = {
-            "openai": (self.openai_api_key, "OPENAI_API_KEY", False),
-            "mistral": (self.mistral_api_key, "MISTRAL_API_KEY", False),
-            "google": (self.google_api_key, "GOOGLE_API_KEY", False),
-            "openrouter": (self.openrouter_api_key, "OPENROUTER_API_KEY", False),
-            "anthropic": (self.anthropic_api_key, "ANTHROPIC_API_KEY", False),
-            "ollama": (self.ollama_api_key, "OLLAMA_API_KEY", True),
-        }
-
-        if provider_lower not in key_mapping:
-            raise ValueError(f"Unknown LLM provider: {provider}")
-
-        api_key, env_var, is_optional = key_mapping[provider_lower]
-
-        if not api_key and not is_optional:
-            raise ValueError(
-                f"{env_var} is required for {provider} LLM. Set the {env_var} environment variable."
-            )
-
-        return api_key or ""
-
-    def get_api_key(self, env_var_name: str) -> str:
-        """Get an API key by its environment variable name.
-
-        Args:
-            env_var_name: Name of the environment variable (e.g., "OPENAI_API_KEY").
-
-        Returns:
-            The API key value or empty string if not set.
-
-        Note:
-            This method returns empty string for missing keys to maintain
-            backward compatibility. Use require_llm_api_key() for strict validation.
-        """
-        key_map = {
-            "OPENAI_API_KEY": self.openai_api_key,
-            "MISTRAL_API_KEY": self.mistral_api_key,
-            "GOOGLE_API_KEY": self.google_api_key,
-            "OPENROUTER_API_KEY": self.openrouter_api_key,
-            "ANTHROPIC_API_KEY": self.anthropic_api_key,
-            "OLLAMA_API_KEY": self.ollama_api_key,
-        }
-
-        return key_map.get(env_var_name) or ""
