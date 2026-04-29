@@ -31,7 +31,7 @@ def create_issue_fetch_node(agent_settings: AgentSettingsDb):
     """Creates an issue fetch node for the agent graph."""
     its = create_issue_tracking_system(agent_settings)
     repo_credential: UserCredentialDb | None = get_credential_by_id(
-        agent_settings.repo_credential_id
+        agent_settings.vcs_credential_id
     )
     if not repo_credential:
         raise ValueError("No repo credential found")

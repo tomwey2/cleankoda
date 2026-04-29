@@ -32,7 +32,7 @@ def _get_github_token(agent_settings: AgentSettingsDb) -> str:
     Raises:
         ValueError: If no token is available.
     """
-    token = get_repo_token(agent_settings.repo_credential_id)
+    token = get_repo_token(agent_settings.vcs_credential_id)
     if not token:
         raise ValueError(
             "GitHub token not configured. Set GITHUB_TOKEN environment variable "

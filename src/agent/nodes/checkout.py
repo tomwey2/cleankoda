@@ -77,10 +77,10 @@ async def _checkout_issue_branch(
             issue_name,
         )
 
-        if agent_settings.repo_url:
-            checkout_branch(agent_settings.repo_url, repo_branch_name, get_workspace())
+        if agent_settings.vcs_repo_url:
+            checkout_branch(agent_settings.vcs_repo_url, repo_branch_name, get_workspace())
         else:
-            logger.warning("No repo_url in agent settings, skipping checkout")
+            logger.warning("No vcs_repo_url in agent settings, skipping checkout")
 
         real_git_branch = get_current_branch(get_workspace())
         logger.info("Current branch: %s", real_git_branch)
@@ -156,9 +156,9 @@ async def _checkout_branch_for_issue(
     existing_branches = _collect_repo_branch_names(repo)
     repo_branch_name = _resolve_unique_repo_branch_name(base_repo_branch_name, existing_branches)
 
-    if not agent_settings.repo_url:
+    if not agent_settings.vcs_repo_url:
         logger.warning(
-            "No repo_url in agent settings, cannot checkout branch for issue %s", issue_id
+            "No vcs_repo_url in agent settings, cannot checkout branch for issue %s", issue_id
         )
         return None
 

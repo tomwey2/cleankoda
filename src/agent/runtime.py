@@ -45,12 +45,12 @@ def prepare_runtime() -> Optional[RuntimeSetting]:
         "Agent settings:\n%s",
         json.dumps(agent_settings.as_dict(), indent=2, default=str),
     )
-    if not agent_settings.repo_url:
+    if not agent_settings.vcs_repo_url:
         logger.error("GitHub repository URL not provided.")
         return None
 
     logger.info("Workspace: %s", get_workspace())
-    ensure_repository_exists(agent_settings.repo_url, get_workspace())
+    ensure_repository_exists(agent_settings.vcs_repo_url, get_workspace())
 
     if agent_settings.its_type not in MCP_SYSTEM_DEFINITIONS:
         logger.error("Issue tracking system '%s' not defined.", agent_settings.its_type)

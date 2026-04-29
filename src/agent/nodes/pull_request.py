@@ -31,7 +31,7 @@ ROLE_PREFIX_MAP = {
 def create_pull_request_node(agent_settings: AgentSettingsDb):
     """Create a pull request node"""
     repo_credential: UserCredentialDb | None = get_credential_by_id(
-        agent_settings.repo_credential_id
+        agent_settings.vcs_credential_id
     )
     if not repo_credential:
         raise ValueError("No repo credential found")

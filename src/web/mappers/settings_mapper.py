@@ -52,9 +52,9 @@ def form_to_schema() -> SettingsFormSchema:
         agent_gender=request.form.get("agent_gender"),
         polling_interval_seconds=int(request.form.get("polling_interval_seconds", "60")),
         is_active="is_active" in request.form,
-        repo_type=request.form.get("repo_type"),
-        repo_url=request.form.get("repo_url"),
-        repo_credential_id=request.form.get("repo_credential_id"),
+        vcs_type=request.form.get("vcs_type"),
+        vcs_repo_url=request.form.get("vcs_repo_url"),
+        vcs_credential_id=request.form.get("vcs_credential_id"),
         its_config=its_config,
         llm_config=llm_config,
     )
@@ -75,9 +75,9 @@ def schema_to_model(schema: SettingsFormSchema, settings: AgentSettingsDb) -> Ag
     settings.agent_gender = GenderType.from_string(schema.agent_gender)
     settings.polling_interval_seconds = schema.polling_interval_seconds
     settings.is_active = schema.is_active
-    settings.repo_type = schema.repo_type
-    settings.repo_url = schema.repo_url
-    settings.repo_credential_id = schema.repo_credential_id
+    settings.vcs_type = schema.vcs_type
+    settings.vcs_repo_url = schema.vcs_repo_url
+    settings.vcs_credential_id = schema.vcs_credential_id
 
     _apply_llm_config(schema.llm_config, settings)
     _apply_its_config(schema.its_config, settings)
@@ -127,9 +127,9 @@ def model_to_form_data(settings: AgentSettingsDb) -> Dict[str, Any]:
         "its_state_in_review": settings.its_state_in_review,
         "its_state_done": settings.its_state_done,
         "its_credential_id": settings.its_credential_id,
-        "repo_type": settings.repo_type,
-        "repo_url": settings.repo_url,
-        "repo_credential_id": settings.repo_credential_id,
+        "vcs_type": settings.vcs_type,
+        "vcs_repo_url": settings.vcs_repo_url,
+        "vcs_credential_id": settings.vcs_credential_id,
         "llm_provider": settings.llm_provider,
         "llm_credential_id": settings.llm_credential_id,
         "llm_model_large": settings.llm_model_large,

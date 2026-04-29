@@ -129,13 +129,16 @@ class AgentSettingsDb(db.Model):
     its_state_done = db.Column(db.String(50), nullable=True)
 
     # Repo system: e.g., "GITHUB", "BITBUCKET"
-    repo_type = db.Column(db.String(50), nullable=False, default="GITHUB")
-    repo_credential_id = db.Column(
+    vcs_type = db.Column(db.String(50), nullable=False, default="GITHUB")
+    vcs_credential_id = db.Column(
         db.Integer,
         db.ForeignKey("user_credentials.id", ondelete="SET NULL"),
         nullable=True,
     )
-    repo_url = db.Column(db.String(200))
+    vcs_repo_url = db.Column(db.String(200))
+    vcs_api_base_url = db.Column(db.String(200))
+    vcs_project_identifier = db.Column(db.String(100))
+    vcs_default_branch = db.Column(db.String(50))
 
     # LLM system: e.g., "OPENAI", "ANTHROPIC", "GOOGLE"
     llm_provider = db.Column(db.String(50), nullable=True)

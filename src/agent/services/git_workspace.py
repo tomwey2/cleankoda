@@ -40,8 +40,8 @@ def normalize_git_url(url: str) -> str:
         return url.split("@")[-1] if "@" in url else url
 
 
-def ensure_repository_exists(repo_url: str, work_dir: str) -> None:
-    """Ensure work_dir contains a clean checkout of repo_url."""
+def ensure_repository_exists(vcs_repo_url: str, work_dir: str) -> None:
+    """Ensure work_dir contains a clean checkout of vcs_repo_url."""
 
     def clean_and_clone() -> None:
         for filename in os.listdir(work_dir):
@@ -53,8 +53,8 @@ def ensure_repository_exists(repo_url: str, work_dir: str) -> None:
                     shutil.rmtree(file_path)
             except Exception as exc:  # pylint: disable=broad-exception-caught
                 logger.warning("Failed to delete %s. Reason: %s", file_path, exc)
-        logger.info("Cloning repository %s into %s", repo_url, work_dir)
-        Repo.clone_from(repo_url, work_dir)
+        logger.info("Cloning repository %s into %s", vcs_repo_url, work_dir)
+        Repo.clone_from(vcs_repo_url, work_dir)
 
     if not os.path.isdir(work_dir):
         logger.info("Work directory %s does not exist, creating...", work_dir)
@@ -76,7 +76,7 @@ def ensure_repository_exists(repo_url: str, work_dir: str) -> None:
             return
 
         normalized_origin = normalize_git_url(origin_url)
-        normalized_requested = normalize_git_url(repo_url)
+        normalized_requested = normalize_git_url(vcs_repo_url)
 
         if normalized_origin != normalized_requested:
             logger.info(
@@ -87,7 +87,7 @@ def ensure_repository_exists(repo_url: str, work_dir: str) -> None:
             clean_and_clone()
             return
 
-        logger.info("Repository %s already exists in %s, updating...", repo_url, work_dir)
+        logger.info("Repository %s already exists in %s, updating...", vcs_repo_url, work_dir)
 
         if repo.is_dirty(untracked_files=True):
             logger.info("Committing local changes...")
@@ -112,7 +112,7 @@ def ensure_repository_exists(repo_url: str, work_dir: str) -> None:
         clean_and_clone()
 
 
-def checkout_branch(repo_url: str, repo_branch_name: str, work_dir: str) -> None:
+def checkout_branch(vcs_repo_url: str, repo_branch_name: str, work_dir: str) -> None:
     """Ensure repo_branch_name exists locally, fetching or creating as needed."""
     if not repo_branch_name:
         raise ValueError("repo_branch_name is required to checkout a branch.")
@@ -137,7 +137,7 @@ def checkout_branch(repo_url: str, repo_branch_name: str, work_dir: str) -> None
         logger.info(
             "Local branch '%s' not found. Fetching from origin for repository %s.",
             repo_branch_name,
-            repo_url,
+            vcs_repo_url,
         )
         try:
             repo.remotes.origin.fetch(repo_branch_name)

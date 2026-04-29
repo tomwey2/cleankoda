@@ -218,7 +218,7 @@ def get_pr_json(owner: str, repo: str, repo_pr_number: int):
     """
     user_id = users_service.get_current_user_id()
     agent_settings = agent_settings_service.get_or_create_agent_settings(user_id)
-    repo_token = credentials_service.get_repo_token(agent_settings.repo_credential_id)
+    repo_token = credentials_service.get_repo_token(agent_settings.vcs_credential_id)
 
     pr = fetch_pr_details(owner, repo, repo_pr_number, repo_token)
     if not pr:
@@ -255,7 +255,7 @@ def get_pr_formatted(owner: str, repo: str, repo_pr_number: int):
     """
     user_id = users_service.get_current_user_id()
     agent_settings = agent_settings_service.get_or_create_agent_settings(user_id)
-    repo_token = credentials_service.get_repo_token(agent_settings.repo_credential_id)
+    repo_token = credentials_service.get_repo_token(agent_settings.vcs_credential_id)
 
     pr = fetch_pr_details(owner, repo, repo_pr_number, repo_token)
     if not pr:
