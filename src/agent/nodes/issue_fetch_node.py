@@ -119,11 +119,11 @@ async def _resolve_issue(issue_id: str | None, its: IssueTrackingSystem) -> Issu
 
         if issue:
             # check if issue in review or in progress
-            if issue.state_name == its.get_state_in_review():
+            if issue.state_type == IssueStateType.IN_REVIEW:
                 logger.info("Issue is in review. Wait for user action.")
                 return None
 
-            if issue.state_name == its.get_state_in_progress():
+            if issue.state_type == IssueStateType.IN_PROGRESS:
                 logger.info("Issue is in progress. Add review comments.")
                 return issue
 

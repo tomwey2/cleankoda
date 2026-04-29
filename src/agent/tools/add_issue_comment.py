@@ -39,7 +39,7 @@ async def add_issue_comment(
             return "Error: No agent settings found in runtime context"
 
         issue_provider = create_issue_tracking_system(agent_settings)
-        await issue_provider.add_comment(issue_id, comment)
+        await issue_provider.add_comment_to_issue(issue_id, comment)
 
         logger.info(
             "Added comment to issue '%s' (%s): %s",

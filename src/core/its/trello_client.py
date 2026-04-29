@@ -157,7 +157,9 @@ async def add_comment_to_trello_card(card_id: str, comment: str, agent_settings:
         raise RuntimeError(f"Failed to add a comment to card {card_id}: {response.text}")
 
 
-async def get_trello_card_comments(card_id: str, agent_settings: AgentSettingsDb) -> list[dict]:
+async def get_comments_from_trello_card(
+    card_id: str, agent_settings: AgentSettingsDb
+) -> list[dict]:
     """
     Fetches all comments for the provided Trello card ID.
     """

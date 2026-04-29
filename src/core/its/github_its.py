@@ -8,7 +8,6 @@ issue operations across different systems.
 
 import logging
 from datetime import datetime, timezone
-from typing import Optional
 
 from src.core.its.issue_tracking_system import (
     IssueComment,
@@ -16,9 +15,9 @@ from src.core.its.issue_tracking_system import (
     Issue,
 )
 from src.core.its.github_client import (
-    add_comment_to_issue,
+    add_comment_to_gh_issue,
     create_draft_issue,
-    get_issue_comments,
+    get_comments_from_gh_issue,
     get_items_from_column,
     get_project_columns,
     get_project_item,
@@ -108,7 +107,7 @@ class GitHubIts(IssueTrackingSystem):
         state_id = self.agent_settings.translate_type_to_issue_state(target_state_type)
         await move_item_to_column(issue_id, state_id, self.agent_settings)
 
-    async def add_comment(self, issue_id: str, comment: str) -> None:
+    async def add_comment_to_issue(self, issue_id: str, comment: str) -> None:
         """
         Add a comment to a GitHub issue.
 
@@ -116,11 +115,11 @@ class GitHubIts(IssueTrackingSystem):
         project item ID. If the issue_id is a project item ID, we need to
         extract the content ID first.
         """
-        await add_comment_to_issue(issue_id, comment, self.agent_settings)
+        await add_comment_to_gh_issue(issue_id, comment, self.agent_settings)
 
-    async def get_comments(self, issue_id: str) -> list[IssueComment]:
+    async def get_comments_from_issue(self, issue_id: str) -> list[IssueComment]:
         """Fetch all comments for a GitHub issue."""
-        comments = await get_issue_comments(issue_id, self.agent_settings)
+        comments = await get_comments_from_gh_issue(issue_id, self.agent_settings)
 
         return [
             IssueComment(

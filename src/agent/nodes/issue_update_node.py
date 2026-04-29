@@ -51,7 +51,7 @@ def create_issue_update_node(agent_settings: AgentSettingsDb):
         try:
             final_comments = _build_agent_comments(state)
             for comment in final_comments:
-                await its.add_comment(state["issue_id"], comment)
+                await its.add_comment_to_issue(state["issue_id"], comment)
                 sleep(0.1)
         except Exception as e:  # pylint: disable=broad-exception-caught
             logger.error("Failed to add comment to issue: %s", e)

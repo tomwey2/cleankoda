@@ -115,7 +115,7 @@ async def add_plan_rejection_comment(user_id: str, issue_id: str, rejection_reas
     """
     logger.info("Adding rejection comment to issue %s", issue_id)
     its = _get_its(user_id)
-    await its.add_comment(issue_id, rejection_reason)
+    await its.add_comment_to_issue(issue_id, rejection_reason)
 
 
 async def move_issue_to_in_progress(user_id: str, issue_id: str) -> bool:

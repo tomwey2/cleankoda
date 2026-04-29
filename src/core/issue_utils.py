@@ -51,7 +51,7 @@ async def fetch_comments_since(
     Returns:
         List of comments between the since_timestamp and now.
     """
-    all_comments = await its.get_comments(issue_id)
+    all_comments = await its.get_comments_from_issue(issue_id)
 
     comments = (
         filter_comments_between_timestamps(

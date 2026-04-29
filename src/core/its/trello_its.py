@@ -20,7 +20,7 @@ from src.core.its.trello_client import (
     get_all_trello_cards,
     get_all_trello_lists,
     get_trello_card,
-    get_trello_card_comments,
+    get_comments_from_trello_card,
     move_trello_card_to_list,
 )
 from src.core.database.models import AgentSettingsDb
@@ -119,13 +119,13 @@ class TrelloIts(IssueTrackingSystem):
 
         await move_trello_card_to_list(issue_id, target_state_id, self.agent_settings)
 
-    async def add_comment(self, issue_id: str, comment: str) -> None:
+    async def add_comment_to_issue(self, issue_id: str, comment: str) -> None:
         """Add a comment to a Trello issue."""
         await add_comment_to_trello_card(issue_id, comment, self.agent_settings)
 
-    async def get_comments(self, issue_id: str) -> list[IssueComment]:
+    async def get_comments_from_issue(self, issue_id: str) -> list[IssueComment]:
         """Fetch all comments for a Trello issue."""
-        comments = await get_trello_card_comments(issue_id, self.agent_settings)
+        comments = await get_comments_from_trello_card(issue_id, self.agent_settings)
 
         return [
             IssueComment(

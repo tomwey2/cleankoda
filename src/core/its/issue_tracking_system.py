@@ -108,7 +108,7 @@ class IssueTrackingSystem(ABC):
         """
 
     @abstractmethod
-    async def add_comment(self, issue_id: str, comment: str) -> None:
+    async def add_comment_to_issue(self, issue_id: str, comment: str) -> None:
         """
         Add a comment to a issue.
 
@@ -121,7 +121,7 @@ class IssueTrackingSystem(ABC):
         """
 
     @abstractmethod
-    async def get_comments(self, issue_id: str) -> list[IssueComment]:
+    async def get_comments_from_issue(self, issue_id: str) -> list[IssueComment]:
         """
         Fetch all comments for a issue.
 

@@ -8,7 +8,7 @@ It uses `httpx` for async HTTP requests.
 """
 
 import logging
-from typing import Any, Optional
+from typing import Any
 
 import httpx
 
@@ -278,7 +278,7 @@ async def get_items_from_column(
     """
 
     all_items: list[dict[str, Any]] = []
-    cursor: Optional[str] = None
+    cursor: str | None = None
 
     while True:
         variables = {"projectId": project_id, "cursor": cursor}
@@ -497,7 +497,7 @@ async def _resolve_to_issue_id(
     )
 
 
-async def add_comment_to_issue(
+async def add_comment_to_gh_issue(
     issue_id: str,
     comment: str,
     agent_settings: AgentSettingsDb,
@@ -530,7 +530,7 @@ async def add_comment_to_issue(
     logger.info("Added comment to issue %s", resolved_issue_id)
 
 
-async def get_issue_comments(
+async def get_comments_from_gh_issue(
     issue_id: str,
     agent_settings: AgentSettingsDb,
 ) -> list[dict[str, Any]]:
