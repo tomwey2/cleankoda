@@ -21,7 +21,7 @@ from src.agent.services.summaries import (
     record_finish_task_summary,
 )
 from src.agent.state import AgentState
-from src.core.plan_utils import exist_plan, get_plan
+from src.core.services.plan_service import exist_plan, get_plan
 from src.core.types import PlanState
 
 logger = logging.getLogger(__name__)

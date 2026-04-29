@@ -3,36 +3,9 @@
 import logging
 from datetime import datetime
 
-
-from src.core.its.issue_tracking_system import (
-    IssueTrackingSystem,
-    Issue,
-)
+from src.core.its.issue_tracking_system import IssueTrackingSystem
 
 logger = logging.getLogger(__name__)
-
-
-async def fetch_issue_from_state(its: IssueTrackingSystem, state_name: str) -> Issue | None:
-    """Fetch an issue from with a state."""
-    issue_states = await its.get_states()
-    target_state = next(
-        (data for data in issue_states if data["name"] == state_name),
-        None,
-    )
-
-    if not target_state:
-        logger.warning("%s state not found", state_name)
-        return None
-
-    state_id = target_state["id"]
-    logger.info("Found %s state id: %s", state_name, state_id)
-
-    issues = await its.get_next_issue_from_state(state_id)
-    if not issues:
-        logger.info("No open issues found in %s.", state_name)
-        return None
-
-    return issues[0]
 
 
 async def fetch_comments_since(

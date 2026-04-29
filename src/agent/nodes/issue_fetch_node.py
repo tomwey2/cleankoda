@@ -15,9 +15,7 @@ from src.agent.services.pull_request import (
     get_latest_open_pr_for_branch,
     get_latest_pr_review_status,
 )
-from src.core.issue_utils import (
-    fetch_comments_since,
-)
+from src.core.services.issue_service import fetch_comments_since
 from src.agent.state import AgentState
 from src.core.database.models import AgentSettingsDb, UserCredentialDb
 from src.core.types import IssueStateType
