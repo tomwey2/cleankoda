@@ -1,9 +1,9 @@
 """
-Factory for creating issue provider instances.
+Factory for creating issue tracking system instances.
 
 This module provides a factory function that creates the appropriate issue
-provider based on the system configuration, enabling easy switching between
-different issue systems (Trello, GitHub, Jira, etc.).
+tracking system based on the system configuration, enabling easy switching between
+different issue tracking systems.
 """
 
 import logging
@@ -19,11 +19,10 @@ logger = logging.getLogger(__name__)
 
 def create_issue_tracking_system(agent_settings: AgentSettingsDb) -> IssueTrackingSystem:
     """
-    Factory function to create the appropriate issue provider.
+    Factory function to create the appropriate issue tracking system.
 
-    The provider type is determined by the 'its_type' key inside
-    AgentSettings.
-    If not specified, defaults to 'trello' for backward compatibility.
+    The type is determined by the 'its_type' key inside AgentSettings.
+    If not specified, defaults to 'TRELLO' for backward compatibility.
 
     Args:
         agent_settings: Agent settings containing system configuration details
@@ -36,11 +35,11 @@ def create_issue_tracking_system(agent_settings: AgentSettingsDb) -> IssueTracki
 
     Example:
         >>> agent_settings = AgentSettingsDb(its_type="TRELLO", ...)
-        >>> provider = create_issue_provider(agent_settings)
+        >>> its = create_issue_tracking_system(agent_settings)
     """
     its_type = agent_settings.its_type
 
-    logger.info("Creating issue provider: %s", its_type)
+    logger.info("Creating issue tracking system: %s", its_type)
 
     if its_type == IssueTrackingSystemType.TRELLO:
         return TrelloIts(agent_settings)
@@ -49,5 +48,6 @@ def create_issue_tracking_system(agent_settings: AgentSettingsDb) -> IssueTracki
         return GitHubIts(agent_settings)
 
     raise ValueError(
-        f"Unknown issue provider: {its_type}. Supported providers: {IssueTrackingSystemType.TRELLO}, {IssueTrackingSystemType.GITHUB}"
+        f"Unknown issue tracking system: {its_type}. Supported providers: "
+        + f"{IssueTrackingSystemType.TRELLO}, {IssueTrackingSystemType.GITHUB}"
     )
