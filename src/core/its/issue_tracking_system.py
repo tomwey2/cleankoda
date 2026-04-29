@@ -9,7 +9,7 @@ issue tracking system implementation.
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from datetime import datetime
-from typing import Optional
+from src.core.types import IssueStateType
 
 
 @dataclass
@@ -29,6 +29,7 @@ class Issue:
     id: str
     name: str
     description: str
+    state_type: IssueStateType
     state_id: str
     state_name: str
     url: str = ""
@@ -55,24 +56,6 @@ class IssueComment:
         return f"{self.author}: {self.text} ({self.date.isoformat()})"
 
 
-@dataclass
-class IssueStateMove:
-    """
-    Domain model for tracking when a issue moves between states.
-
-    Attributes:
-        id: Unique identifier for the move action
-        date: Timestamp when the move occurred
-        state_before: Name of the state before the move
-        state_after: Name of the state after the move
-    """
-
-    id: str
-    date: datetime
-    state_before: str | None
-    state_after: str | None
-
-
 class IssueTrackingSystem(ABC):
     """
     Abstract interface for external issue tracking system operations.
@@ -82,16 +65,7 @@ class IssueTrackingSystem(ABC):
     """
 
     @abstractmethod
-    async def get_states(self) -> list[dict]:
-        """
-        Fetch all states/columns from the issue system.
-
-        Returns:
-            List of dictionaries with 'id' and 'name' keys
-        """
-
-    @abstractmethod
-    async def get_issue(self, issue_id: str) -> Optional[Issue]:
+    async def get_issue_by_id(self, issue_id: str) -> Issue | None:
         """
         Fetch a specific issue from the issue system.
 
@@ -106,45 +80,31 @@ class IssueTrackingSystem(ABC):
         """
 
     @abstractmethod
-    async def get_issues_from_state(self, state_id: str) -> list[Issue]:
+    async def get_next_issue_from_state(self, state_type: IssueStateType) -> Issue | None:
         """
-        Fetch all issues from a specific state.
+        Fetch the next issue from a specific state.
 
         Args:
-            state_id: The ID of the state to fetch issues from
+            state_type: The type of the state to fetch issues from
 
         Returns:
-            List of Issue objects
+            The Issue object or None if no issues are found
+
+        Raises:
+            RuntimeError: If fetching issues fails
         """
 
     @abstractmethod
-    async def move_issue_to_state(self, issue_id: str, state_id: str) -> None:
+    async def move_issue_to_state(self, issue_id: str, target_state_type: IssueStateType) -> None:
         """
         Move a issue to a different state.
 
         Args:
             issue_id: The ID of the issue to move
-            state_id: The ID of the target state
+            state_type: The type of the target state
 
         Raises:
             RuntimeError: If the operation fails
-        """
-
-    @abstractmethod
-    async def move_issue_to_named_state(self, issue_id: str, state_name: str) -> str:
-        """
-        Move a issue to a state identified by name.
-
-        Args:
-            issue_id: The ID of the issue to move
-            state_name: The name of the target state
-
-        Returns:
-            The ID of the target state
-
-        Raises:
-            ValueError: If the state name is not found
-            RuntimeError: If the move operation fails
         """
 
     @abstractmethod
@@ -176,21 +136,6 @@ class IssueTrackingSystem(ABC):
         """
 
     @abstractmethod
-    async def get_state_moves(self, issue_id: str) -> list[IssueStateMove]:
-        """
-        Fetch the history of state moves for a issue.
-
-        Args:
-            issue_id: The ID of the issue
-
-        Returns:
-            List of IssueStateMove objects
-
-        Raises:
-            RuntimeError: If fetching move history fails
-        """
-
-    @abstractmethod
     async def create_issue(self, name: str, description: str, state_name: str) -> Issue:
         """
         Create a new issue in the specified state.
@@ -211,19 +156,3 @@ class IssueTrackingSystem(ABC):
     @abstractmethod
     def get_type(self) -> str:
         """Return provider identifier (e.g., 'TRELLO', 'GITHUB')."""
-
-    @abstractmethod
-    def get_state_todo(self) -> str:
-        """Return the state name for todo."""
-
-    @abstractmethod
-    def get_state_in_progress(self) -> str:
-        """Return the state name for in progress."""
-
-    @abstractmethod
-    def get_state_in_review(self) -> str:
-        """Return the state name for in review."""
-
-    @abstractmethod
-    def get_state_done(self) -> str:
-        """Return the state name for done."""

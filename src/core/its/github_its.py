@@ -13,21 +13,19 @@ from typing import Optional
 from src.core.its.issue_tracking_system import (
     IssueComment,
     IssueTrackingSystem,
-    IssueStateMove,
     Issue,
 )
 from src.core.its.github_client import (
     add_comment_to_issue,
     create_draft_issue,
     get_issue_comments,
-    get_item_status_history,
     get_items_from_column,
     get_project_columns,
     get_project_item,
     move_item_to_column,
-    move_item_to_named_column,
 )
 from src.core.database.models import AgentSettingsDb
+from src.core.types import IssueStateType
 
 logger = logging.getLogger(__name__)
 
@@ -53,7 +51,7 @@ class GitHubIts(IssueTrackingSystem):
         """Fetch all states (columns) from the GitHub Project."""
         return await get_project_columns(self.agent_settings)
 
-    async def get_issue(self, issue_id: str) -> Optional[Issue]:
+    async def get_issue_by_id(self, issue_id: str) -> Issue | None:
         """Fetch a specific issue (project item) by ID."""
         item = await get_project_item(issue_id, self.agent_settings)
 
@@ -61,22 +59,28 @@ class GitHubIts(IssueTrackingSystem):
             logger.warning("GitHub Issue %s not found", issue_id)
             return None
 
+        state_type = self.agent_settings.translate_issue_state_to_type(item.get("state_name", ""))
+        if state_type == IssueStateType.UNKNOWN:
+            logger.warning("Could not determine state for card %s", issue_id)
+
         return Issue(
             id=item["id"],
             name=item.get("title", ""),
             description=item.get("body", ""),
+            state_type=state_type,
             state_id=item.get("state_id", ""),
             state_name=item.get("state_name", ""),
             url=item.get("url", ""),
         )
 
-    async def get_issues_from_state(self, state_id: str) -> list[Issue]:
+    async def get_issues_from_state(self, state_type: IssueStateType) -> list[Issue]:
         """
         Fetch all issues from a specific state (column).
 
         Note: For GitHub Projects, we need to resolve the column name from ID
         first, then fetch items. The state_id here is the column option ID.
         """
+        state_id = self.agent_settings.translate_type_to_issue_state(state_type)
         columns = await get_project_columns(self.agent_settings)
         target_column = next((col for col in columns if col["id"] == state_id), None)
 
@@ -91,6 +95,7 @@ class GitHubIts(IssueTrackingSystem):
                 id=item["id"],
                 name=item["title"],
                 description=item["body"] or "",
+                state_type=state_type,
                 state_id=state_id,
                 state_name=target_column["name"],
                 url=item.get("url", ""),
@@ -98,13 +103,10 @@ class GitHubIts(IssueTrackingSystem):
             for item in items
         ]
 
-    async def move_issue_to_state(self, issue_id: str, state_id: str) -> None:
+    async def move_issue_to_state(self, issue_id: str, target_state_type: IssueStateType) -> None:
         """Move a issue to a different state (column)."""
+        state_id = self.agent_settings.translate_type_to_issue_state(target_state_type)
         await move_item_to_column(issue_id, state_id, self.agent_settings)
-
-    async def move_issue_to_named_state(self, issue_id: str, state_name: str) -> str:
-        """Move a issue to a state (column) identified by name."""
-        return await move_item_to_named_column(issue_id, state_name, self.agent_settings)
 
     async def add_comment(self, issue_id: str, comment: str) -> None:
         """
@@ -128,25 +130,6 @@ class GitHubIts(IssueTrackingSystem):
                 date=self._parse_timestamp(comment["date"]),
             )
             for comment in comments
-        ]
-
-    async def get_state_moves(self, issue_id: str) -> list[IssueStateMove]:
-        """
-        Fetch the history of state moves (column changes) for an issue.
-
-        Note: GitHub Projects v2 doesn't provide direct access to field change
-        history through the API. This returns an empty list.
-        """
-        moves = await get_item_status_history(issue_id, self.agent_settings)
-
-        return [
-            IssueStateMove(
-                id=move["id"],
-                date=self._parse_timestamp(move.get("date")),
-                state_before=move.get("state_before"),
-                state_after=move.get("state_after"),
-            )
-            for move in moves
         ]
 
     async def create_issue(self, name: str, description: str, state_name: str) -> Issue:
@@ -195,15 +178,3 @@ class GitHubIts(IssueTrackingSystem):
             parsed = parsed.replace(tzinfo=timezone.utc)
 
         return parsed
-
-    def get_state_todo(self) -> str:
-        return self.agent_settings.its_state_todo
-
-    def get_state_in_progress(self) -> str:
-        return self.agent_settings.its_state_in_progress
-
-    def get_state_in_review(self) -> str:
-        return self.agent_settings.its_state_in_review
-
-    def get_state_done(self) -> str:
-        return self.agent_settings.its_state_done

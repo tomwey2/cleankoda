@@ -8,13 +8,11 @@ with other issue tracking systems.
 
 import logging
 from datetime import datetime, timezone
-from typing import Optional
 
 from src.core.its.issue_tracking_system import (
     IssueTrackingSystem,
     Issue,
     IssueComment,
-    IssueStateMove,
 )
 from src.core.its.trello_client import (
     add_comment_to_trello_card,
@@ -23,12 +21,10 @@ from src.core.its.trello_client import (
     get_all_trello_lists,
     get_trello_card,
     get_trello_card_comments,
-    get_trello_card_list_moves,
     move_trello_card_to_list,
-    move_trello_card_to_named_list,
 )
 from src.core.database.models import AgentSettingsDb
-from src.core.types import IssueTrackingSystemType
+from src.core.types import IssueTrackingSystemType, IssueStateType
 
 logger = logging.getLogger(__name__)
 
@@ -50,11 +46,7 @@ class TrelloIts(IssueTrackingSystem):
         """
         self.agent_settings = agent_settings
 
-    async def get_states(self) -> list[dict]:
-        """Fetch all states (Trello lists) from the board."""
-        return await get_all_trello_lists(self.agent_settings)
-
-    async def get_issue(self, issue_id: str) -> Optional[Issue]:
+    async def get_issue_by_id(self, issue_id: str) -> Issue | None:
         """Fetch a specific Trello card."""
         card = await get_trello_card(issue_id, self.agent_settings)
 
@@ -62,57 +54,70 @@ class TrelloIts(IssueTrackingSystem):
             logger.warning("Trello card %s not found", issue_id)
             return None
 
+        state_type = self.agent_settings.translate_issue_state_to_type(card.get("list_name", ""))
+        if state_type == IssueStateType.UNKNOWN:
+            logger.warning("Could not determine state for card %s", issue_id)
+
         return Issue(
             id=card["id"],
             name=card.get("name", ""),
             description=card.get("desc", ""),
+            state_type=state_type,
             state_id=card.get("list_id", ""),
             state_name=card.get("list_name", ""),
             url=card.get("url", ""),
         )
 
-    async def get_issues_from_state(self, state_id: str) -> list[Issue]:
-        """Fetch all issues from a specific state (Trello list)."""
-        # state_id corresponds to Trello list_id
-        state_name = await self._resolve_state_name_from_id(state_id)
+    async def get_next_issue_from_state(self, state_type: IssueStateType) -> Issue | None:
+        """Fetch the next issue from a specific state (Trello list)."""
+        state_id, state_name = await self._resolve_trello_state_from_state_type(state_type)
         cards = await get_all_trello_cards(state_id, self.agent_settings)
 
-        return [
-            Issue(
-                id=card["id"],
-                name=card["name"],
-                description=card["desc"],
-                state_id=state_id,
-                state_name=state_name,
-                url=card.get("url", ""),
-            )
-            for card in cards
-        ]
+        if not cards:
+            logger.warning("No issues found in state %s", state_name)
+            return None
 
-    async def _resolve_state_name_from_id(self, state_id: str) -> str:
+        card = cards[0]
+        return Issue(
+            id=card["id"],
+            name=card.get("name", ""),
+            description=card.get("desc", ""),
+            state_type=state_type,
+            state_id=state_id,
+            state_name=state_name,
+            url=card.get("url", ""),
+        )
+
+    async def _resolve_trello_state_from_state_type(
+        self, state_type: IssueStateType
+    ) -> tuple[str, str]:
         """Resolve the human-readable Trello list name for a given list ID."""
+        state_name = self.agent_settings.translate_type_to_issue_state(state_type)
         try:
             trello_lists = await get_all_trello_lists(self.agent_settings)
         except Exception as exc:  # pylint: disable=broad-exception-caught
-            logger.warning("Failed to resolve Trello state name for %s: %s", state_id, exc)
-            return ""
+            logger.warning("Failed to resolve Trello state name for %s: %s", state_name, exc)
+            return "", ""
 
         for trello_list in trello_lists:
-            if trello_list["id"] == state_id:
-                return trello_list.get("name", "")
+            if trello_list["name"] == state_name:
+                return trello_list.get("id", ""), trello_list.get("name", "")
 
-        logger.warning("Trello list %s not found when resolving state name", state_id)
-        return ""
+        logger.warning("Trello list %s not found when resolving state name", state_name)
+        return "", ""
 
-    async def move_issue_to_state(self, issue_id: str, state_id: str) -> None:
+    async def move_issue_to_state(self, issue_id: str, target_state_type: IssueStateType) -> None:
         """Move a issue to a different state (Trello list)."""
-        # state_id corresponds to Trello list_id
-        await move_trello_card_to_list(issue_id, state_id, self.agent_settings)
+        target_state_id, target_state_name = await self._resolve_trello_state_from_state_type(
+            target_state_type
+        )
 
-    async def move_issue_to_named_state(self, issue_id: str, state_name: str) -> str:
-        """Move a issue to a state (Trello list) identified by name."""
-        # state_name corresponds to Trello list_name
-        return await move_trello_card_to_named_list(issue_id, state_name, self.agent_settings)
+        if not target_state_id:
+            raise ValueError(
+                f"Trello list {target_state_name} ({target_state_type.name}) not found on configured board"
+            )
+
+        await move_trello_card_to_list(issue_id, target_state_id, self.agent_settings)
 
     async def add_comment(self, issue_id: str, comment: str) -> None:
         """Add a comment to a Trello issue."""
@@ -130,20 +135,6 @@ class TrelloIts(IssueTrackingSystem):
                 date=self._parse_timestamp(comment["date"]),
             )
             for comment in comments
-        ]
-
-    async def get_state_moves(self, issue_id: str) -> list[IssueStateMove]:
-        """Fetch the history of state moves (Trello list moves) for an issue."""
-        moves = await get_trello_card_list_moves(issue_id, self.agent_settings)
-
-        return [
-            IssueStateMove(
-                id=move["id"],
-                date=self._parse_timestamp(move["date"]),
-                state_before=move["list_before"],
-                state_after=move["list_after"],
-            )
-            for move in moves
         ]
 
     async def create_issue(self, name: str, description: str, state_name: str) -> Issue:
@@ -193,15 +184,3 @@ class TrelloIts(IssueTrackingSystem):
             parsed = parsed.replace(tzinfo=timezone.utc)
 
         return parsed
-
-    def get_state_todo(self) -> str:
-        return self.agent_settings.its_state_todo
-
-    def get_state_in_progress(self) -> str:
-        return self.agent_settings.its_state_in_progress
-
-    def get_state_in_review(self) -> str:
-        return self.agent_settings.its_state_in_review
-
-    def get_state_done(self) -> str:
-        return self.agent_settings.its_state_done

@@ -8,7 +8,7 @@ from typing import Any, Dict
 
 from src.core.extensions import db
 from src.core.security import EncryptedString
-from src.core.types import IssueTrackingSystemType
+from src.core.types import IssueTrackingSystemType, IssueStateType
 
 # pylint: disable=too-few-public-methods
 DEFAULT_TRELLO_BASE_URL = "https://api.trello.com/1"
@@ -169,6 +169,32 @@ class AgentSettingsDb(db.Model):
             key: getattr(self, key)
             for key in self.__mapper__.columns.keys()  # type: ignore[attr-defined]
         }
+
+    def translate_issue_state_to_type(self, issue_state: str) -> IssueStateType:
+        """Translate issue state to issue state type."""
+        if issue_state.lower() == self.its_state_todo.lower():
+            return IssueStateType.TODO
+        elif issue_state.lower() == self.its_state_in_progress.lower():
+            return IssueStateType.IN_PROGRESS
+        elif issue_state.lower() == self.its_state_in_review.lower():
+            return IssueStateType.IN_REVIEW
+        elif issue_state.lower() == self.its_state_done.lower():
+            return IssueStateType.DONE
+        else:
+            return IssueStateType.UNKNOWN
+
+    def translate_type_to_issue_state(self, issue_type: IssueStateType) -> str:
+        """Translate issue type to issue state."""
+        if issue_type == IssueStateType.TODO:
+            return self.its_state_todo
+        elif issue_type == IssueStateType.IN_PROGRESS:
+            return self.its_state_in_progress
+        elif issue_type == IssueStateType.IN_REVIEW:
+            return self.its_state_in_review
+        elif issue_type == IssueStateType.DONE:
+            return self.its_state_done
+        else:
+            return self.its_state_unknown
 
 
 # pylint: disable=too-few-public-methods

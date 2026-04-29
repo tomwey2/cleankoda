@@ -138,26 +138,6 @@ async def move_trello_card_to_list(card_id: str, list_id: str, agent_settings: A
         raise RuntimeError(f"Failed to move card {card_id} to list {list_id}: {response.text}")
 
 
-async def move_trello_card_to_named_list(
-    card_id: str, list_name: str, agent_settings: AgentSettingsDb
-) -> str:
-    """
-    Helper that resolves the Trello list ID by name and moves the
-    given card to that list. Returns the resolved list ID.
-    """
-    trello_lists = await get_all_trello_lists(agent_settings)
-    target_list = next((data for data in trello_lists if data["name"] == list_name), None)
-
-    if not target_list:
-        raise ValueError(f"Trello list '{list_name}' not found on configured board")
-
-    target_list_id = target_list["id"]
-    logger.info("Found %s list id: %s", list_name, target_list_id)
-    await move_trello_card_to_list(card_id, target_list_id, agent_settings)
-
-    return target_list_id
-
-
 async def add_comment_to_trello_card(card_id: str, comment: str, agent_settings: AgentSettingsDb):
     """Adds a comment to a specified Trello card."""
     credential = get_credential_by_id(agent_settings.its_credential_id)

@@ -27,36 +27,12 @@ async def fetch_issue_from_state(its: IssueTrackingSystem, state_name: str) -> I
     state_id = target_state["id"]
     logger.info("Found %s state id: %s", state_name, state_id)
 
-    issues = await its.get_issues_from_state(state_id)
+    issues = await its.get_next_issue_from_state(state_id)
     if not issues:
         logger.info("No open issues found in %s.", state_name)
         return None
 
     return issues[0]
-
-
-async def move_issue_to_state(
-    its: IssueTrackingSystem,
-    issue_id: str,
-    issue_state_name: str,
-):
-    """
-    Moves the issue to the in-progress state before issue processing begins.
-    """
-    if not issue_state_name:
-        logger.warning("issue_in_progress_state not configured, skipping move to in-progress state")
-    else:
-        logger.info(
-            "Moving issue %s to in-progress state: %s",
-            issue_id,
-            issue_state_name,
-        )
-
-        try:
-            await its.move_issue_to_named_state(issue_id, issue_state_name)
-            await its.get_issue(issue_id)
-        except Exception as e:  # pylint: disable=broad-exception-caught
-            logger.error("Failed to move issue to in-progress state: %s", e)
 
 
 async def fetch_comments_since(

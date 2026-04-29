@@ -17,7 +17,6 @@ from src.agent.services.pull_request import (
 )
 from src.core.issue_utils import (
     fetch_comments_since,
-    fetch_issue_from_state,
 )
 from src.agent.state import AgentState
 from src.core.database.models import AgentSettingsDb, UserCredentialDb
@@ -31,10 +30,10 @@ logger = logging.getLogger(__name__)
 def create_issue_fetch_node(agent_settings: AgentSettingsDb):
     """Creates an issue fetch node for the agent graph."""
     its = create_issue_tracking_system(agent_settings)
-    repo_credential: UserCredentialDb | None = get_credential_by_id(
+    vcs_repo_credential: UserCredentialDb | None = get_credential_by_id(
         agent_settings.vcs_credential_id
     )
-    if not repo_credential:
+    if not vcs_repo_credential:
         raise ValueError("No repo credential found")
 
     async def issue_fetch(state: AgentState) -> dict:  # pylint: disable=unused-argument
@@ -53,17 +52,17 @@ def create_issue_fetch_node(agent_settings: AgentSettingsDb):
                 return {"issue_id": None}
 
             # if issue is found, determine if it is active, i.e. in todo, in progress or in review
-            issue_is_active = issue.state_name in [
-                its.get_state_todo(),
-                its.get_state_in_progress(),
-                its.get_state_in_review(),
+            issue_is_active = issue.state_type in [
+                IssueStateType.TODO,
+                IssueStateType.IN_PROGRESS,
+                IssueStateType.IN_REVIEW,
             ]
-            issue_from_todo = issue.state_name == its.get_state_todo()
+            issue_from_todo = issue.state_type == IssueStateType.TODO
 
             comments = []
             issue_read_comments_at = state["issue_read_comments_at"]
             pr_review_message = ""
-            if issue_is_active and issue.state_name == its.get_state_in_progress():
+            if issue_is_active and issue.state_type == IssueStateType.IN_PROGRESS:
                 # otherwise fetch review comments from issue tracking system and pr, in order
                 # to give further information from user
                 comments = await fetch_comments_since(
@@ -72,12 +71,12 @@ def create_issue_fetch_node(agent_settings: AgentSettingsDb):
                     issue_read_comments_at,
                 )
                 issue_read_comments_at = datetime.now()
-                pr_review_message = _fetch_pr_review_info(repo_credential, state, issue.id)
+                pr_review_message = _fetch_pr_review_info(vcs_repo_credential, state, issue.id)
 
             if issue_is_active and issue_from_todo:
                 # if the issue is new and has the state "todo" then move it to "in progress"
-                await its.move_issue_to_named_state(
-                    issue_id=issue.id, state_name=its.get_state_in_progress()
+                await its.move_issue_to_state(
+                    issue_id=issue.id, target_state_type=IssueStateType.IN_PROGRESS
                 )
 
             return {
@@ -114,7 +113,7 @@ async def _resolve_issue(issue_id: str | None, its: IssueTrackingSystem) -> Issu
         logger.info("Fetching issue from issue tracking system: %s", issue_id)
 
         try:
-            issue = await its.get_issue(issue_id)
+            issue = await its.get_issue_by_id(issue_id)
         except Exception:  # pylint: disable=broad-exception-caught
             issue = None
 
@@ -133,12 +132,12 @@ async def _resolve_issue(issue_id: str | None, its: IssueTrackingSystem) -> Issu
 
     # Get a new issue from todo
     logger.info("Fetching new issue from todo.")
-    issue = await fetch_issue_from_state(its, its.get_state_todo())
+    issue = await its.get_next_issue_from_state(IssueStateType.TODO)
     return issue
 
 
 def _fetch_pr_review_info(
-    repo_credential: UserCredentialDb, state: AgentState, issue_id: str
+    vcs_repo_credential: UserCredentialDb, state: AgentState, issue_id: str
 ) -> str:
     """
     Fetch PR review info if a PR exists for the issue.
@@ -154,14 +153,14 @@ def _fetch_pr_review_info(
     repo_branch_name = state["repo_branch_name"]
     pr = None
     if repo_branch_name:
-        pr = get_latest_open_pr_for_branch(repo_branch_name, repo_credential.api_token)
+        pr = get_latest_open_pr_for_branch(repo_branch_name, vcs_repo_credential.api_token)
 
     if not pr:
         logger.info("No PR found for issue %s", issue_id)
         return ""
 
     is_approved, rejection_reviews, code_comments = get_latest_pr_review_status(
-        pr.number, repo_credential.api_token
+        pr.number, vcs_repo_credential.api_token
     )
 
     if is_approved:
