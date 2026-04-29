@@ -219,8 +219,26 @@
                                 <div class="mb-3">
                                     <label for="vcs_repo_url" class="form-label">Repository URL</label>
                                     <input type="text" class="form-control" id="vcs_repo_url" name="vcs_repo_url"
-                                        value="{{ settings.vcs_repo_url }}"
+                                        value="{{ settings.vcs_repo_url or '' }}"
                                         placeholder="https://github.com/org/repo.git">
+                                </div>
+                                <div class="mb-3">
+                                    <label for="vcs_api_base_url" class="form-label">API Base URL</label>
+                                    <input type="text" class="form-control" id="vcs_api_base_url" name="vcs_api_base_url"
+                                        value="{{ settings.vcs_api_base_url or '' }}"
+                                        placeholder="e.g. https://api.github.com">
+                                </div>
+                                <div class="mb-3">
+                                    <label for="vcs_project_identifier" class="form-label">Project Identifier</label>
+                                    <input type="text" class="form-control" id="vcs_project_identifier" name="vcs_project_identifier"
+                                        value="{{ settings.vcs_project_identifier or '' }}"
+                                        placeholder="e.g. org/repo">
+                                </div>
+                                <div class="mb-3">
+                                    <label for="vcs_default_branch" class="form-label">Default Branch</label>
+                                    <input type="text" class="form-control" id="vcs_default_branch" name="vcs_default_branch"
+                                        value="{{ settings.vcs_default_branch or '' }}"
+                                        placeholder="e.g. main">
                                 </div>
                             </div>
                         </div>

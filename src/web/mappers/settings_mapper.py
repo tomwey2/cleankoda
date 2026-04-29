@@ -55,6 +55,9 @@ def form_to_schema() -> SettingsFormSchema:
         vcs_type=request.form.get("vcs_type"),
         vcs_repo_url=request.form.get("vcs_repo_url"),
         vcs_credential_id=request.form.get("vcs_credential_id"),
+        vcs_api_base_url=request.form.get("vcs_api_base_url"),
+        vcs_project_identifier=request.form.get("vcs_project_identifier"),
+        vcs_default_branch=request.form.get("vcs_default_branch"),
         its_config=its_config,
         llm_config=llm_config,
     )
@@ -78,6 +81,9 @@ def schema_to_model(schema: SettingsFormSchema, settings: AgentSettingsDb) -> Ag
     settings.vcs_type = schema.vcs_type
     settings.vcs_repo_url = schema.vcs_repo_url
     settings.vcs_credential_id = schema.vcs_credential_id
+    settings.vcs_api_base_url = schema.vcs_api_base_url
+    settings.vcs_project_identifier = schema.vcs_project_identifier
+    settings.vcs_default_branch = schema.vcs_default_branch
 
     _apply_llm_config(schema.llm_config, settings)
     _apply_its_config(schema.its_config, settings)
@@ -130,6 +136,9 @@ def model_to_form_data(settings: AgentSettingsDb) -> Dict[str, Any]:
         "vcs_type": settings.vcs_type,
         "vcs_repo_url": settings.vcs_repo_url,
         "vcs_credential_id": settings.vcs_credential_id,
+        "vcs_api_base_url": settings.vcs_api_base_url,
+        "vcs_project_identifier": settings.vcs_project_identifier,
+        "vcs_default_branch": settings.vcs_default_branch,
         "llm_provider": settings.llm_provider,
         "llm_credential_id": settings.llm_credential_id,
         "llm_model_large": settings.llm_model_large,
