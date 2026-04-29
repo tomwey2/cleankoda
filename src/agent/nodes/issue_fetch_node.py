@@ -5,6 +5,7 @@ Fetches issues from an issue tracking system (Trello, GitHub, Jira, etc.),
 preparing them for processing by the agent.
 """
 
+from datetime import datetime
 import logging
 
 from src.core.its.its_factory import create_issue_tracking_system
@@ -15,7 +16,7 @@ from src.agent.services.pull_request import (
     get_latest_pr_review_status,
 )
 from src.core.issue_utils import (
-    fetch_review_comments,
+    fetch_comments_since,
     fetch_issue_from_state,
 )
 from src.agent.state import AgentState
@@ -60,16 +61,17 @@ def create_issue_fetch_node(agent_settings: AgentSettingsDb):
             issue_from_todo = issue.state_name == its.get_state_todo()
 
             comments = []
+            issue_read_comments_at = state["issue_read_comments_at"]
             pr_review_message = ""
             if issue_is_active and issue.state_name == its.get_state_in_progress():
                 # otherwise fetch review comments from issue tracking system and pr, in order
                 # to give further information from user
-                comments = await fetch_review_comments(
+                comments = await fetch_comments_since(
                     its,
                     issue.id,
-                    its.get_state_in_progress(),
-                    its.get_state_in_review(),
+                    issue_read_comments_at,
                 )
+                issue_read_comments_at = datetime.now()
                 pr_review_message = _fetch_pr_review_info(repo_credential, state, issue.id)
 
             if issue_is_active and issue_from_todo:
@@ -88,6 +90,7 @@ def create_issue_fetch_node(agent_settings: AgentSettingsDb):
                 else IssueStateType.UNKNOWN,
                 "issue_comments": comments,
                 "issue_is_active": issue_is_active,
+                "issue_read_comments_at": issue_read_comments_at,
                 "issue_from_todo": issue_from_todo,
                 "issue_url": issue.url,
                 "pr_review_message": pr_review_message,

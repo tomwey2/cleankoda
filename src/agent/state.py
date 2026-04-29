@@ -69,6 +69,7 @@ class AgentState(TypedDict):
     issue_skill_level_reasoning: str | None
     issue_from_todo: bool | None
     issue_is_active: bool | None
+    issue_read_comments_at: datetime | None
 
     # agent information from settings
     agent_stack: AgentStack
@@ -120,8 +121,9 @@ class AgentState(TypedDict):
             "issue_type": None,
             "issue_skill_level": None,
             "issue_skill_level_reasoning": None,
-            "issue_is_active": None,
             "issue_from_todo": None,
+            "issue_is_active": None,
+            "issue_read_comments_at": None,
             "repo_branch_name": None,
             "repo_pr_url": None,
             "plan_content": None,

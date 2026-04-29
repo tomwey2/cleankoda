@@ -202,6 +202,8 @@ class AgentStatesDb(db.Model):
     # The LLM description of the skill level decision
     issue_skill_level_reasoning = db.Column(db.Text, nullable=True)
     issue_is_active = db.Column(db.Boolean, nullable=False, default=False)
+    # Time when the issue comments were read last time
+    issue_read_comments_at = db.Column(db.DateTime(timezone=True), nullable=True)
 
     # Branch name of the repository
     repo_branch_name = db.Column(db.String(100), nullable=True)

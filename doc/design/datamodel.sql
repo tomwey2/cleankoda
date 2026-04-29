@@ -161,6 +161,8 @@ CREATE TABLE agent_states (
     -- The LLM description of the skill level decision
     issue_skill_level_reasoning TEXT,
     issue_is_active BOOLEAN NOT NULL DEFAULT false,
+    -- Time when the issue comments were read last time
+    issue_read_comments_at TIMESTAMPTZ,
 
     -- Branch name and repo url of the repository
     repo_branch_name VARCHAR(200),
