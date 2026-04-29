@@ -16,15 +16,15 @@ logger = logging.getLogger(__name__)
 
 __all__ = [
     "checkout_branch",
-    "commit",
+    "git_commit",
     "configure_user",
     "ensure_repository_exists",
     "get_current_branch",
     "get_remote_url",
-    "has_changes",
+    "git_has_changes",
     "normalize_git_url",
     "parse_github_owner_repo",
-    "stage_all",
+    "git_stage_all",
 ]
 
 
@@ -188,7 +188,7 @@ def get_current_branch(work_dir: str) -> Optional[str]:
         return None
 
 
-def has_changes(work_dir: str) -> bool:
+def git_has_changes(work_dir: str) -> bool:
     """Return ``True`` when the working tree contains staged, unstaged, or untracked changes."""
     try:
         repo = Repo(work_dir)
@@ -198,7 +198,7 @@ def has_changes(work_dir: str) -> bool:
         return False
 
 
-def stage_all(work_dir: str) -> bool:
+def git_stage_all(work_dir: str) -> bool:
     """Stage all changes (tracked and untracked) in *work_dir*. Returns success flag."""
     try:
         repo = Repo(work_dir)
@@ -222,7 +222,7 @@ def configure_user(work_dir: str, name: str = "Coding Agent", email: str = "agen
         raise
 
 
-def commit(work_dir: str, message: str) -> bool:
+def git_commit(work_dir: str, message: str) -> bool:
     """Commit staged changes with *message*. Returns success flag."""
     try:
         configure_user(work_dir)
@@ -256,12 +256,12 @@ def parse_github_owner_repo(remote_url: str) -> tuple[Optional[str], Optional[st
     return match.group(1), match.group(2)
 
 
-def push(work_dir: str, token: str) -> tuple[bool, str]:
+def git_push(work_dir: str, repo_token: str) -> tuple[bool, str]:
     """Push the current branch to *origin*, injecting *token* into the remote URL if needed.
 
     Returns ``(success, message)``.
     """
-    if not token:
+    if not repo_token:
         logger.error("GITHUB_TOKEN missing for git push")
         return False, "ERROR: GITHUB_TOKEN missing"
 
@@ -279,13 +279,13 @@ def push(work_dir: str, token: str) -> tuple[bool, str]:
         current_url = repo.remotes.origin.url
 
         if "https://" in current_url and "@" not in current_url:
-            auth_url = current_url.replace("https://", f"https://{token}@")
+            auth_url = current_url.replace("https://", f"https://{repo_token}@")
             repo.remotes.origin.set_url(auth_url)
 
         repo.git.push("-u", "origin", "HEAD")
         logger.info("Git push successful")
         return True, "Push successful"
     except GitCommandError as exc:
-        safe_msg = str(exc).replace(token, "***") if token else str(exc)
+        safe_msg = str(exc).replace(repo_token, "***") if repo_token else str(exc)
         logger.error("Git push failed: %s", safe_msg)
         return False, f"Push FAILED: {safe_msg}"

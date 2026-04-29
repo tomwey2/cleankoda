@@ -27,7 +27,7 @@ from src.core.its.trello_client import (
     move_trello_card_to_list,
     move_trello_card_to_named_list,
 )
-from src.core.localdb.models import AgentSettingsDb
+from src.core.database.models import AgentSettingsDb
 from src.core.types import IssueTrackingSystemType
 
 logger = logging.getLogger(__name__)

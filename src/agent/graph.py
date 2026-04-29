@@ -160,7 +160,7 @@ def create_workflow(runtime: RuntimeSetting) -> StateGraph:
     workflow.add_node("tools_analyst", ToolNode(analyst_tools))
     workflow.add_node("tools_tester", ToolNode(tester_tools))
 
-    workflow.add_node("pull_request", create_pull_request_node())
+    workflow.add_node("pull_request", create_pull_request_node(runtime.agent_settings))
     workflow.add_node("issue_update", create_issue_update_node(runtime.agent_settings))
 
     workflow.set_entry_point("issue_fetch")

@@ -107,24 +107,25 @@
                                         </div>
                                         <div class="card-body">
                                             <div class="mb-3">
+                                                <label for="its_credential_id" class="form-label">Trello
+                                                    Credential</label>
+                                                <select class="form-select" id="its_credential_id"
+                                                    name="its_credential_id">
+                                                    <option value="">-- Select Credential --</option>
+                                                    {% for cred in trello_credentials %}
+                                                    <option value="{{ cred.id }}" {% if
+                                                        form_data.its_credential_id==cred.id %}selected{% endif %}>
+                                                        {{ cred.name }}
+                                                    </option>
+                                                    {% endfor %}
+                                                </select>
+                                            </div>
+                                            <div class="mb-3">
                                                 <label for="its_base_url" class="form-label">Base URL</label>
                                                 <input type="text" class="form-control" id="its_base_url"
                                                     name="its_base_url"
                                                     value="{{ form_data.its_base_url or 'https://api.trello.com' }}"
                                                     placeholder="https://api.trello.com/1">
-                                            </div>
-                                            <div class="mb-3">
-                                                <label for="its_api_key" class="form-label">API Key</label>
-                                                <input type="password" class="form-control" id="its_api_key"
-                                                    name="its_api_key" value="{{ form_data.its_api_key or '' }}"
-                                                    placeholder="Enter API key">
-                                            </div>
-                                            <div class="mb-3">
-                                                <label for="its_api_token" class="form-label">API
-                                                    Token</label>
-                                                <input type="password" class="form-control" id="its_api_token"
-                                                    name="its_api_token" value="{{ form_data.its_api_token or '' }}"
-                                                    placeholder="Enter API token">
                                             </div>
                                             <div class="mb-3">
                                                 <label for="its_container_id" class="form-label">Container ID (Trello:
@@ -204,6 +205,18 @@
                                     </select>
                                 </div>
                                 <div class="mb-3">
+                                    <label for="repo_credential_id" class="form-label">GitHub Credential</label>
+                                    <select class="form-select" id="repo_credential_id" name="repo_credential_id">
+                                        <option value="">-- Select Credential --</option>
+                                        {% for cred in github_credentials %}
+                                        <option value="{{ cred.id }}" {% if form_data.repo_credential_id==cred.id
+                                            %}selected{% endif %}>
+                                            {{ cred.name }}
+                                        </option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
+                                <div class="mb-3">
                                     <label for="repo_url" class="form-label">Repository URL</label>
                                     <input type="text" class="form-control" id="repo_url" name="repo_url"
                                         value="{{ settings.repo_url }}" placeholder="https://github.com/org/repo.git">
@@ -217,34 +230,16 @@
                                 <h5>LLM Configuration</h5>
                             </div>
                             <div class="card-body">
-                                {% if missing_provider_env %}
-                                <div class="alert alert-warning" role="alert">
-                                    <strong>Missing API key:</strong> The selected provider
-                                    <code>{{ selected_provider }}</code> requires the environment variable
-                                    <code>{{ missing_provider_env }}</code>. Please set it before activating the agent.
-                                </div>
-                                {% elif show_ollama_warning %}
-                                <div class="alert alert-info" role="alert">
-                                    <strong>Ollama Note:</strong> Local Ollama instances usually do not need an API key,
-                                    but cloud providers might. Double-check whether your deployment requires
-                                    <code>OLLAMA_API_KEY</code>.
-                                </div>
-                                {% endif %}
                                 <div class="mb-3">
-                                    <label for="llm_provider" class="form-label">AI Provider</label>
-                                    <select class="form-select" id="llm_provider" name="llm_provider">
-                                        <option value="mistral" {% if form_data.llm_provider=="mistral" %}selected{%
-                                            endif %}>Mistral</option>
-                                        <option value="openai" {% if form_data.llm_provider=="openai" %}selected{% endif
-                                            %}>OpenAI</option>
-                                        <option value="google" {% if form_data.llm_provider=="google" %}selected{% endif
-                                            %}>Google</option>
-                                        <option value="openrouter" {% if form_data.llm_provider=="openrouter"
-                                            %}selected{% endif %}>OpenRouter</option>
-                                        <option value="ollama" {% if form_data.llm_provider=="ollama" %}selected{% endif
-                                            %}>Ollama</option>
-                                        <option value="anthropic" {% if form_data.llm_provider=="anthropic" %}selected{%
-                                            endif %}>Anthropic</option>
+                                    <label for="llm_credential_id" class="form-label">LLM Credential</label>
+                                    <select class="form-select" id="llm_credential_id" name="llm_credential_id">
+                                        <option value="">-- Select Credential --</option>
+                                        {% for cred in llm_credentials %}
+                                        <option value="{{ cred.id }}" {% if form_data.llm_credential_id==cred.id
+                                            %}selected{% endif %}>
+                                            {{ cred.name }} ({{ cred.credential_type }})
+                                        </option>
+                                        {% endfor %}
                                     </select>
                                 </div>
                                 <div class="mb-3">

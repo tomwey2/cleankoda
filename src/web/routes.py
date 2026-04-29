@@ -26,9 +26,10 @@ from src.agent.services.pull_request import (
     format_pr_review_message,
     get_latest_pr_review_status,
 )
-from src.web.services import dashboard_service, settings_service, credentials_service
+from src.web.services import dashboard_service, settings_service
 from src.web.services.dashboard_service import PlanReviewError, process_plan_review
 from src.core.types import PlanState
+from src.core.services import credentials_service, users_service, agent_settings_service
 
 logger = logging.getLogger(__name__)
 
@@ -44,23 +45,26 @@ def landing():
 @web_bp.route("/dashboard", methods=["GET"])
 async def dashboard():
     """Handles the main dashboard page."""
-    context = await dashboard_service.get_template_context()
+    user_id = users_service.get_current_user_id()
+    context = await dashboard_service.get_template_context(user_id)
     return render_template("dashboard.html", **context)
 
 
 @web_bp.route("/settings", methods=["GET", "POST"])
 def settings():
     """Handles the settings page."""
-    agent_settings = settings_service.get_or_create_settings()
+    user_id = users_service.get_current_user_id()
+    agent_settings = agent_settings_service.get_or_create_agent_settings(user_id)
 
     if request.method == "POST":
-        success, error_msg = settings_service.validate_and_save(agent_settings)
-        if success:
+        try:
+            settings_service.save_settings(agent_settings)
             flash("Settings saved successfully!", "success")
-        else:
-            flash(f"Error saving settings: {error_msg}", "danger")
+        except Exception as e:  # pylint: disable=broad-exception-caught
+            logger.exception("Failed to save settings")
+            flash(f"Error saving settings: {str(e)}", "danger")
         # Re-fetch settings to show updated values
-        agent_settings = settings_service.get_or_create_settings()
+        agent_settings = agent_settings_service.get_or_create_agent_settings(user_id)
 
     context = settings_service.get_template_context(agent_settings)
     return render_template("settings.html", **context)
@@ -69,7 +73,7 @@ def settings():
 @web_bp.route("/credentials", methods=["GET"])
 def credentials_overview():
     """Handles the credentials overview page."""
-    user_id = credentials_service.get_current_user_id()
+    user_id = users_service.get_current_user_id()
     credentials = credentials_service.get_credentials_for_user(user_id)
     return render_template("credentials_overview.html", credentials=credentials)
 
@@ -80,31 +84,61 @@ def credentials_new_selection():
     # List of available credential types
     credential_types = [
         {
-            "id": "github",
+            "id": "GITHUB",
             "name": "GitHub PAT",
             "icon": "bi-github",
             "description": "Personal Access Token for GitHub",
         },
         {
-            "id": "jira",
+            "id": "JIRA",
             "name": "Jira Basic Auth",
             "icon": "bi-bezier",
             "description": "Email and API Token for Jira",
         },
         {
-            "id": "trello",
+            "id": "TRELLO",
             "name": "Trello Key",
             "icon": "bi-trello",
             "description": "API Key and Token for Trello",
         },
         {
-            "id": "llm",
-            "name": "LLM Provider API Key",
+            "id": "MISTRAL",
+            "name": "Mistral API Key",
             "icon": "bi-cpu",
-            "description": "API Key for Mistral, OpenAI, Anthropic, etc.",
+            "description": "API Key for Mistral",
         },
         {
-            "id": "basic_auth",
+            "id": "GEMINI",
+            "name": "Gemini API Key",
+            "icon": "bi-cpu",
+            "description": "API Key for Gemini",
+        },
+        {
+            "id": "OPENAI",
+            "name": "OpenAI API Key",
+            "icon": "bi-cpu",
+            "description": "API Key for OpenAI",
+        },
+        {
+            "id": "ANTHROPIC",
+            "name": "Anthropic API Key",
+            "icon": "bi-cpu",
+            "description": "API Key for Anthropic",
+        },
+        {
+            "id": "OLLAMA",
+            "name": "Local LLM with Ollama",
+            "icon": "bi-cpu",
+            "description": "Ollama API Key",
+        },
+        {
+            "id": "OPENROUTER",
+            "name": "OpenRouter API Key",
+            "icon": "bi-cpu",
+            "description": "OpenRouter API Key",
+        },
+        {
+            "id": "BASIC_AUTH",
             "name": "Basic Auth",
             "icon": "bi-person",
             "description": "Basic Auth for username and password",
@@ -116,7 +150,7 @@ def credentials_new_selection():
 @web_bp.route("/credentials/new/<credential_type>", methods=["GET", "POST"])
 def credentials_new_form(credential_type: str):
     """Handles the credential creation form for a specific type."""
-    user_id = credentials_service.get_current_user_id()
+    user_id = users_service.get_current_user_id()
 
     if request.method == "POST":
         try:
@@ -135,8 +169,8 @@ def credentials_new_form(credential_type: str):
 @web_bp.route("/credentials/<int:credential_id>/edit", methods=["GET", "POST"])
 def credentials_edit(credential_id: int):
     """Handles editing an existing credential."""
-    user_id = credentials_service.get_current_user_id()
-    credential = credentials_service.get_credential_by_id(user_id, credential_id)
+    user_id = users_service.get_current_user_id()
+    credential = credentials_service.get_credential_by_id(credential_id)
     if not credential:
         flash("Credential not found.", "danger")
         return redirect(url_for("web.credentials_overview"))
@@ -160,7 +194,7 @@ def credentials_edit(credential_id: int):
 @web_bp.route("/credentials/<int:credential_id>/delete", methods=["POST"])
 def credentials_delete(credential_id: int):
     """Handles deleting a credential."""
-    user_id = credentials_service.get_current_user_id()
+    user_id = users_service.get_current_user_id()
     success = credentials_service.delete_credential(user_id, credential_id)
     if success:
         flash("Credential deleted successfully!", "success")
@@ -182,7 +216,11 @@ def get_pr_json(owner: str, repo: str, repo_pr_number: int):
     Returns:
         JSON response with PR details, reviews, and comments
     """
-    pr = fetch_pr_details(owner, repo, repo_pr_number)
+    user_id = users_service.get_current_user_id()
+    agent_settings = agent_settings_service.get_or_create_agent_settings(user_id)
+    repo_token = credentials_service.get_repo_token(agent_settings.repo_credential_id)
+
+    pr = fetch_pr_details(owner, repo, repo_pr_number, repo_token)
     if not pr:
         return jsonify({"error": f"PR #{repo_pr_number} not found"}), 404
 
@@ -215,12 +253,16 @@ def get_pr_formatted(owner: str, repo: str, repo_pr_number: int):
     Returns:
         Plain text response with formatted PR review feedback
     """
-    pr = fetch_pr_details(owner, repo, repo_pr_number)
+    user_id = users_service.get_current_user_id()
+    agent_settings = agent_settings_service.get_or_create_agent_settings(user_id)
+    repo_token = credentials_service.get_repo_token(agent_settings.repo_credential_id)
+
+    pr = fetch_pr_details(owner, repo, repo_pr_number, repo_token)
     if not pr:
         return Response(f"PR #{repo_pr_number} not found", status=404, mimetype="text/plain")
 
     is_approved, rejection_reviews, code_comments = get_latest_pr_review_status(
-        repo_pr_number, owner, repo
+        repo_pr_number, repo_token, owner, repo
     )
 
     lines = [
@@ -246,12 +288,13 @@ def get_pr_formatted(owner: str, repo: str, repo_pr_number: int):
 @web_bp.route("/issue/review_plan", methods=["POST"])
 async def review_plan():
     """Updates the plan state of the current issue."""
+    user_id = users_service.get_current_user_id()
     data = request.json or {}
     new_state = PlanState.from_string(data.get("plan_state"))
     rejection_reason = data.get("rejection_reason")
 
     try:
-        result = await process_plan_review(new_state, rejection_reason)
+        result = await process_plan_review(user_id, new_state, rejection_reason)
         return jsonify(result)
     except PlanReviewError as exc:
         return jsonify({"error": str(exc)}), exc.status_code

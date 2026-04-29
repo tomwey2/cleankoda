@@ -4,7 +4,7 @@ import logging
 
 from langchain.tools import ToolRuntime, tool
 
-from src.core.localdb.models import AgentSettingsDb
+from src.core.database.models import AgentSettingsDb
 from src.core.its.its_factory import create_issue_tracking_system
 
 logger = logging.getLogger(__name__)

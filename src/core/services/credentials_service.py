@@ -6,37 +6,14 @@ separating concerns from the route handlers and database operations.
 
 import logging
 from typing import List, Optional
-import uuid
 
 from src.core.extensions import db
-from src.core.localdb.models import User, UserCredential
+from src.core.database.models import UserCredentialDb
 
 logger = logging.getLogger(__name__)
 
 
-def get_current_user_id() -> str:
-    """Mock implementation to get the current user ID.
-
-    Since a full authentication layer is not yet implemented, this function
-    returns the ID of the first user in the database. If no user exists,
-    it creates a mock user and returns its ID.
-
-    Returns:
-        String representing the user ID.
-    """
-    first_user = User.query.first()
-    if not first_user:
-        mock_id = str(uuid.uuid4())
-        first_user = User(id=mock_id, first_name="Mock", last_name="User")
-        db.session.add(first_user)
-        db.session.commit()
-        logger.info("Created mock user with ID: %s", mock_id)
-        return mock_id
-
-    return first_user.id
-
-
-def get_credentials_for_user(user_id: str) -> List[UserCredential]:
+def get_credentials_for_user(user_id: str) -> List[UserCredentialDb]:
     """Retrieve all credentials for a given user.
 
     Args:
@@ -45,23 +22,22 @@ def get_credentials_for_user(user_id: str) -> List[UserCredential]:
     Returns:
         List of UserCredential objects.
     """
-    return UserCredential.query.filter_by(user_id=user_id).all()
+    return UserCredentialDb.query.filter_by(user_id=user_id).all()
 
 
-def get_credential_by_id(user_id: str, credential_id: int) -> Optional[UserCredential]:
+def get_credential_by_id(credential_id: int) -> Optional[UserCredentialDb]:
     """Retrieve a specific credential for a user.
 
     Args:
-        user_id: The ID of the user.
         credential_id: The ID of the credential.
 
     Returns:
         UserCredential or None.
     """
-    return UserCredential.query.filter_by(user_id=user_id, id=credential_id).first()
+    return UserCredentialDb.query.filter_by(id=credential_id).first()
 
 
-def save_credential(user_id: str, data: dict) -> UserCredential:
+def save_credential(user_id: str, data: dict) -> UserCredentialDb:
     """Create or update a user credential.
 
     Args:
@@ -74,11 +50,11 @@ def save_credential(user_id: str, data: dict) -> UserCredential:
     credential_id = data.get("id")
 
     if credential_id:
-        credential = get_credential_by_id(user_id, int(credential_id))
+        credential = get_credential_by_id(int(credential_id))
         if not credential:
             raise ValueError(f"Credential {credential_id} not found for user {user_id}")
     else:
-        credential = UserCredential(user_id=user_id)
+        credential = UserCredentialDb(user_id=user_id)
         db.session.add(credential)
 
     # Map fields
@@ -88,6 +64,8 @@ def save_credential(user_id: str, data: dict) -> UserCredential:
         credential.name = data["name"]
     if "username_or_email" in data:
         credential.username_or_email = data["username_or_email"]
+    if "base_url" in data:
+        credential.base_url = data["base_url"]
 
     # Encrypted fields
     if "password" in data and data["password"]:
@@ -112,7 +90,7 @@ def delete_credential(user_id: str, credential_id: int) -> bool:
     Returns:
         True if deleted, False if not found.
     """
-    credential = get_credential_by_id(user_id, credential_id)
+    credential = get_credential_by_id(credential_id)
     if not credential:
         return False
 
@@ -120,3 +98,8 @@ def delete_credential(user_id: str, credential_id: int) -> bool:
     db.session.commit()
     logger.info("Deleted credential ID %s for user %s", credential_id, user_id)
     return True
+
+
+def get_repo_token(credential_id: int) -> str | None:
+    credential = get_credential_by_id(credential_id)
+    return credential.api_token if credential else None

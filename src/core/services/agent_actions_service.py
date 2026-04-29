@@ -2,28 +2,29 @@ import logging
 from sqlalchemy.exc import IntegrityError
 
 from src.core.extensions import db
-from src.core.localdb.models import AgentActionDb, AgentStatesDb
+from src.core.database.models import AgentActionDb, AgentStatesDb
 from sqlalchemy import select
-from src.core.localdb.agent_issues_utils import read_db_agent_state
+from src.core.services.agent_states_service import get_agent_state_by_id
 
 logger = logging.getLogger(__name__)
 
 
-def read_db_agent_actions(issue_id: str) -> list[AgentActionDb]:
+def get_agent_actions_by_issue_id(user_id: str, issue_id: str) -> list[AgentActionDb]:
     """Get the actions from the database for a given issue."""
-    agent_state: AgentStatesDb | None = read_db_agent_state(issue_id=issue_id)
+    agent_state: AgentStatesDb | None = get_agent_state_by_id(user_id=user_id, issue_id=issue_id)
     if not agent_state:
         return []
 
     stmt = (
         select(AgentActionDb)
+        .filter_by(user_id=user_id)
         .where(AgentActionDb.state_id == agent_state.id)
         .order_by(AgentActionDb.id.asc())
     )
     return db.session.execute(stmt).scalars().all()
 
 
-def create_db_agent_action(db_agent_state_id: int, tool_calls: list[dict], node_name: str):
+def create_agent_action(user_id: str, agent_state_id: int, tool_calls: list[dict], node_name: str):
     """insert agent state into sqlalchemy database"""
     if node_name is None or not tool_calls:
         return
@@ -42,7 +43,7 @@ def create_db_agent_action(db_agent_state_id: int, tool_calls: list[dict], node_
             if args and tool_name in ["read", "write", "bash"]:
                 tool_arg0_name, tool_arg0_value = next(iter(args.items()))
 
-            last_agent_action = get_last_agent_action()
+            last_agent_action = get_last_agent_action(user_id)
             if (
                 last_agent_action
                 and last_agent_action.node_name == node_name
@@ -52,7 +53,8 @@ def create_db_agent_action(db_agent_state_id: int, tool_calls: list[dict], node_
             ):
                 return
             new_agent_action = AgentActionDb(
-                state_id=db_agent_state_id,
+                user_id=user_id,
+                state_id=agent_state_id,
                 node_name=node_name,
                 tool_name=tool_name,
                 tool_arg0_name=tool_arg0_name,
@@ -73,7 +75,7 @@ def create_db_agent_action(db_agent_state_id: int, tool_calls: list[dict], node_
         return None
 
 
-def get_last_agent_action() -> AgentActionDb | None:
+def get_last_agent_action(user_id: str) -> AgentActionDb | None:
     """Get the last action from the database."""
-    stmt = select(AgentActionDb).order_by(AgentActionDb.id.desc())
+    stmt = select(AgentActionDb).filter_by(user_id=user_id).order_by(AgentActionDb.id.desc())
     return db.session.execute(stmt).scalar()

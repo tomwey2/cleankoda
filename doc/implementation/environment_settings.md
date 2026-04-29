@@ -49,14 +49,6 @@ When your code requires specific settings, use validation helpers:
 ```python
 from app.core.config import get_env_settings
 
-def github_operation():
-    settings = get_env_settings()
-    
-    # Raises ValueError with helpful message if not set
-    token = settings.require_github_token()
-    
-    # Use token for GitHub API calls...
-```
 
 ### Caching Settings in Functions
 
@@ -70,7 +62,6 @@ def complex_operation():
     
     workspace = env.workspace
     workbench = env.workbench
-    token = env.require_github_token()
     
     # Use cached settings...
 ```
@@ -90,14 +81,6 @@ These are validated in `EnvironmentSettings.from_env()` and will raise `ValueErr
 
 All other settings are optional and validated when used:
 
-- `GITHUB_TOKEN` - GitHub Personal Access Token
-- `OPENAI_API_KEY` - OpenAI API key
-- `MISTRAL_API_KEY` - Mistral AI API key
-- `GOOGLE_API_KEY` - Google/Gemini API key
-- `OPENROUTER_API_KEY` - OpenRouter API key
-- `ANTHROPIC_API_KEY` - Anthropic Claude API key
-- `OLLAMA_API_KEY` - Ollama API key (optional even for Ollama)
-- `OLLAMA_BASE_URL` - Ollama server URL (default: `http://host.docker.internal:11434`)
 - `SECRET_KEY` - Flask secret key (default: development key)
 - `DATABASE_URL` - Database connection URL (default: sqlite in instance/)
 - `INSTANCE_DIR` - Flast instance Directory used for sqlite database (default: instance/)
@@ -158,16 +141,6 @@ WORKBENCH_WORKSPACE=/coding-agent-workspace
 ```
 
 ## Validation Helper Methods
-
-### `require_github_token() -> str`
-
-Validates that GitHub token is configured. Use when GitHub functionality is required.
-
-```python
-token = settings.require_github_token()
-```
-
-**Raises:** `ValueError` if `GITHUB_TOKEN` is not set.
 
 ### `require_encryption_key() -> str`
 
@@ -284,55 +257,6 @@ The `frozen=True` parameter makes `EnvironmentSettings` immutable:
 
 ## Migration Guide
 
-### From Direct Environment Access
-
-**Before:**
-```python
-import os
-
-def my_function():
-    token = os.environ.get("GITHUB_TOKEN")
-    if not token:
-        raise ValueError("GITHUB_TOKEN not set")
-    # Use token...
-```
-
-**After:**
-```python
-from app.core.config import get_env_settings
-
-def my_function():
-    settings = get_env_settings()
-    token = settings.require_github_token()
-    # Use token...
-```
-
-### From Module-Level Constants
-
-**Before:**
-```python
-# config.py
-import os
-GITHUB_TOKEN = os.environ.get("GITHUB_TOKEN")
-
-# other_module.py
-from config import GITHUB_TOKEN
-
-def my_function():
-    # Use GITHUB_TOKEN...
-```
-
-**After:**
-```python
-# other_module.py
-from app.core.config import get_env_settings
-
-def my_function():
-    settings = get_env_settings()
-    token = settings.require_github_token()
-    # Use token...
-```
-
 ## Common Pitfalls
 
 ### Don't Cache Settings Globally
@@ -388,23 +312,6 @@ def my_function():
 
 ### Don't Silently Ignore Missing Settings
 
-**Bad:**
-```python
-def my_function():
-    settings = get_env_settings()
-    token = settings.github_token or "default-token"  # DON'T DO THIS
-    # Use token...
-```
-
-**Good:**
-```python
-def my_function():
-    settings = get_env_settings()
-    token = settings.require_github_token()  # DO THIS - explicit validation
-    # Use token...
-```
-
-**Why:** Silent fallbacks hide configuration errors.
 
 ## See Also
 

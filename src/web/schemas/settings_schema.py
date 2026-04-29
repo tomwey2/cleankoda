@@ -14,8 +14,6 @@ from src.core.types import IssueTrackingSystemType
 class ItsConfigSchema(BaseModel):
     """Schema for Trello configuration form data."""
 
-    its_api_key: Optional[str] = Field(default=None, description="API key")
-    its_api_token: Optional[str] = Field(default=None, description="API token")
     its_base_url: Optional[str] = Field(default=None, description="Base URL")
     its_container_id: Optional[str] = Field(default=None, description="Container ID")
     its_parent_id: Optional[str] = Field(default=None, description="Parent ID")
@@ -24,8 +22,9 @@ class ItsConfigSchema(BaseModel):
     its_state_in_progress: Optional[str] = Field(default=None, description="In-progress state")
     its_state_in_review: Optional[str] = Field(default=None, description="In-review state")
     its_state_done: Optional[str] = Field(default=None, description="Done state")
+    its_credential_id: Optional[int] = Field(default=None, description="Credential ID")
 
-    @field_validator("its_api_key", "its_api_token", "its_container_id", mode="before")
+    @field_validator("its_container_id", mode="before")
     @classmethod
     def empty_str_to_none(cls, v: Optional[str]) -> Optional[str]:
         """Convert empty strings to None."""
@@ -33,22 +32,45 @@ class ItsConfigSchema(BaseModel):
             return None
         return v
 
+    @field_validator("its_credential_id", mode="before")
+    @classmethod
+    def parse_its_credential_id(cls, v) -> Optional[int]:
+        """Parse credential id, defaulting to None on error or empty string."""
+        if not v or v == "":
+            return None
+        try:
+            return int(v)
+        except (ValueError, TypeError):
+            return None
+
 
 class LLMConfigSchema(BaseModel):
     """Schema for LLM configuration form data."""
 
-    llm_provider: str = Field(default="mistral", description="LLM provider name")
+    llm_provider: Optional[str] = Field(default=None, description="LLM provider name")
+    llm_credential_id: Optional[int] = Field(default=None, description="LLM Credential ID")
     llm_model_large: Optional[str] = Field(default=None, description="Large model name")
     llm_model_small: Optional[str] = Field(default=None, description="Small model name")
     llm_temperature: Optional[str] = Field(default=None, description="LLM temperature")
 
     @field_validator("llm_provider", mode="before")
     @classmethod
-    def default_provider(cls, v: Optional[str]) -> str:
-        """Default to mistral if empty."""
+    def default_provider(cls, v: Optional[str]) -> Optional[str]:
+        """Return provider or None if empty."""
         if not v or v == "":
-            return "mistral"
+            return None
         return v
+
+    @field_validator("llm_credential_id", mode="before")
+    @classmethod
+    def parse_llm_credential_id(cls, v) -> Optional[int]:
+        """Parse llm credential id, defaulting to None on error or empty string."""
+        if not v or v == "":
+            return None
+        try:
+            return int(v)
+        except (ValueError, TypeError):
+            return None
 
     @field_validator("llm_model_large", "llm_model_small", "llm_temperature", mode="before")
     @classmethod
@@ -71,6 +93,7 @@ class SettingsFormSchema(BaseModel):
     agent_gender: Optional[str] = Field(default=None, description="Agent gender")
     repo_type: str = Field(default="GITHUB", description="Repository type")
     repo_url: Optional[str] = Field(default=None, description="GitHub repository URL")
+    repo_credential_id: Optional[int] = Field(default=None, description="Repo Credential ID")
 
     its_config: ItsConfigSchema = Field(
         default_factory=ItsConfigSchema, description="Issue tracking system configuration"
@@ -107,3 +130,14 @@ class SettingsFormSchema(BaseModel):
         if isinstance(v, str):
             return v.lower() in ("true", "1", "on", "yes")
         return bool(v)
+
+    @field_validator("repo_credential_id", mode="before")
+    @classmethod
+    def parse_repo_credential_id(cls, v) -> Optional[int]:
+        """Parse repo credential id, defaulting to None on error or empty string."""
+        if not v or v == "":
+            return None
+        try:
+            return int(v)
+        except (ValueError, TypeError):
+            return None

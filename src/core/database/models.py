@@ -14,7 +14,7 @@ from src.core.types import IssueTrackingSystemType
 DEFAULT_TRELLO_BASE_URL = "https://api.trello.com/1"
 
 
-class User(db.Model):
+class UserDb(db.Model):
     __tablename__ = "users"
 
     # The ID is a string (36) to directly adopt the UUID from Supabase auth.users.
@@ -45,14 +45,15 @@ class User(db.Model):
     )
 
     def __repr__(self):
-        return f"<User(id='{self.id}', plan='{self.subscription_plan}', active={self.is_active})>"
+        return f"<UserDb(id='{self.id}', plan='{self.subscription_plan}', active={self.is_active})>"
 
 
-class UserCredential(db.Model):
+class UserCredentialDb(db.Model):
     __tablename__ = "user_credentials"
 
     id = db.Column(db.Integer, primary_key=True)
 
+    # Foreign key to User
     # Supabase UUIDs are typically stored as String(36) in SQLAlchemy.
     user_id = db.Column(
         db.String(36), db.ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True
@@ -61,6 +62,7 @@ class UserCredential(db.Model):
     credential_type = db.Column(db.String(50), nullable=False)
     name = db.Column(db.String(100), nullable=False)
     username_or_email = db.Column(db.String(100), nullable=True)
+    base_url = db.Column(db.String(200), nullable=True)
 
     # The encrypted BYTEA fields from Supabase are mapped via the EncryptedString.
     password = db.Column(EncryptedString, nullable=True)
@@ -78,11 +80,13 @@ class UserCredential(db.Model):
     # Optional, but very practical relationship for access from the user object:
     # `user.credentials` directly returns all of the user's keys as a list.
     user = db.relationship(
-        "User", backref=db.backref("credentials", cascade="all, delete-orphan", lazy="select")
+        "UserDb", backref=db.backref("credentials", cascade="all, delete-orphan", lazy="select")
     )
 
     def __repr__(self):
-        return f"<UserCredential(id={self.id}, name='{self.name}', type='{self.credential_type}')>"
+        return (
+            f"<UserCredentialDb(id={self.id}, name='{self.name}', type='{self.credential_type}')>"
+        )
 
 
 class AgentSettingsDb(db.Model):
@@ -97,6 +101,11 @@ class AgentSettingsDb(db.Model):
 
     id = db.Column(db.Integer, primary_key=True)
 
+    # Foreign key to User
+    user_id = db.Column(
+        db.String(36), db.ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+
     # Common settings
     polling_interval_seconds = db.Column(db.Integer, nullable=False, default=60)
     is_active = db.Column(db.Boolean, nullable=False, default=False)
@@ -105,8 +114,11 @@ class AgentSettingsDb(db.Model):
 
     # Issue tracking system: e.g., "TRELLO", "JIRA", "GITHUB ISSUES"
     its_type = db.Column(db.String(50), nullable=False, default=IssueTrackingSystemType.TRELLO)
-    its_api_key = db.Column(EncryptedString, nullable=True)
-    its_token = db.Column(EncryptedString, nullable=True)
+    its_credential_id = db.Column(
+        db.Integer,
+        db.ForeignKey("user_credentials.id", ondelete="SET NULL"),
+        nullable=True,
+    )
     its_base_url = db.Column(db.String(200), nullable=True)
     its_container_id = db.Column(db.String(100), nullable=True)
     its_parent_id = db.Column(db.String(100), nullable=True)
@@ -118,10 +130,20 @@ class AgentSettingsDb(db.Model):
 
     # Repo system: e.g., "GITHUB", "BITBUCKET"
     repo_type = db.Column(db.String(50), nullable=False, default="GITHUB")
+    repo_credential_id = db.Column(
+        db.Integer,
+        db.ForeignKey("user_credentials.id", ondelete="SET NULL"),
+        nullable=True,
+    )
     repo_url = db.Column(db.String(200))
 
     # LLM system: e.g., "OPENAI", "ANTHROPIC", "GOOGLE"
-    llm_provider = db.Column(db.String(50), nullable=False)
+    llm_provider = db.Column(db.String(50), nullable=True)
+    llm_credential_id = db.Column(
+        db.Integer,
+        db.ForeignKey("user_credentials.id", ondelete="SET NULL"),
+        nullable=True,
+    )
     llm_model_large = db.Column(db.String(100), nullable=True)
     llm_model_small = db.Column(db.String(100), nullable=True)
     llm_temperature = db.Column(db.String(16), nullable=True)
@@ -153,6 +175,11 @@ class AgentStatesDb(db.Model):
     __tablename__ = "agent_states"
 
     id = db.Column(db.Integer, primary_key=True)
+
+    # Foreign key to User
+    user_id = db.Column(
+        db.String(36), db.ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True
+    )
 
     # Issue ID from the external issue system
     issue_id = db.Column(db.String(100), nullable=False, unique=True, index=True)
@@ -223,10 +250,17 @@ class AgentActionDb(db.Model):
     __tablename__ = "agent_actions"
 
     id = db.Column(db.Integer, primary_key=True)
-    # Foreign key to Issue
+
+    # Foreign key to User
+    user_id = db.Column(
+        db.String(36), db.ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+
+    # Foreign key to AgentState
     state_id = db.Column(
         db.Integer, db.ForeignKey("agent_states.id", ondelete="CASCADE"), nullable=True
     )
+
     # Current node of the agent ("issue_fetch", "coder", "tester", "issue_update")
     node_name = db.Column(db.String(50), nullable=True)
     # Tool used by the agent

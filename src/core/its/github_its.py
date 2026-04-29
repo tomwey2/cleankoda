@@ -27,7 +27,7 @@ from src.core.its.github_client import (
     move_item_to_column,
     move_item_to_named_column,
 )
-from src.core.localdb.models import AgentSettingsDb
+from src.core.database.models import AgentSettingsDb
 
 logger = logging.getLogger(__name__)
 
