@@ -11,30 +11,28 @@ from time import sleep
 
 from langchain_core.messages import AIMessage, ToolMessage
 
-from src.core.extern.its.its_factory import create_issue_tracking_system
 from src.core.extern.its.issue_tracking_system import IssueTrackingSystem
 from src.agent.services.summaries import get_agent_summary_entries
 from src.agent.state import AgentState
-from src.core.database.models import AgentSettingsDb
 from src.core.types import IssueStateType
+from src.agent.runtime import RuntimeSettings
 
 AGENT_DEFAULT_COMMENT = "Issue completed by AI Agent."
 
 logger = logging.getLogger(__name__)
 
 
-def create_issue_update_node(agent_settings: AgentSettingsDb):
+def create_issue_update_node(runtime: RuntimeSettings):
     """
     Factory function that creates the issue update node.
 
     Args:
-        agent_settings: Agent configuration containing issue provider credentials
-            and settings.
+        runtime_settings: Runtime context for the agent.
 
     Returns:
         A function that represents the issue update node.
     """
-    its: IssueTrackingSystem = create_issue_tracking_system(agent_settings)
+    its: IssueTrackingSystem = runtime.its
 
     async def issue_update(state: AgentState) -> dict:
         """

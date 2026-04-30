@@ -18,7 +18,7 @@ from src.core.extern.its.issue_tracking_system import IssueComment
 from src.core.types import PlanState, IssueStateType, IssueType, AgentStack
 
 if TYPE_CHECKING:
-    from src.agent.runtime import RuntimeSetting
+    from src.agent.runtime import RuntimeSettings
 
 
 @dataclass
@@ -105,7 +105,7 @@ class AgentState(TypedDict):
     pr_description: str | None
 
     @staticmethod
-    def init_state(runtime: "RuntimeSetting") -> "AgentState":
+    def init_state(runtime: "RuntimeSettings") -> "AgentState":
         """Initialize the default agent state based on runtime settings."""
         # pylint: disable=import-outside-toplevel
         from src.core.constants import TECH_STACKS

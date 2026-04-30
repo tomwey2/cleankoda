@@ -14,7 +14,7 @@ from langgraph.graph import StateGraph
 
 from src.agent.graph import create_workflow
 from src.agent.mcp.adapter import McpServerClient
-from src.agent.runtime import RuntimeSetting
+from src.agent.runtime import RuntimeSettings
 from src.agent.services.graph_assets import save_graph_as_mermaid, save_graph_as_png
 from src.agent.utils import get_workspace, save_state_to_instance
 from src.core.config import get_env_settings
@@ -32,7 +32,7 @@ from src.core.services.credentials_service import get_credential_by_id
 logger = logging.getLogger(__name__)
 
 
-async def run_agent_cycle(runtime: RuntimeSetting) -> None:
+async def run_agent_cycle(runtime: RuntimeSettings) -> None:
     """Internal helper that orchestrates one graph execution."""
     async with AsyncExitStack() as stack:
         enable_mcp = get_env_settings().enable_mcp_servers

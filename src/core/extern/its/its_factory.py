@@ -17,7 +17,7 @@ from src.core.types import IssueTrackingSystemType
 logger = logging.getLogger(__name__)
 
 
-def create_issue_tracking_system(agent_settings: AgentSettingsDb) -> IssueTrackingSystem:
+def create_its(agent_settings: AgentSettingsDb) -> IssueTrackingSystem:
     """
     Factory function to create the appropriate issue tracking system.
 

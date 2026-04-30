@@ -16,7 +16,7 @@ from src.core.types import VersionControlSystemType
 logger = logging.getLogger(__name__)
 
 
-def create_version_control_system(agent_settings: AgentSettingsDb) -> VersionControlSystem:
+def create_vcs(agent_settings: AgentSettingsDb) -> VersionControlSystem:
     """
     Factory function to create the appropriate version control system.
 

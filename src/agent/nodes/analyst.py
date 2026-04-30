@@ -23,24 +23,26 @@ from src.agent.services.summaries import (
 from src.agent.state import AgentState
 from src.core.services.plan_service import exist_plan, get_plan
 from src.core.types import PlanState
+from src.agent.runtime import RuntimeSettings
+
 
 logger = logging.getLogger(__name__)
 
 DASHBOARD_URL = "http://localhost:5000/dashboard"
 
 
-def create_analyst_node(llm: BaseChatModel, tools):
+def create_analyst_node(runtime: RuntimeSettings, tools):
     """
     Factory function that creates the Analyst agent node.
 
     Args:
-        llm: The language model to be used by the analyst.
+        runtime: The runtime settings for the agent.
         tools: A list of tools available to the analyst.
 
     Returns:
         A function that represents the analyst node.
     """
-
+    llm: BaseChatModel = runtime.llm_large
     initial_plan_exists: bool | None = None
 
     async def analyst_node(state: AgentState):

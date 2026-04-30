@@ -11,6 +11,7 @@ from src.agent.state import AgentState
 from src.agent.utils import get_workspace
 from src.core.database.models import AgentSettingsDb
 from src.core.types import IssueType
+from src.agent.runtime import RuntimeSettings
 
 logger = logging.getLogger(__name__)
 
@@ -20,8 +21,9 @@ ROLE_PREFIXES = {
 }
 
 
-def create_checkout_node(agent_settings: AgentSettingsDb):
+def create_checkout_node(runtime: RuntimeSettings):
     """Create a checkout node"""
+    agent_settings: AgentSettingsDb = runtime.agent_settings
 
     async def checkout_node(state: AgentState) -> Dict[str, Any]:  # pylint: disable=unused-argument
         if state["current_node"] != "checkout":

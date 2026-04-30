@@ -10,12 +10,14 @@ import logging
 from typing import Dict, Literal
 
 from langchain_core.messages import SystemMessage, HumanMessage, BaseMessage
+from langchain.chat_models import BaseChatModel
 from pydantic import BaseModel, Field
 
 from src.agent.services.message_processing import filter_messages_for_llm
 from src.agent.state import AgentState
 from src.agent.services.prompts import load_prompt
 from src.core.types import SkillLevelType, PlanState, IssueType
+from src.agent.runtime import RuntimeSettings
 
 logger = logging.getLogger(__name__)
 
@@ -33,16 +35,17 @@ class RouterDecision(BaseModel):
     reasoning: str = Field(description="Why this classification was chosen")
 
 
-def create_router_node(llm):
+def create_router_node(runtime: RuntimeSettings):
     """
     Factory function that creates the router node for the agent graph.
 
     Args:
-        llm: The language model to be used for routing decisions.
+        runtime: RuntimeSettings for router
 
     Returns:
         A function that represents the router node.
     """
+    llm: BaseChatModel = runtime.llm_small
     structured_llm = llm.with_structured_output(RouterDecision, method="json_mode")
 
     async def router_node(state: AgentState) -> Dict[str, str]:

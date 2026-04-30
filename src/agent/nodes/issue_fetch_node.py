@@ -8,7 +8,6 @@ preparing them for processing by the agent.
 from datetime import datetime
 import logging
 
-from src.core.extern.its.its_factory import create_issue_tracking_system
 from src.core.extern.its.issue_tracking_system import IssueTrackingSystem, Issue
 from src.agent.services.pull_request import (
     format_pr_review_message,
@@ -20,14 +19,15 @@ from src.agent.state import AgentState
 from src.core.database.models import AgentSettingsDb, UserCredentialDb
 from src.core.types import IssueStateType
 from src.core.services.credentials_service import get_credential_by_id
-
+from src.agent.runtime import RuntimeSettings
 
 logger = logging.getLogger(__name__)
 
 
-def create_issue_fetch_node(agent_settings: AgentSettingsDb):
+def create_issue_fetch_node(runtime: RuntimeSettings):
     """Creates an issue fetch node for the agent graph."""
-    its = create_issue_tracking_system(agent_settings)
+    agent_settings: AgentSettingsDb = runtime.agent_settings
+    its: IssueTrackingSystem = runtime.its
     vcs_repo_credential: UserCredentialDb | None = get_credential_by_id(
         agent_settings.vcs_credential_id
     )

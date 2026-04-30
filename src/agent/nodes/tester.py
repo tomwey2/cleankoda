@@ -10,12 +10,14 @@ import logging
 from typing import Any, Dict, Literal, Optional
 
 from langchain_core.messages import AIMessage
+from langchain.chat_models import BaseChatModel
 from pydantic import BaseModel, Field
 
 from src.agent.nodes.base import invoke_tool_node
 from src.agent.services.prompts import load_prompt
 from src.agent.services.summaries import append_agent_summary
 from src.agent.state import AgentState
+from src.agent.runtime import RuntimeSettings
 
 logger = logging.getLogger(__name__)
 
@@ -41,17 +43,18 @@ class TesterResult(BaseModel):
     )
 
 
-def create_tester_node(llm, tools):
+def create_tester_node(runtime: RuntimeSettings, tools):
     """
     Factory function that creates the Tester agent node.
 
     Args:
-        llm: The language model to be used by the tester.
+        runtime: The runtime settings for the agent.
         tools: A list of tools available to the tester.
 
     Returns:
         A function that represents the tester node.
     """
+    llm: BaseChatModel = runtime.llm_large
 
     def _llm_response_hook(state: AgentState, response: AIMessage) -> dict[str, Any]:
         """

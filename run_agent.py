@@ -8,7 +8,7 @@ from src.core.config import get_env_settings
 from src.core.extensions import db
 from src.core.utils import log_and_validate_env, setup_logging
 from src.web import create_app
-from src.agent.runtime import RuntimeSetting, prepare_runtime
+from src.agent.runtime import RuntimeSettings, prepare_runtime
 
 
 DEFAULT_POLLING_INTERVAL_SECONDS = 60
@@ -59,7 +59,7 @@ async def main():
 
 async def run_cycle(app, logger) -> int:
     with app.app_context():
-        runtime: RuntimeSetting | None = prepare_runtime()
+        runtime: RuntimeSettings | None = prepare_runtime()
 
         if not runtime or not runtime.agent_settings:
             logger.info("No runtime or agent settings found, skipping cycle")

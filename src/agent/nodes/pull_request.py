@@ -16,6 +16,7 @@ from src.agent.utils import get_workspace
 from src.core.types import IssueType
 from src.core.database.models import AgentSettingsDb, UserCredentialDb
 from src.core.services.credentials_service import get_credential_by_id
+from src.agent.runtime import RuntimeSettings
 
 logger = logging.getLogger(__name__)
 
@@ -28,8 +29,9 @@ ROLE_PREFIX_MAP = {
 }
 
 
-def create_pull_request_node(agent_settings: AgentSettingsDb):
+def create_pull_request_node(runtime: RuntimeSettings):
     """Create a pull request node"""
+    agent_settings: AgentSettingsDb = runtime.agent_settings
     repo_credential: UserCredentialDb | None = get_credential_by_id(
         agent_settings.vcs_credential_id
     )
