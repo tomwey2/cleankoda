@@ -96,8 +96,8 @@
             <hr>
             <ul class="nav nav-pills flex-column mb-auto">
                 <li class="nav-item">
-                    <a href="{{ url_for('web.dashboard') }}"
-                        class="nav-link {% if request.path == url_for('web.dashboard') %}active{% endif %}"
+                    <a href="{{ url_for('dashboard.dashboard') }}"
+                        class="nav-link {% if request.path == url_for('dashboard.dashboard') %}active{% endif %}"
                         aria-current="page">
                         <i class="bi bi-speedometer2 me-2"></i>
                         Dashboard
@@ -110,15 +110,15 @@
                     </a>
                 </li>
                 <li>
-                    <a href="{{ url_for('web.credentials_overview') }}"
+                    <a href="{{ url_for('credentials.credentials_overview') }}"
                         class="nav-link {% if request.path.startswith('/credentials') %}active{% endif %}">
                         <i class="bi bi-key me-2"></i>
                         Credentials
                     </a>
                 </li>
                 <li>
-                    <a href="{{ url_for('web.settings') }}"
-                        class="nav-link {% if request.path == url_for('web.settings') %}active{% endif %}">
+                    <a href="{{ url_for('settings.settings') }}"
+                        class="nav-link {% if request.path == url_for('settings.settings') %}active{% endif %}">
                         <i class="bi bi-gear me-2"></i>
                         Settings
                     </a>

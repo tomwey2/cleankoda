@@ -14,6 +14,9 @@ from flask import Flask
 from src.core.config import get_env_settings
 from src.core.extensions import db
 from src.web.routes import web_bp
+from src.web.routes_credentials import credentials_bp
+from src.web.routes_dashboard import dashboard_bp
+from src.web.routes_settings import settings_bp
 
 
 def create_app(encryption_key: Fernet) -> Flask:
@@ -45,4 +48,7 @@ def create_app(encryption_key: Fernet) -> Flask:
 
     # This adds all routes from web_bp to the app
     app.register_blueprint(web_bp)
+    app.register_blueprint(credentials_bp)
+    app.register_blueprint(dashboard_bp)
+    app.register_blueprint(settings_bp)
     return app
