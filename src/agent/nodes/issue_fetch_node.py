@@ -8,14 +8,14 @@ preparing them for processing by the agent.
 from datetime import datetime
 import logging
 
-from src.core.its.its_factory import create_issue_tracking_system
-from src.core.its.issue_tracking_system import IssueTrackingSystem, Issue
+from src.core.extern.its.its_factory import create_issue_tracking_system
+from src.core.extern.its.issue_tracking_system import IssueTrackingSystem, Issue
 from src.agent.services.pull_request import (
     format_pr_review_message,
     get_latest_open_pr_for_branch,
     get_latest_pr_review_status,
 )
-from src.core.services.issue_service import fetch_comments_since
+from src.core.services.issues_service import fetch_comments_since
 from src.agent.state import AgentState
 from src.core.database.models import AgentSettingsDb, UserCredentialDb
 from src.core.types import IssueStateType

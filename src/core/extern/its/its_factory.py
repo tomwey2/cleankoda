@@ -8,9 +8,9 @@ different issue tracking systems.
 
 import logging
 
-from src.core.its.issue_tracking_system import IssueTrackingSystem
-from src.core.its.github_its import GitHubIts
-from src.core.its.trello_its import TrelloIts
+from src.core.extern.its.issue_tracking_system import IssueTrackingSystem
+from src.core.extern.its.github_its import GitHubIts
+from src.core.extern.its.trello_its import TrelloIts
 from src.core.database.models import AgentSettingsDb
 from src.core.types import IssueTrackingSystemType
 

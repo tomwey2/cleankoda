@@ -3,7 +3,7 @@
 import logging
 from datetime import datetime
 
-from src.core.its.issue_tracking_system import IssueTrackingSystem
+from src.core.extern.its.issue_tracking_system import IssueTrackingSystem
 
 logger = logging.getLogger(__name__)
 

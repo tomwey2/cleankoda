@@ -9,12 +9,12 @@ with other issue tracking systems.
 import logging
 from datetime import datetime, timezone
 
-from src.core.its.issue_tracking_system import (
+from src.core.extern.its.issue_tracking_system import (
     IssueTrackingSystem,
     Issue,
     IssueComment,
 )
-from src.core.its.trello_client import (
+from src.core.extern.its.trello_client import (
     add_comment_to_trello_card,
     create_trello_card,
     get_all_trello_cards,

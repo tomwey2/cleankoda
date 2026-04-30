@@ -8,7 +8,7 @@ the VersionControlSystem interface for consistent version control operations acr
 import httpx
 
 from src.core.database.models import AgentSettingsDb
-from src.core.vcs.version_control_system import VersionControlSystem, PullRequest
+from src.core.extern.vcs.version_control_system import VersionControlSystem, PullRequest
 from src.core.services.credentials_service import get_repo_token
 
 
@@ -49,7 +49,7 @@ class GitHubVcs(VersionControlSystem):
             "title": title,
             "head": source_branch,
             "base": self.get_default_branch_name(),
-            "body": "Pull request created by CleanKoda agent."
+            "body": "Pull request created by CleanKoda agent.",
         }
 
         async with httpx.AsyncClient() as client:
@@ -84,15 +84,13 @@ class GitHubVcs(VersionControlSystem):
 
         # In GitHub API, PR comments are created via the issues endpoint
         url = f"{base_url}/repos/{repo_id}/issues/{pr_number}/comments"
-        
+
         headers = {
             "Authorization": f"Bearer {token}",
             "Accept": "application/vnd.github.v3+json",
         }
-        
-        payload = {
-            "body": comment
-        }
+
+        payload = {"body": comment}
 
         async with httpx.AsyncClient() as client:
             response = await client.post(url, headers=headers, json=payload, timeout=30.0)

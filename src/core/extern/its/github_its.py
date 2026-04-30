@@ -9,12 +9,12 @@ issue operations across different systems.
 import logging
 from datetime import datetime, timezone
 
-from src.core.its.issue_tracking_system import (
+from src.core.extern.its.issue_tracking_system import (
     IssueComment,
     IssueTrackingSystem,
     Issue,
 )
-from src.core.its.github_client import (
+from src.core.extern.its.github_client import (
     add_comment_to_gh_issue,
     create_draft_issue,
     get_comments_from_gh_issue,

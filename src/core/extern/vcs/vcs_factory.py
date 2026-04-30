@@ -8,8 +8,8 @@ different version control systems (GitHub, GitLab, Bitbucket, etc.).
 
 import logging
 
-from src.core.vcs.version_control_system import VersionControlSystem
-from src.core.vcs.github_vcs import GitHubVcs
+from src.core.extern.vcs.version_control_system import VersionControlSystem
+from src.core.extern.vcs.github_vcs import GitHubVcs
 from src.core.database.models import AgentSettingsDb
 from src.core.types import VersionControlSystemType
 

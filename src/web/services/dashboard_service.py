@@ -8,7 +8,7 @@ import logging
 import markdown
 
 from src.core.database.models import AgentActionDb, AgentSettingsDb, AgentStatesDb
-from src.core.its.its_factory import create_issue_tracking_system
+from src.core.extern.its.its_factory import create_issue_tracking_system
 from src.core.services import (
     agent_actions_service,
     agent_states_service,
