@@ -1,5 +1,5 @@
 {% extends "base.html" %} {% block content %}
-<div id="dashboard-content" hx-get="{{ url_for('web.dashboard') }}" hx-trigger="every 1s" hx-select="#dashboard-content"
+<div id="dashboard-content" hx-get="{{ url_for('dashboard.dashboard') }}" hx-trigger="every 1s" hx-select="#dashboard-content"
     hx-target="#dashboard-content" hx-swap="outerHTML" class="h-100 d-flex flex-column">
 
     <!-- Scrollable Content Area -->

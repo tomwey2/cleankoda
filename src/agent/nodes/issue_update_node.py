@@ -11,29 +11,28 @@ from time import sleep
 
 from langchain_core.messages import AIMessage, ToolMessage
 
-from src.core.its.its_factory import create_issue_tracking_system
-from src.core.its.issue_tracking_system import IssueTrackingSystem
+from src.core.extern.its.issue_tracking_system import IssueTrackingSystem
 from src.agent.services.summaries import get_agent_summary_entries
 from src.agent.state import AgentState
-from src.core.database.models import AgentSettingsDb
 from src.core.types import IssueStateType
+from src.agent.runtime import RuntimeSettings
 
 AGENT_DEFAULT_COMMENT = "Issue completed by AI Agent."
 
 logger = logging.getLogger(__name__)
 
 
-def create_issue_update_node(agent_settings: AgentSettingsDb):
+def create_issue_update_node(runtime: RuntimeSettings):
     """
     Factory function that creates the issue update node.
 
     Args:
-        agent_settings: Agent configuration containing issue provider credentials
-            and settings.
+        runtime_settings: Runtime context for the agent.
 
     Returns:
         A function that represents the issue update node.
     """
+    its: IssueTrackingSystem = runtime.its
 
     async def issue_update(state: AgentState) -> dict:
         """
@@ -47,19 +46,17 @@ def create_issue_update_node(agent_settings: AgentSettingsDb):
 
         logger.info("Updating issue in issue tracking system %s", state["issue_id"])
 
-        its: IssueTrackingSystem = create_issue_tracking_system(agent_settings)
-
         try:
             final_comments = _build_agent_comments(state)
             for comment in final_comments:
-                await its.add_comment(state["issue_id"], comment)
+                await its.add_comment_to_issue(state["issue_id"], comment)
                 sleep(0.1)
         except Exception as e:  # pylint: disable=broad-exception-caught
             logger.error("Failed to add comment to issue: %s", e)
 
         try:
-            await its.move_issue_to_named_state(
-                issue_id=state["issue_id"], state_name=its.get_state_in_review()
+            await its.move_issue_to_state(
+                issue_id=state["issue_id"], target_state_type=IssueStateType.IN_REVIEW
             )
 
             return {
@@ -75,21 +72,6 @@ def create_issue_update_node(agent_settings: AgentSettingsDb):
             return
 
     return issue_update
-
-
-def get_agent_result(messages):
-    """
-    Searches backward in the history for the 'finish_task' Tool-Call.
-    The summary or result of the tool call is returned.
-    If not found, returns the default comment.
-    """
-    for msg in reversed(messages):
-        if isinstance(msg, AIMessage) and msg.tool_calls:
-            for tool_call in msg.tool_calls:
-                if tool_call["name"] == "finish_task":
-                    return tool_call["args"].get("summary", AGENT_DEFAULT_COMMENT)
-
-    return AGENT_DEFAULT_COMMENT
 
 
 def _check_for_issue_creation(state: AgentState) -> tuple[bool, str | None]:

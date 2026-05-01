@@ -5,7 +5,7 @@ import logging
 from langchain.tools import ToolRuntime, tool
 
 from src.core.database.models import AgentSettingsDb
-from src.core.its.its_factory import create_issue_tracking_system
+from src.core.extern.its.its_factory import create_its
 
 logger = logging.getLogger(__name__)
 
@@ -38,8 +38,8 @@ async def add_issue_comment(
         if not agent_settings:
             return "Error: No agent settings found in runtime context"
 
-        issue_provider = create_issue_tracking_system(agent_settings)
-        await issue_provider.add_comment(issue_id, comment)
+        issue_provider = create_its(agent_settings)
+        await issue_provider.add_comment_to_issue(issue_id, comment)
 
         logger.info(
             "Added comment to issue '%s' (%s): %s",

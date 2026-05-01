@@ -57,6 +57,24 @@ class IssueTrackingSystemType(StrEnum):
             return cls.UNKNOWN
 
 
+class VersionControlSystemType(StrEnum):
+    """Defines the types of version control systems."""
+
+    UNKNOWN = "UNKNOWN"
+    GITHUB = "GITHUB"
+    GITLAB = "GITLAB"
+    BITBUCKET = "BITBUCKET"
+
+    @classmethod
+    def from_string(cls, value: str) -> "VersionControlSystemType":
+        """Convert a string to a VersionControlSystemType, normalizing whitespace and case."""
+        normalized = value.strip().upper() if value else ""
+        try:
+            return cls(normalized)
+        except ValueError:
+            return cls.UNKNOWN
+
+
 class PlanState(StrEnum):
     """Defines the states of the plan."""
 

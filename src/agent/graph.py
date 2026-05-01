@@ -20,7 +20,7 @@ from src.agent.nodes.router import create_router_node
 from src.agent.nodes.issue_fetch_node import create_issue_fetch_node
 from src.agent.nodes.issue_update_node import create_issue_update_node
 from src.agent.nodes.tester import create_tester_node
-from src.agent.runtime import RuntimeSetting
+from src.agent.runtime import RuntimeSettings
 from src.agent.services.summaries import has_finish_task_call
 from src.agent.state import AgentState
 from src.agent.tools.add_issue_comment import add_issue_comment
@@ -110,7 +110,7 @@ def route_after_tools_analyst(state: AgentState) -> str:
     return "analyst"
 
 
-def create_workflow(runtime: RuntimeSetting) -> StateGraph:
+def create_workflow(runtime: RuntimeSettings) -> StateGraph:
     """Creates and configures the main LangGraph workflow."""
     # --- Tool Sets ---
     analyst_tools = [
@@ -137,31 +137,21 @@ def create_workflow(runtime: RuntimeSetting) -> StateGraph:
     # --- Graph Nodes ---
     workflow = StateGraph(AgentState)
 
-    workflow.add_node("issue_fetch", create_issue_fetch_node(runtime.agent_settings))
-    workflow.add_node("checkout", create_checkout_node(runtime.agent_settings))
-    workflow.add_node("router", create_router_node(runtime.llm_small))
-
-    workflow.add_node(
-        "coder", create_coder_node(runtime.llm_large, coder_tools, runtime.agent_stack)
-    )
-    workflow.add_node(
-        "analyst",
-        create_analyst_node(runtime.llm_large, analyst_tools),
-    )
-
-    workflow.add_node(
-        "tester",
-        create_tester_node(runtime.llm_large, tester_tools),
-    )
-    workflow.add_node("explainer", create_explainer_node(runtime.llm_small))
+    workflow.add_node("issue_fetch", create_issue_fetch_node(runtime))
+    workflow.add_node("checkout", create_checkout_node(runtime))
+    workflow.add_node("router", create_router_node(runtime))
+    workflow.add_node("coder", create_coder_node(runtime, coder_tools))
+    workflow.add_node("analyst", create_analyst_node(runtime, analyst_tools))
+    workflow.add_node("tester", create_tester_node(runtime, tester_tools))
 
     # Tool Nodes
     workflow.add_node("tools_coder", ToolNode(coder_tools))
     workflow.add_node("tools_analyst", ToolNode(analyst_tools))
     workflow.add_node("tools_tester", ToolNode(tester_tools))
 
-    workflow.add_node("pull_request", create_pull_request_node(runtime.agent_settings))
-    workflow.add_node("issue_update", create_issue_update_node(runtime.agent_settings))
+    workflow.add_node("explainer", create_explainer_node(runtime))
+    workflow.add_node("pull_request", create_pull_request_node(runtime))
+    workflow.add_node("issue_update", create_issue_update_node(runtime))
 
     workflow.set_entry_point("issue_fetch")
 

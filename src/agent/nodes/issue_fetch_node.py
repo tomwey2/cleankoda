@@ -5,36 +5,23 @@ Fetches issues from an issue tracking system (Trello, GitHub, Jira, etc.),
 preparing them for processing by the agent.
 """
 
+from datetime import datetime
 import logging
 
-from src.core.its.its_factory import create_issue_tracking_system
-from src.core.its.issue_tracking_system import IssueTrackingSystem, Issue
-from src.agent.services.pull_request import (
-    format_pr_review_message,
-    get_latest_open_pr_for_branch,
-    get_latest_pr_review_status,
-)
-from src.core.issue_utils import (
-    fetch_review_comments,
-    fetch_issue_from_state,
-)
+from src.core.extern.its.issue_tracking_system import IssueTrackingSystem, Issue
+from src.core.extern.vcs.version_control_system import VersionControlSystem
+from src.core.services.issues_service import fetch_comments_since
 from src.agent.state import AgentState
-from src.core.database.models import AgentSettingsDb, UserCredentialDb
 from src.core.types import IssueStateType
-from src.core.services.credentials_service import get_credential_by_id
-
+from src.agent.runtime import RuntimeSettings
 
 logger = logging.getLogger(__name__)
 
 
-def create_issue_fetch_node(agent_settings: AgentSettingsDb):
+def create_issue_fetch_node(runtime: RuntimeSettings):
     """Creates an issue fetch node for the agent graph."""
-    its = create_issue_tracking_system(agent_settings)
-    repo_credential: UserCredentialDb | None = get_credential_by_id(
-        agent_settings.repo_credential_id
-    )
-    if not repo_credential:
-        raise ValueError("No repo credential found")
+    its: IssueTrackingSystem = runtime.its
+    vcs: VersionControlSystem = runtime.vcs
 
     async def issue_fetch(state: AgentState) -> dict:  # pylint: disable=unused-argument
         """
@@ -52,30 +39,31 @@ def create_issue_fetch_node(agent_settings: AgentSettingsDb):
                 return {"issue_id": None}
 
             # if issue is found, determine if it is active, i.e. in todo, in progress or in review
-            issue_is_active = issue.state_name in [
-                its.get_state_todo(),
-                its.get_state_in_progress(),
-                its.get_state_in_review(),
+            issue_is_active = issue.state_type in [
+                IssueStateType.TODO,
+                IssueStateType.IN_PROGRESS,
+                IssueStateType.IN_REVIEW,
             ]
-            issue_from_todo = issue.state_name == its.get_state_todo()
+            issue_from_todo = issue.state_type == IssueStateType.TODO
 
             comments = []
+            issue_read_comments_at = state["issue_read_comments_at"]
             pr_review_message = ""
-            if issue_is_active and issue.state_name == its.get_state_in_progress():
+            if issue_is_active and issue.state_type == IssueStateType.IN_PROGRESS:
                 # otherwise fetch review comments from issue tracking system and pr, in order
                 # to give further information from user
-                comments = await fetch_review_comments(
+                comments = await fetch_comments_since(
                     its,
                     issue.id,
-                    its.get_state_in_progress(),
-                    its.get_state_in_review(),
+                    issue_read_comments_at,
                 )
-                pr_review_message = _fetch_pr_review_info(repo_credential, state, issue.id)
+                issue_read_comments_at = datetime.now()
+                pr_review_message = _fetch_pr_review_info(vcs, state, issue.id)
 
             if issue_is_active and issue_from_todo:
                 # if the issue is new and has the state "todo" then move it to "in progress"
-                await its.move_issue_to_named_state(
-                    issue_id=issue.id, state_name=its.get_state_in_progress()
+                await its.move_issue_to_state(
+                    issue_id=issue.id, target_state_type=IssueStateType.IN_PROGRESS
                 )
 
             return {
@@ -88,6 +76,7 @@ def create_issue_fetch_node(agent_settings: AgentSettingsDb):
                 else IssueStateType.UNKNOWN,
                 "issue_comments": comments,
                 "issue_is_active": issue_is_active,
+                "issue_read_comments_at": issue_read_comments_at,
                 "issue_from_todo": issue_from_todo,
                 "issue_url": issue.url,
                 "pr_review_message": pr_review_message,
@@ -111,17 +100,17 @@ async def _resolve_issue(issue_id: str | None, its: IssueTrackingSystem) -> Issu
         logger.info("Fetching issue from issue tracking system: %s", issue_id)
 
         try:
-            issue = await its.get_issue(issue_id)
+            issue = await its.get_issue_by_id(issue_id)
         except Exception:  # pylint: disable=broad-exception-caught
             issue = None
 
         if issue:
             # check if issue in review or in progress
-            if issue.state_name == its.get_state_in_review():
+            if issue.state_type == IssueStateType.IN_REVIEW:
                 logger.info("Issue is in review. Wait for user action.")
                 return None
 
-            if issue.state_name == its.get_state_in_progress():
+            if issue.state_type == IssueStateType.IN_PROGRESS:
                 logger.info("Issue is in progress. Add review comments.")
                 return issue
 
@@ -130,13 +119,11 @@ async def _resolve_issue(issue_id: str | None, its: IssueTrackingSystem) -> Issu
 
     # Get a new issue from todo
     logger.info("Fetching new issue from todo.")
-    issue = await fetch_issue_from_state(its, its.get_state_todo())
+    issue = await its.get_next_issue_from_state(IssueStateType.TODO)
     return issue
 
 
-def _fetch_pr_review_info(
-    repo_credential: UserCredentialDb, state: AgentState, issue_id: str
-) -> str:
+def _fetch_pr_review_info(vcs: VersionControlSystem, state: AgentState, issue_id: str) -> str:
     """
     Fetch PR review info if a PR exists for the issue.
 
@@ -148,18 +135,15 @@ def _fetch_pr_review_info(
         - is_approved: True if PR is approved or no PR exists
         - formatted_review_message: Formatted message for SystemMessage, empty if approved
     """
-    repo_branch_name = state["repo_branch_name"]
+    repo_pr_number = state.get("repo_pr_number")
     pr = None
-    if repo_branch_name:
-        pr = get_latest_open_pr_for_branch(repo_branch_name, repo_credential.api_token)
+    if repo_pr_number:
+        pr = vcs.get_pr(repo_pr_number)
 
-    if not pr:
-        logger.info("No PR found for issue %s", issue_id)
-        return ""
+    if not pr or pr.state in ["APPROVED", "MERGED", "CLOSED"]:
+        return ""  # besser: wenn Approved dann issue auf done schieben!
 
-    is_approved, rejection_reviews, code_comments = get_latest_pr_review_status(
-        pr.number, repo_credential.api_token
-    )
+    is_approved, rejection_reviews, code_comments = vcs.get_pr_review_status(pr.number)
 
     if is_approved:
         logger.info("PR #%d for issue %s is approved", pr.number, issue_id)
@@ -173,4 +157,4 @@ def _fetch_pr_review_info(
         len(code_comments),
     )
 
-    return format_pr_review_message(pr.html_url or "", rejection_reviews, code_comments)
+    return vcs.format_pr_review_status(pr.html_url or "", rejection_reviews, code_comments)

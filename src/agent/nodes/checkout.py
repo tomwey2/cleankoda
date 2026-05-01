@@ -11,6 +11,7 @@ from src.agent.state import AgentState
 from src.agent.utils import get_workspace
 from src.core.database.models import AgentSettingsDb
 from src.core.types import IssueType
+from src.agent.runtime import RuntimeSettings
 
 logger = logging.getLogger(__name__)
 
@@ -20,8 +21,9 @@ ROLE_PREFIXES = {
 }
 
 
-def create_checkout_node(agent_settings: AgentSettingsDb):
+def create_checkout_node(runtime: RuntimeSettings):
     """Create a checkout node"""
+    agent_settings: AgentSettingsDb = runtime.agent_settings
 
     async def checkout_node(state: AgentState) -> Dict[str, Any]:  # pylint: disable=unused-argument
         if state["current_node"] != "checkout":
@@ -77,10 +79,10 @@ async def _checkout_issue_branch(
             issue_name,
         )
 
-        if agent_settings.repo_url:
-            checkout_branch(agent_settings.repo_url, repo_branch_name, get_workspace())
+        if agent_settings.vcs_repo_url:
+            checkout_branch(agent_settings.vcs_repo_url, repo_branch_name, get_workspace())
         else:
-            logger.warning("No repo_url in agent settings, skipping checkout")
+            logger.warning("No vcs_repo_url in agent settings, skipping checkout")
 
         real_git_branch = get_current_branch(get_workspace())
         logger.info("Current branch: %s", real_git_branch)
@@ -156,9 +158,9 @@ async def _checkout_branch_for_issue(
     existing_branches = _collect_repo_branch_names(repo)
     repo_branch_name = _resolve_unique_repo_branch_name(base_repo_branch_name, existing_branches)
 
-    if not agent_settings.repo_url:
+    if not agent_settings.vcs_repo_url:
         logger.warning(
-            "No repo_url in agent settings, cannot checkout branch for issue %s", issue_id
+            "No vcs_repo_url in agent settings, cannot checkout branch for issue %s", issue_id
         )
         return None
 

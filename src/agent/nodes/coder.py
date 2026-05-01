@@ -10,28 +10,31 @@ import logging
 from typing import Any
 
 from langchain_core.messages import AIMessage
+from langchain.chat_models import BaseChatModel
 
 from src.agent.nodes.base import invoke_tool_node
 from src.agent.services.prompts import load_prompt
 from src.agent.services.summaries import has_finish_task_call, record_finish_task_summary
 from src.agent.state import AgentState
 from src.core.types import IssueType
+from src.agent.runtime import RuntimeSettings
+
 
 logger = logging.getLogger(__name__)
 
 
-def create_coder_node(llm, tools, agent_stack):
+def create_coder_node(runtime: RuntimeSettings, tools):
     """
     Factory function that creates the Coder agent node.
 
     Args:
-        llm: The language model to be used by the coder.
+        runtime: The runtime settings for the agent.
         tools: A list of tools available to the coder.
-        agent_stack: The technology stack to load the correct system prompt.
-
     Returns:
         A function that represents the coder node.
     """
+    llm: BaseChatModel = runtime.llm_large
+    agent_stack = runtime.agent_stack
 
     def _llm_response_hook(state: AgentState, response: AIMessage) -> dict[str, Any]:
         result: dict[str, Any] = {}

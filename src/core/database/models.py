@@ -8,7 +8,7 @@ from typing import Any, Dict
 
 from src.core.extensions import db
 from src.core.security import EncryptedString
-from src.core.types import IssueTrackingSystemType
+from src.core.types import IssueTrackingSystemType, IssueStateType
 
 # pylint: disable=too-few-public-methods
 DEFAULT_TRELLO_BASE_URL = "https://api.trello.com/1"
@@ -129,13 +129,16 @@ class AgentSettingsDb(db.Model):
     its_state_done = db.Column(db.String(50), nullable=True)
 
     # Repo system: e.g., "GITHUB", "BITBUCKET"
-    repo_type = db.Column(db.String(50), nullable=False, default="GITHUB")
-    repo_credential_id = db.Column(
+    vcs_type = db.Column(db.String(50), nullable=False, default="GITHUB")
+    vcs_credential_id = db.Column(
         db.Integer,
         db.ForeignKey("user_credentials.id", ondelete="SET NULL"),
         nullable=True,
     )
-    repo_url = db.Column(db.String(200))
+    vcs_repo_url = db.Column(db.String(200))
+    vcs_api_base_url = db.Column(db.String(200))
+    vcs_project_identifier = db.Column(db.String(100))
+    vcs_default_branch = db.Column(db.String(50))
 
     # LLM system: e.g., "OPENAI", "ANTHROPIC", "GOOGLE"
     llm_provider = db.Column(db.String(50), nullable=True)
@@ -166,6 +169,32 @@ class AgentSettingsDb(db.Model):
             key: getattr(self, key)
             for key in self.__mapper__.columns.keys()  # type: ignore[attr-defined]
         }
+
+    def translate_issue_state_to_type(self, issue_state: str) -> IssueStateType:
+        """Translate issue state to issue state type."""
+        if issue_state.lower() == self.its_state_todo.lower():
+            return IssueStateType.TODO
+        elif issue_state.lower() == self.its_state_in_progress.lower():
+            return IssueStateType.IN_PROGRESS
+        elif issue_state.lower() == self.its_state_in_review.lower():
+            return IssueStateType.IN_REVIEW
+        elif issue_state.lower() == self.its_state_done.lower():
+            return IssueStateType.DONE
+        else:
+            return IssueStateType.UNKNOWN
+
+    def translate_type_to_issue_state(self, issue_type: IssueStateType) -> str:
+        """Translate issue type to issue state."""
+        if issue_type == IssueStateType.TODO:
+            return self.its_state_todo
+        elif issue_type == IssueStateType.IN_PROGRESS:
+            return self.its_state_in_progress
+        elif issue_type == IssueStateType.IN_REVIEW:
+            return self.its_state_in_review
+        elif issue_type == IssueStateType.DONE:
+            return self.its_state_done
+        else:
+            return self.its_state_unknown
 
 
 # pylint: disable=too-few-public-methods
@@ -199,6 +228,8 @@ class AgentStatesDb(db.Model):
     # The LLM description of the skill level decision
     issue_skill_level_reasoning = db.Column(db.Text, nullable=True)
     issue_is_active = db.Column(db.Boolean, nullable=False, default=False)
+    # Time when the issue comments were read last time
+    issue_read_comments_at = db.Column(db.DateTime(timezone=True), nullable=True)
 
     # Branch name of the repository
     repo_branch_name = db.Column(db.String(100), nullable=True)

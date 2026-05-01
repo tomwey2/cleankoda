@@ -111,9 +111,14 @@ CREATE TABLE agent_settings (
     its_state_done VARCHAR(50),
 
     -- information about the used repo system
-    repo_type VARCHAR(50) NOT NULL,
-    repo_credential_id INTEGER REFERENCES user_credentials(id),
-    repo_url VARCHAR(200),
+    vcs_type VARCHAR(50) NOT NULL,
+    vcs_credential_id INTEGER REFERENCES user_credentials(id),
+    vcs_repo_url VARCHAR(200),
+    -- Self-Hosted APIs
+    vcs_api_base_url VARCHAR(200),
+    -- The ID for the REST-API (Project ID, Owner/Repo)
+    vcs_project_identifier VARCHAR(100),
+    vcs_default_branch VARCHAR(50) DEFAULT 'main',
 
     -- information about the used llm system
     -- MISTRAL, OPENAI, GEMINI
@@ -156,6 +161,8 @@ CREATE TABLE agent_states (
     -- The LLM description of the skill level decision
     issue_skill_level_reasoning TEXT,
     issue_is_active BOOLEAN NOT NULL DEFAULT false,
+    -- Time when the issue comments were read last time
+    issue_read_comments_at TIMESTAMPTZ,
 
     -- Branch name and repo url of the repository
     repo_branch_name VARCHAR(200),

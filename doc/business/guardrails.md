@@ -55,11 +55,11 @@ class GuardrailService:
     }
 
     @classmethod
-    def validate_github_repo_size(cls, repo_url, user_plan='FREE', github_token=None):
+    def validate_vcs_repo_size(cls, vcs_repo_url, user_plan='FREE', vcs_token=None):
         """
         Prüft vor der Speicherung, ob das Repository für den gewählten Plan zulässig ist.
         """
-        path_parts = urlparse(repo_url).path.strip('/').split('/')
+        path_parts = urlparse(vcs_repo_url).path.strip('/').split('/')
         if len(path_parts) < 2:
             raise ValueError("Ungültige GitHub URL")
         

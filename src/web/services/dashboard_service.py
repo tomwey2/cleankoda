@@ -8,7 +8,7 @@ import logging
 import markdown
 
 from src.core.database.models import AgentActionDb, AgentSettingsDb, AgentStatesDb
-from src.core.its.its_factory import create_issue_tracking_system
+from src.core.extern.its.its_factory import create_its
 from src.core.services import (
     agent_actions_service,
     agent_states_service,
@@ -104,7 +104,7 @@ async def get_template_context(user_id: str) -> dict:
 def _get_its(user_id: str):
     """Creates and returns a issue provider from the current agent settings."""
     agent_settings: AgentSettingsDb = agent_settings_service.get_or_create_agent_settings(user_id)
-    return create_issue_tracking_system(agent_settings)
+    return create_its(agent_settings)
 
 
 async def add_plan_rejection_comment(user_id: str, issue_id: str, rejection_reason: str) -> None:
@@ -115,14 +115,14 @@ async def add_plan_rejection_comment(user_id: str, issue_id: str, rejection_reas
     """
     logger.info("Adding rejection comment to issue %s", issue_id)
     its = _get_its(user_id)
-    await its.add_comment(issue_id, rejection_reason)
+    await its.add_comment_to_issue(issue_id, rejection_reason)
 
 
 async def move_issue_to_in_progress(user_id: str, issue_id: str) -> bool:
     """Moves the issue to the state in progress."""
     logger.info("Moving issue %s to in progress", issue_id)
     its = _get_its(user_id)
-    await its.move_issue_to_named_state(issue_id, state_name=its.get_state_in_progress())
+    await its.move_issue_to_state(issue_id=issue_id, target_state_type=IssueStateType.IN_PROGRESS)
     return True
 
 

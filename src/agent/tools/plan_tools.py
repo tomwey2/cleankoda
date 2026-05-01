@@ -4,7 +4,7 @@ import logging
 
 from langchain_core.tools import tool
 
-from src.core.plan_utils import save_plan_to_db
+from src.core.services.plan_service import save_plan_to_db
 
 logger = logging.getLogger(__name__)
 

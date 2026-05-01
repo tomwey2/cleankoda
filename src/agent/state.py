@@ -14,11 +14,11 @@ from typing import Annotated, TypedDict, TYPE_CHECKING
 from langchain_core.messages import BaseMessage
 from langgraph.graph.message import add_messages
 
-from src.core.its.issue_tracking_system import IssueComment
+from src.core.extern.its.issue_tracking_system import IssueComment
 from src.core.types import PlanState, IssueStateType, IssueType, AgentStack
 
 if TYPE_CHECKING:
-    from src.agent.runtime import RuntimeSetting
+    from src.agent.runtime import RuntimeSettings
 
 
 @dataclass
@@ -69,6 +69,7 @@ class AgentState(TypedDict):
     issue_skill_level_reasoning: str | None
     issue_from_todo: bool | None
     issue_is_active: bool | None
+    issue_read_comments_at: datetime | None
 
     # agent information from settings
     agent_stack: AgentStack
@@ -82,6 +83,7 @@ class AgentState(TypedDict):
     # information from the git system
     repo_branch_name: str | None
     repo_pr_url: str | None
+    repo_pr_number: int | None
     pr_review_message: str | None
 
     plan_content: str | None
@@ -104,7 +106,7 @@ class AgentState(TypedDict):
     pr_description: str | None
 
     @staticmethod
-    def init_state(runtime: "RuntimeSetting") -> "AgentState":
+    def init_state(runtime: "RuntimeSettings") -> "AgentState":
         """Initialize the default agent state based on runtime settings."""
         # pylint: disable=import-outside-toplevel
         from src.core.constants import TECH_STACKS
@@ -120,10 +122,12 @@ class AgentState(TypedDict):
             "issue_type": None,
             "issue_skill_level": None,
             "issue_skill_level_reasoning": None,
-            "issue_is_active": None,
             "issue_from_todo": None,
+            "issue_is_active": None,
+            "issue_read_comments_at": None,
             "repo_branch_name": None,
             "repo_pr_url": None,
+            "repo_pr_number": None,
             "plan_content": None,
             "plan_state": None,
             "working_state": None,

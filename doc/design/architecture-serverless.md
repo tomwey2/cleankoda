@@ -71,12 +71,12 @@ import os
 import docker
 from google.cloud import run_v2
 
-def spawn_agent_worker(project_id, region, target_language, ticket_id, repo_url, tenant_id, pr_feedback=None):
+def spawn_agent_worker(project_id, region, target_language, ticket_id, vcs_repo_url, tenant_id, pr_feedback=None):
     mode = os.environ.get("DEPLOYMENT_MODE", "SERVERLESS")
     
     env_vars = {
         "TICKET_ID": ticket_id,
-        "REPO_URL": repo_url,
+        "VCS_REPO_URL": vcs_repo_url,
         "TENANT_ID": tenant_id,
         "DEPLOYMENT_MODE": mode
     }

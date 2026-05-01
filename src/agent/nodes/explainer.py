@@ -16,6 +16,7 @@ from src.agent.services.prompts import load_prompt
 from src.agent.state import AgentState
 from src.core.extensions import db
 from src.core.database.models import AgentActionDb, AgentStatesDb
+from src.agent.runtime import RuntimeSettings
 
 logger = logging.getLogger(__name__)
 
@@ -26,13 +27,14 @@ MAX_TOOL_CHARS = 1300
 MAX_VALUE_CHARS = 120
 
 
-def create_explainer_node(llm):
+def create_explainer_node(runtime: RuntimeSettings):
     """
     Factory function that creates the Explainer node.
 
     Returns:
         A function that represents the explainer node.
     """
+    llm = runtime.llm_small
 
     async def explainer_node(state: AgentState) -> dict[str, Any]:
         if state["current_node"] != "explainer":

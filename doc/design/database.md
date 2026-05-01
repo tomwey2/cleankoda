@@ -46,7 +46,7 @@ erDiagram
         int id PK
         UUID user_id FK
         int its_credential_id FK
-        int repo_credential_id FK
+        int vcs_credential_id FK
         int llm_credential_id FK
     }
     agent_states {

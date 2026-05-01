@@ -14,7 +14,7 @@ from langgraph.graph import StateGraph
 
 from src.agent.graph import create_workflow
 from src.agent.mcp.adapter import McpServerClient
-from src.agent.runtime import RuntimeSetting
+from src.agent.runtime import RuntimeSettings
 from src.agent.services.graph_assets import save_graph_as_mermaid, save_graph_as_png
 from src.agent.utils import get_workspace, save_state_to_instance
 from src.core.config import get_env_settings
@@ -32,7 +32,7 @@ from src.core.services.credentials_service import get_credential_by_id
 logger = logging.getLogger(__name__)
 
 
-async def run_agent_cycle(runtime: RuntimeSetting) -> None:
+async def run_agent_cycle(runtime: RuntimeSettings) -> None:
     """Internal helper that orchestrates one graph execution."""
     async with AsyncExitStack() as stack:
         enable_mcp = get_env_settings().enable_mcp_servers
@@ -108,8 +108,10 @@ def _persist_state_to_database(current_state: AgentState) -> None:
         issue_skill_level=current_state["issue_skill_level"],
         issue_skill_level_reasoning=current_state["issue_skill_level_reasoning"],
         issue_is_active=current_state["issue_is_active"],
+        issue_read_comments_at=current_state["issue_read_comments_at"],
         repo_branch_name=current_state["repo_branch_name"],
         repo_pr_url=current_state["repo_pr_url"],
+        repo_pr_number=current_state["repo_pr_number"],
         plan_state=current_state["plan_state"],
         working_state=current_state["working_state"],
         user_message=current_state["user_message"],
@@ -135,8 +137,10 @@ def _restore_state_from_database(state: AgentState) -> AgentState:
         state["issue_skill_level"] = agent_state.issue_skill_level
         state["issue_skill_level_reasoning"] = agent_state.issue_skill_level_reasoning
         state["issue_is_active"] = agent_state.issue_is_active
+        state["issue_read_comments_at"] = agent_state.issue_read_comments_at
         state["repo_branch_name"] = agent_state.repo_branch_name
         state["repo_pr_url"] = agent_state.repo_pr_url
+        state["repo_pr_number"] = agent_state.repo_pr_number
         state["plan_content"] = agent_state.plan_content
         state["plan_state"] = agent_state.plan_state
         state["working_state"] = agent_state.working_state
