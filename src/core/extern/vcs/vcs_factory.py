@@ -9,7 +9,7 @@ different version control systems (GitHub, GitLab, Bitbucket, etc.).
 import logging
 
 from src.core.extern.vcs.version_control_system import VersionControlSystem
-from src.core.extern.vcs.github_vcs import GitHubVcs
+from src.core.extern.vcs.github import GitHub
 from src.core.database.models import AgentSettingsDb
 from src.core.types import VersionControlSystemType
 
@@ -41,7 +41,7 @@ def create_vcs(agent_settings: AgentSettingsDb) -> VersionControlSystem:
     logger.info("Creating version control provider: %s", vcs_type)
 
     if vcs_type == VersionControlSystemType.GITHUB:
-        return GitHubVcs(agent_settings)
+        return GitHub(agent_settings)
 
     raise ValueError(
         f"Unknown version control provider: {vcs_type}. Supported providers: {VersionControlSystemType.GITHUB}"

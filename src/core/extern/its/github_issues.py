@@ -25,7 +25,7 @@ logger = logging.getLogger(__name__)
 GITHUB_GRAPHQL_ENDPOINT = "/graphql"
 
 
-class GitHubIts(IssueTrackingSystem):
+class GitHubIssues(IssueTrackingSystem):
     """
     GitHub Projects v2 implementation of the IssueTrackingSystem interface.
 

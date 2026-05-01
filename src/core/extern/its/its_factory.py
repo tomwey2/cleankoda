@@ -9,8 +9,8 @@ different issue tracking systems.
 import logging
 
 from src.core.extern.its.issue_tracking_system import IssueTrackingSystem
-from src.core.extern.its.github_its import GitHubIts
-from src.core.extern.its.trello_its import TrelloIts
+from src.core.extern.its.github_issues import GitHubIssues
+from src.core.extern.its.trello import Trello
 from src.core.database.models import AgentSettingsDb
 from src.core.types import IssueTrackingSystemType
 
@@ -42,10 +42,10 @@ def create_its(agent_settings: AgentSettingsDb) -> IssueTrackingSystem:
     logger.info("Creating issue tracking system: %s", its_type)
 
     if its_type == IssueTrackingSystemType.TRELLO:
-        return TrelloIts(agent_settings)
+        return Trello(agent_settings)
 
     if its_type == IssueTrackingSystemType.GITHUB:
-        return GitHubIts(agent_settings)
+        return GitHubIssues(agent_settings)
 
     raise ValueError(
         f"Unknown issue tracking system: {its_type}. Supported providers: "

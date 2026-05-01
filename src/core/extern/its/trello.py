@@ -23,7 +23,7 @@ from src.core.services.credentials_service import get_credential_by_id
 logger = logging.getLogger(__name__)
 
 
-class TrelloIts(IssueTrackingSystem):
+class Trello(IssueTrackingSystem):
     """
     Trello implementation of the IssueTrackingSystem interface.
 

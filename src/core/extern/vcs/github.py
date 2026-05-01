@@ -17,7 +17,7 @@ from src.core.extern.vcs.version_control_system import (
 from src.core.services.credentials_service import get_credential_by_id
 
 
-class GitHubVcs(VersionControlSystem):
+class GitHub(VersionControlSystem):
     """
     GitHub implementation of the VersionControlSystem interface.
     """
