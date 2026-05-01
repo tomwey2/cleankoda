@@ -39,6 +39,17 @@ class TrelloIts(IssueTrackingSystem):
             agent_settings: Agent settings containing Trello credentials and settings
         """
         self.agent_settings = agent_settings
+        if not self.agent_settings.its_credential_id:
+            raise ValueError("Trello credential ID not configured for ITS.")
+        self.credential = get_credential_by_id(self.agent_settings.its_credential_id)
+        if not self.credential or not self.credential.api_key or not self.credential.api_token:
+            raise ValueError("Trello API key or token not configured for ITS.")
+        if not self.agent_settings.its_base_url:
+            raise ValueError("Trello API base URL not configured for ITS.")
+
+    def get_headers(self) -> dict[str, str]:
+        """Get the headers for Trello API requests."""
+        return {"Accept": "application/json"}
 
     async def get_issue_by_id(self, issue_id: str) -> Issue | None:
         """Fetch a specific Trello card."""
@@ -46,7 +57,6 @@ class TrelloIts(IssueTrackingSystem):
         base_url = self.agent_settings.its_base_url
         base_url = base_url.rstrip("/")
         url = f"{base_url}/cards/{issue_id}"
-        headers = {"Accept": "application/json"}
         query = {
             "fields": "name,desc,idList,url",
             "list": "true",
@@ -56,7 +66,7 @@ class TrelloIts(IssueTrackingSystem):
 
         logger.debug("Trello GET: %s", self.get_safe_url(url, query))
         async with httpx.AsyncClient() as client:
-            response = await client.get(url, headers=headers, params=query)
+            response = await client.get(url, headers=self.get_headers(), params=query)
 
         if response.status_code != 200:
             raise RuntimeError(f"Failed to fetch card {issue_id}: {response.text}")
@@ -85,16 +95,14 @@ class TrelloIts(IssueTrackingSystem):
     async def get_next_issue_from_state(self, state_type: IssueStateType) -> Issue | None:
         """Fetch the next issue from a specific state (Trello list)."""
         state_id, state_name = await self._resolve_trello_state_from_state_type(state_type)
-        credential = get_credential_by_id(self.agent_settings.its_credential_id)
         base_url = self.agent_settings.its_base_url
         base_url = base_url.rstrip("/")
         url = f"{base_url}/lists/{state_id}/cards"
-        headers = {"Accept": "application/json"}
-        query = {"key": credential.api_key, "token": credential.api_token}
+        query = {"key": self.credential.api_key, "token": self.credential.api_token}
 
         logger.debug("Trello GET: %s", self.get_safe_url(url, query))
         async with httpx.AsyncClient() as client:
-            response = await client.get(url, headers=headers, params=query)
+            response = await client.get(url, headers=self.get_headers(), params=query)
 
         if response.status_code != 200:
             raise RuntimeError(f"Failed to fetch cards: {response.text}")
@@ -144,20 +152,18 @@ class TrelloIts(IssueTrackingSystem):
                 f"Trello list {target_state_name} ({target_state_type.name}) not found on configured board"
             )
 
-        credential = get_credential_by_id(self.agent_settings.its_credential_id)
         base_url = self.agent_settings.its_base_url
         base_url = base_url.rstrip("/")
         url = f"{base_url}/cards/{issue_id}"
-        headers = {"Accept": "application/json"}
         query = {
             "idList": target_state_id,
-            "key": credential.api_key,
-            "token": credential.api_token,
+            "key": self.credential.api_key,
+            "token": self.credential.api_token,
         }
 
         logger.debug("Trello PUT: %s", self.get_safe_url(url, query))
         async with httpx.AsyncClient() as client:
-            response = await client.put(url, headers=headers, params=query)
+            response = await client.put(url, headers=self.get_headers(), params=query)
 
         if response.status_code != 200:
             raise RuntimeError(
@@ -166,40 +172,36 @@ class TrelloIts(IssueTrackingSystem):
 
     async def add_comment_to_issue(self, issue_id: str, comment: str) -> None:
         """Add a comment to a Trello issue."""
-        credential = get_credential_by_id(self.agent_settings.its_credential_id)
         base_url = self.agent_settings.its_base_url
         base_url = base_url.rstrip("/")
         url = f"{base_url}/cards/{issue_id}/actions/comments"
-        headers = {"Accept": "application/json"}
         query = {
             "text": comment,
-            "key": credential.api_key,
-            "token": credential.api_token,
+            "key": self.credential.api_key,
+            "token": self.credential.api_token,
         }
 
         logger.debug("Trello POST: %s", self.get_safe_url(url, query))
         async with httpx.AsyncClient() as client:
-            response = await client.post(url, headers=headers, params=query)
+            response = await client.post(url, headers=self.get_headers(), params=query)
 
         if response.status_code != 200:
             raise RuntimeError(f"Failed to add a comment to card {issue_id}: {response.text}")
 
     async def get_comments_from_issue(self, issue_id: str) -> list[IssueComment]:
         """Fetch all comments for a Trello issue."""
-        credential = get_credential_by_id(self.agent_settings.its_credential_id)
         base_url = self.agent_settings.its_base_url
         base_url = base_url.rstrip("/")
         url = f"{base_url}/cards/{issue_id}/actions"
-        headers = {"Accept": "application/json"}
         query = {
             "filter": "commentCard",
-            "key": credential.api_key,
-            "token": credential.api_token,
+            "key": self.credential.api_key,
+            "token": self.credential.api_token,
         }
 
         logger.debug("Trello GET: %s", self.get_safe_url(url, query))
         async with httpx.AsyncClient() as client:
-            response = await client.get(url, headers=headers, params=query)
+            response = await client.get(url, headers=self.get_headers(), params=query)
 
         if response.status_code != 200:
             raise RuntimeError(f"Failed to fetch comments for card {issue_id}: {response.text}")
@@ -227,22 +229,20 @@ class TrelloIts(IssueTrackingSystem):
         list_id = target_list["id"]
         logger.info("Creating card in list '%s' (id: %s)", state_name, list_id)
 
-        credential = get_credential_by_id(self.agent_settings.its_credential_id)
         base_url = self.agent_settings.its_base_url
         base_url = base_url.rstrip("/")
         url = f"{base_url}/cards"
-        headers = {"Accept": "application/json"}
         query = {
             "idList": list_id,
             "name": name,
             "desc": description,
-            "key": credential.api_key,
-            "token": credential.api_token,
+            "key": self.credential.api_key,
+            "token": self.credential.api_token,
         }
 
         logger.info("Trello POST: %s", self.get_safe_url(url, query))
         async with httpx.AsyncClient() as client:
-            response = await client.post(url, headers=headers, params=query)
+            response = await client.post(url, headers=self.get_headers(), params=query)
 
         if response.status_code != 200:
             raise RuntimeError(f"Failed to create card: {response.text}")
@@ -260,17 +260,15 @@ class TrelloIts(IssueTrackingSystem):
     async def get_all_trello_lists(self) -> list[dict]:
         """Fetches all lists for the configured Trello issue system."""
         board_id = self.agent_settings.its_container_id
-        credential = get_credential_by_id(self.agent_settings.its_credential_id)
 
         base_url = self.agent_settings.its_base_url
         base_url = base_url.rstrip("/")
         url = f"{base_url}/boards/{board_id}/lists"
-        headers = {"Accept": "application/json"}
-        query = {"key": credential.api_key, "token": credential.api_token}
+        query = {"key": self.credential.api_key, "token": self.credential.api_token}
 
         logger.debug("Trello GET: %s", self.get_safe_url(url, query))
         async with httpx.AsyncClient() as client:
-            response = await client.get(url, headers=headers, params=query)
+            response = await client.get(url, headers=self.get_headers(), params=query)
 
         if response.status_code != 200:
             raise RuntimeError(f"Failed to fetch lists: {response.text}")

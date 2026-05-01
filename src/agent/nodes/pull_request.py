@@ -10,13 +10,13 @@ from src.agent.services.git_workspace import (
     git_stage_all,
 )
 from src.agent.services.summaries import append_agent_summary, build_agent_summary_markdown
-from src.agent.services.pull_request import create_or_update_pr
 from src.agent.state import AgentState, AgentSummary
 from src.agent.utils import get_workspace
 from src.core.types import IssueType
 from src.core.database.models import AgentSettingsDb, UserCredentialDb
 from src.core.services.credentials_service import get_credential_by_id
 from src.agent.runtime import RuntimeSettings
+from src.core.extern.vcs.version_control_system import VersionControlSystem
 
 logger = logging.getLogger(__name__)
 
@@ -32,6 +32,7 @@ ROLE_PREFIX_MAP = {
 def create_pull_request_node(runtime: RuntimeSettings):
     """Create a pull request node"""
     agent_settings: AgentSettingsDb = runtime.agent_settings
+    vcs: VersionControlSystem = runtime.vcs
     repo_credential: UserCredentialDb | None = get_credential_by_id(
         agent_settings.vcs_credential_id
     )
@@ -42,12 +43,20 @@ def create_pull_request_node(runtime: RuntimeSettings):
         if state["current_node"] != "pull_request":
             logger.info("--- PULL REQUEST node ---")
 
-        repo_pr_url, repo_pr_number = None, None
+        repo_pr_url = state.get("repo_pr_url")
+        repo_pr_number = state.get("repo_pr_number")
         success, summary_entries = _commit_and_push(repo_credential, state)
         if success:
-            success, summary_entries, repo_pr_url, repo_pr_number = _create_or_update_pr(
-                repo_credential, state
-            )
+            pr_title = state.get("issue_name") or "Automated Fix"
+            pr_body = _build_pr_body(state)
+            pr_branch = state.get("repo_branch_name")
+            if repo_pr_url:
+                await vcs.add_comment_to_pr(repo_pr_number, pr_body)
+            else:
+                pr = await vcs.create_pull_request(pr_title, pr_body, pr_branch)
+                if pr:
+                    repo_pr_url = pr.html_url
+                    repo_pr_number = pr.number
 
         user_message = (
             "Review the pull request. If you approve it, move the task to 'done'.\n"
@@ -117,47 +126,6 @@ def _commit_and_push(repo_credential: UserCredentialDb, state: AgentState):
     return True, summary_entries
 
 
-def _create_or_update_pr(repo_credential: UserCredentialDb, state: AgentState):
-    summary_entries = list(state.get("agent_summary") or [])
-
-    pr_title, pr_body = _build_pr_inputs(state)
-    pr_success, pr_msg, repo_pr_url = create_or_update_pr(
-        title=pr_title,
-        body=pr_body,
-        token=repo_credential.api_token,
-    )
-    if not pr_success:
-        summary_entries = _append_summary(
-            summary_entries,
-            state,
-            "PR",
-            f"Pull request creation/update failed: {pr_msg}",
-        )
-        logger.error("Pull request creation failed: %s", pr_msg)
-        return False, summary_entries, None, None
-
-    if not repo_pr_url:
-        summary_entries = _append_summary(
-            summary_entries,
-            state,
-            "PR",
-            "Pull request missing URL despite success",
-        )
-        logger.warning("PR creation succeeded but no URL was returned")
-        return False, summary_entries, None, None
-
-    repo_pr_number = _extract_repo_pr_number_from_url(repo_pr_url)
-
-    summary_entries = _append_summary(
-        summary_entries,
-        state,
-        "PR",
-        f"Pull request available at\n\n {repo_pr_url}",
-    )
-    logger.info("Pull request created/updated successfully")
-    return True, summary_entries, repo_pr_url, repo_pr_number
-
-
 def _generate_commit_message(state: AgentState) -> str:
     """Generate a concise commit message from the latest agent summary."""
     summaries = state.get("agent_summary") or []
@@ -211,26 +179,7 @@ def _build_role_details(role_entries: list[str]) -> str | None:
     return "\n".join(f"- {text}" for text in filtered_entries)
 
 
-def _extract_repo_pr_number_from_url(repo_pr_url: str) -> int | None:
-    """
-    Extract the PR number from a GitHub PR URL.
-
-    Args:
-        repo_pr_url: GitHub PR URL (e.g., https://github.com/owner/repo/pull/123)
-
-    Returns:
-        The PR number, or None if extraction fails
-    """
-    try:
-        parts = repo_pr_url.rstrip("/").split("/")
-        if len(parts) >= 2 and parts[-2] == "pull":
-            return int(parts[-1])
-    except (ValueError, IndexError):
-        pass
-    return None
-
-
-def _build_pr_inputs(state: AgentState) -> tuple[str, str]:
+def _build_pr_body(state: AgentState) -> str:
     """
     Build the PR title and body using the issue name and agent summaries.
     """
@@ -242,8 +191,6 @@ def _build_pr_inputs(state: AgentState) -> tuple[str, str]:
     )
     pr_body_summary = aggregated_summary
 
-    issue_title = state.get("issue_name")
-    pr_title = issue_title or "Automated Fix"
     pr_description = (state.get("pr_description") or "").strip()
     if pr_description:
         pr_body = pr_description
@@ -254,4 +201,4 @@ def _build_pr_inputs(state: AgentState) -> tuple[str, str]:
         if pr_body_summary:
             pr_body += f"\n\n{pr_body_summary}"
 
-    return pr_title, pr_body
+    return pr_body

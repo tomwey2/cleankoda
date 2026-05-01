@@ -13,7 +13,7 @@ from typing import Any
 import httpx
 
 from src.core.database.models import AgentSettingsDb
-from src.core.services.credentials_service import get_repo_token
+from src.core.services.credentials_service import get_credential_by_id
 
 logger = logging.getLogger(__name__)
 
@@ -32,13 +32,10 @@ def _get_github_token(agent_settings: AgentSettingsDb) -> str:
     Raises:
         ValueError: If no token is available.
     """
-    token = get_repo_token(agent_settings.vcs_credential_id)
-    if not token:
-        raise ValueError(
-            "GitHub token not configured. Set GITHUB_TOKEN environment variable "
-            "or provide a token in the GitHub Projects configuration."
-        )
-    return token
+    credential = get_credential_by_id(agent_settings.its_credential_id)
+    if not credential or not credential.api_token:
+        raise ValueError("GitHub token not configured.")
+    return credential.api_token
 
 
 def _get_base_url(agent_settings: AgentSettingsDb) -> str:

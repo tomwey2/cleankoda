@@ -9,16 +9,11 @@ from datetime import datetime
 import logging
 
 from src.core.extern.its.issue_tracking_system import IssueTrackingSystem, Issue
-from src.agent.services.pull_request import (
-    format_pr_review_message,
-    get_latest_open_pr_for_branch,
-    get_latest_pr_review_status,
-)
+from src.core.extern.vcs.version_control_system import VersionControlSystem
 from src.core.services.issues_service import fetch_comments_since
 from src.agent.state import AgentState
-from src.core.database.models import AgentSettingsDb, UserCredentialDb
+from src.core.database.models import AgentSettingsDb
 from src.core.types import IssueStateType
-from src.core.services.credentials_service import get_credential_by_id
 from src.agent.runtime import RuntimeSettings
 
 logger = logging.getLogger(__name__)
@@ -28,11 +23,7 @@ def create_issue_fetch_node(runtime: RuntimeSettings):
     """Creates an issue fetch node for the agent graph."""
     agent_settings: AgentSettingsDb = runtime.agent_settings
     its: IssueTrackingSystem = runtime.its
-    vcs_repo_credential: UserCredentialDb | None = get_credential_by_id(
-        agent_settings.vcs_credential_id
-    )
-    if not vcs_repo_credential:
-        raise ValueError("No repo credential found")
+    vcs: VersionControlSystem = runtime.vcs
 
     async def issue_fetch(state: AgentState) -> dict:  # pylint: disable=unused-argument
         """
@@ -134,9 +125,7 @@ async def _resolve_issue(issue_id: str | None, its: IssueTrackingSystem) -> Issu
     return issue
 
 
-def _fetch_pr_review_info(
-    vcs_repo_credential: UserCredentialDb, state: AgentState, issue_id: str
-) -> str:
+def _fetch_pr_review_info(vcs: VersionControlSystem, state: AgentState, issue_id: str) -> str:
     """
     Fetch PR review info if a PR exists for the issue.
 
@@ -148,18 +137,15 @@ def _fetch_pr_review_info(
         - is_approved: True if PR is approved or no PR exists
         - formatted_review_message: Formatted message for SystemMessage, empty if approved
     """
-    repo_branch_name = state["repo_branch_name"]
+    repo_pr_number = state.get("repo_pr_number")
     pr = None
-    if repo_branch_name:
-        pr = get_latest_open_pr_for_branch(repo_branch_name, vcs_repo_credential.api_token)
+    if repo_pr_number:
+        pr = vcs.get_pr(repo_pr_number)
 
-    if not pr:
-        logger.info("No PR found for issue %s", issue_id)
-        return ""
+    if not pr or pr.state in ["APPROVED", "MERGED", "CLOSED"]:
+        return ""  # besser: wenn Approved dann issue auf done schieben!
 
-    is_approved, rejection_reviews, code_comments = get_latest_pr_review_status(
-        pr.number, vcs_repo_credential.api_token
-    )
+    is_approved, rejection_reviews, code_comments = vcs.get_pr_review_status(pr.number)
 
     if is_approved:
         logger.info("PR #%d for issue %s is approved", pr.number, issue_id)
@@ -173,4 +159,4 @@ def _fetch_pr_review_info(
         len(code_comments),
     )
 
-    return format_pr_review_message(pr.html_url or "", rejection_reviews, code_comments)
+    return vcs.format_pr_review_status(pr.html_url or "", rejection_reviews, code_comments)

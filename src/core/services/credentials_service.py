@@ -5,7 +5,6 @@ separating concerns from the route handlers and database operations.
 """
 
 import logging
-from typing import List, Optional
 
 from src.core.extensions import db
 from src.core.database.models import UserCredentialDb
@@ -13,7 +12,7 @@ from src.core.database.models import UserCredentialDb
 logger = logging.getLogger(__name__)
 
 
-def get_credentials_for_user(user_id: str) -> List[UserCredentialDb]:
+def get_credentials_for_user(user_id: str) -> list[UserCredentialDb]:
     """Retrieve all credentials for a given user.
 
     Args:
@@ -25,7 +24,7 @@ def get_credentials_for_user(user_id: str) -> List[UserCredentialDb]:
     return UserCredentialDb.query.filter_by(user_id=user_id).all()
 
 
-def get_credential_by_id(credential_id: int) -> Optional[UserCredentialDb]:
+def get_credential_by_id(credential_id: int) -> UserCredentialDb | None:
     """Retrieve a specific credential for a user.
 
     Args:
@@ -98,8 +97,3 @@ def delete_credential(user_id: str, credential_id: int) -> bool:
     db.session.commit()
     logger.info("Deleted credential ID %s for user %s", credential_id, user_id)
     return True
-
-
-def get_repo_token(credential_id: int) -> str | None:
-    credential = get_credential_by_id(credential_id)
-    return credential.api_token if credential else None
