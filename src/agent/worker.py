@@ -111,6 +111,7 @@ def _persist_state_to_database(current_state: AgentState) -> None:
         issue_read_comments_at=current_state["issue_read_comments_at"],
         repo_branch_name=current_state["repo_branch_name"],
         repo_pr_url=current_state["repo_pr_url"],
+        repo_pr_number=current_state["repo_pr_number"],
         plan_state=current_state["plan_state"],
         working_state=current_state["working_state"],
         user_message=current_state["user_message"],
@@ -139,6 +140,7 @@ def _restore_state_from_database(state: AgentState) -> AgentState:
         state["issue_read_comments_at"] = agent_state.issue_read_comments_at
         state["repo_branch_name"] = agent_state.repo_branch_name
         state["repo_pr_url"] = agent_state.repo_pr_url
+        state["repo_pr_number"] = agent_state.repo_pr_number
         state["plan_content"] = agent_state.plan_content
         state["plan_state"] = agent_state.plan_state
         state["working_state"] = agent_state.working_state

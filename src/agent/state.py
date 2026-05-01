@@ -83,6 +83,7 @@ class AgentState(TypedDict):
     # information from the git system
     repo_branch_name: str | None
     repo_pr_url: str | None
+    repo_pr_number: int | None
     pr_review_message: str | None
 
     plan_content: str | None
@@ -126,6 +127,7 @@ class AgentState(TypedDict):
             "issue_read_comments_at": None,
             "repo_branch_name": None,
             "repo_pr_url": None,
+            "repo_pr_number": None,
             "plan_content": None,
             "plan_state": None,
             "working_state": None,
