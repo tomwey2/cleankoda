@@ -95,7 +95,9 @@ class SettingsFormSchema(BaseModel):
     vcs_repo_url: Optional[str] = Field(default=None, description="VCS Repository URL")
     vcs_credential_id: Optional[int] = Field(default=None, description="VCS Credential ID")
     vcs_api_base_url: Optional[str] = Field(default=None, description="VCS API Base URL")
-    vcs_project_identifier: Optional[str] = Field(default=None, description="VCS Project Identifier")
+    vcs_project_identifier: Optional[str] = Field(
+        default=None, description="VCS Project Identifier"
+    )
     vcs_default_branch: Optional[str] = Field(default=None, description="VCS Default Branch")
 
     its_config: ItsConfigSchema = Field(

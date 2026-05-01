@@ -1,3 +1,5 @@
+"""Defines the routes for the web application's settings pages."""
+
 import logging
 
 from flask import (

@@ -122,7 +122,7 @@ async def move_issue_to_in_progress(user_id: str, issue_id: str) -> bool:
     """Moves the issue to the state in progress."""
     logger.info("Moving issue %s to in progress", issue_id)
     its = _get_its(user_id)
-    await its.move_issue_to_named_state(issue_id, state_name=its.get_state_in_progress())
+    await its.move_issue_to_state(issue_id=issue_id, target_state_type=IssueStateType.IN_PROGRESS)
     return True
 
 

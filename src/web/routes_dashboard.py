@@ -1,3 +1,5 @@
+"""Defines the routes for the web application's dashboard pages."""
+
 import logging
 
 from flask import (

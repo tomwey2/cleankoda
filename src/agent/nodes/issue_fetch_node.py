@@ -12,7 +12,6 @@ from src.core.extern.its.issue_tracking_system import IssueTrackingSystem, Issue
 from src.core.extern.vcs.version_control_system import VersionControlSystem
 from src.core.services.issues_service import fetch_comments_since
 from src.agent.state import AgentState
-from src.core.database.models import AgentSettingsDb
 from src.core.types import IssueStateType
 from src.agent.runtime import RuntimeSettings
 
@@ -21,7 +20,6 @@ logger = logging.getLogger(__name__)
 
 def create_issue_fetch_node(runtime: RuntimeSettings):
     """Creates an issue fetch node for the agent graph."""
-    agent_settings: AgentSettingsDb = runtime.agent_settings
     its: IssueTrackingSystem = runtime.its
     vcs: VersionControlSystem = runtime.vcs
 
@@ -60,7 +58,7 @@ def create_issue_fetch_node(runtime: RuntimeSettings):
                     issue_read_comments_at,
                 )
                 issue_read_comments_at = datetime.now()
-                pr_review_message = _fetch_pr_review_info(vcs_repo_credential, state, issue.id)
+                pr_review_message = _fetch_pr_review_info(vcs, state, issue.id)
 
             if issue_is_active and issue_from_todo:
                 # if the issue is new and has the state "todo" then move it to "in progress"

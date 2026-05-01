@@ -21,6 +21,3 @@ web_bp = Blueprint("web", __name__, template_folder="templates", static_folder="
 def landing():
     """Handles the landing page."""
     return render_template("index.html")
-
-
-
