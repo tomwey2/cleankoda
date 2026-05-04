@@ -11,7 +11,6 @@ from .summaries import (
     has_finish_task_call,
     record_finish_task_summary,
 )
-from .llm_factory import get_llm
 
 __all__ = [
     "log_agent_response",
@@ -26,5 +25,4 @@ __all__ = [
     "get_agent_summary_entries",
     "has_finish_task_call",
     "record_finish_task_summary",
-    "get_llm",
 ]
