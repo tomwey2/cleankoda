@@ -10,7 +10,6 @@ from typing import Any, Dict
 from langchain_core.language_models import BaseChatModel
 
 from src.agent.services.git_workspace import ensure_repository_exists
-from src.agent.services.llm_factory import get_llm
 from src.agent.system_mappings import MCP_SYSTEM_DEFINITIONS
 from src.agent.utils import get_workbench, get_workspace
 from src.core.config import get_env_settings
@@ -21,6 +20,7 @@ from src.core.extern.its.issue_tracking_system import IssueTrackingSystem
 from src.core.extern.its.its_factory import create_its
 from src.core.extern.vcs.version_control_system import VersionControlSystem
 from src.core.extern.vcs.vcs_factory import create_vcs
+from src.core.extern.llm.llm_factory import get_llm
 
 logger = logging.getLogger(__name__)
 
