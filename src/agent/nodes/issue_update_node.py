@@ -14,7 +14,7 @@ from langchain_core.messages import AIMessage, ToolMessage
 from src.core.extern.its.issue_tracking_system import IssueTrackingSystem
 from src.agent.services.summaries import get_agent_summary_entries
 from src.agent.state import AgentState
-from src.core.types import IssueStateType
+from src.core.types import IssueStateType, WorkingState
 from src.agent.runtime import RuntimeSettings
 
 AGENT_DEFAULT_COMMENT = "Issue completed by AI Agent."
@@ -61,7 +61,7 @@ def create_issue_update_node(runtime: RuntimeSettings):
 
             return {
                 "current_node": "issue_update",
-                "working_state": "finished.",
+                "working_state": WorkingState.FINISHED,
                 "issue_state": IssueStateType.IN_REVIEW,
             }
         except ValueError as exc:

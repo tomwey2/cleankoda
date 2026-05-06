@@ -138,3 +138,20 @@ class AgentStack(StrEnum):
     BACKEND = "BACKEND"
     FRONTEND = "FRONTEND"
     GRADLE_NODE = "GRADLE_NODE"
+
+
+class WorkingState(StrEnum):
+    """Defines the working states of the agent."""
+
+    UNKNOWN = "UNKNOWN"
+    WORKING = "WORKING"
+    FINISHED = "FINISHED"
+
+    @classmethod
+    def from_string(cls, value: str) -> "WorkingState":
+        """Convert a string to a WorkinState, normalizing whitespace and case."""
+        normalized = value.strip().upper() if value else ""
+        try:
+            return cls(normalized)
+        except ValueError:
+            return cls.UNKNOWN

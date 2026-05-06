@@ -16,7 +16,7 @@ from pydantic import BaseModel, Field
 from src.agent.services.message_processing import filter_messages_for_llm
 from src.agent.state import AgentState
 from src.agent.services.prompts import load_prompt
-from src.core.types import SkillLevelType, PlanState, IssueType
+from src.core.types import SkillLevelType, PlanState, IssueType, WorkingState
 from src.agent.runtime import RuntimeSettings
 
 logger = logging.getLogger(__name__)
@@ -87,7 +87,7 @@ def create_router_node(runtime: RuntimeSettings):
             "issue_skill_level": response.issue_skill_level,
             "issue_skill_level_reasoning": response.reasoning,
             "user_message": "",
-            "working_state": "working...",
+            "working_state": WorkingState.WORKING,
         }
 
     return router_node
