@@ -14,7 +14,9 @@ from src.core.services import (
     agent_states_service,
     agent_settings_service,
 )
-from src.core.types import PlanState, IssueStateType
+from src.core.types import PlanState, IssueStateType, WorkingState
+from src.core.services.issues_service import resolve_issue_for_agent
+from src.core.extern.its.issue_tracking_system import Issue
 
 logger = logging.getLogger(__name__)
 
@@ -93,7 +95,7 @@ async def get_template_context(user_id: str) -> dict:
         "issue_description_html": issue_description_html,
         "current_node": "todo",
         "agent_actions": agent_actions,
-        "working_state": agent_state.working_state if agent_state else None,
+        "working_state": agent_state.working_state.value if agent_state else None,
         "user_message": agent_state.user_message if agent_state else None,
         "repo_pr_url": agent_state.repo_pr_url if agent_state else None,
         "agent_skill_level": agent_settings.agent_skill_level if agent_settings else None,
@@ -187,7 +189,7 @@ async def process_plan_review(
     Returns:
         Dictionary with success message and issue details.
 
-    Raises:
+    Raises:PLAN_APPROVED
         PlanReviewError: If validation fails or operations cannot be completed.
     """
     # Validate input
@@ -273,3 +275,30 @@ async def process_plan_review(
             "An unexpected error occurred. Plan state has been rolled back.",
             status_code=HTTP_INTERNAL_SERVER_ERROR,
         ) from exc
+
+
+async def get_next_open_issue(user_id: str) -> Issue | None:
+    """
+    Gets the next open issue for the agent.
+    The next open issue is the last active issue that is in progress or a new issue from todo
+
+    Returns:
+        An issue from the issue tracking system for the agent to work on
+    """
+    # get the last active issue the agent was working on
+    agent_state: AgentStatesDb | None = agent_states_service.get_agent_state_by_id(user_id)
+    if agent_state and agent_state.working_state == WorkingState.WORKING:
+        # if agent is already working on this issue then do nothing
+        return None
+
+    issue_id = agent_state.issue_id if agent_state else None
+    its = _get_its(user_id)
+    return await resolve_issue_for_agent(issue_id, its)
+
+
+async def trigger_agent_job(user_id: str, issue: Issue) -> bool:
+    """Triggers the worker to process the current issue."""
+
+    # trigger worker
+    logger.info("Issue found %s. Triggering worker.", issue.id)
+    return True

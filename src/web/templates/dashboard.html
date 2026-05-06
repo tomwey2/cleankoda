@@ -1,6 +1,6 @@
 {% extends "base.html" %} {% block content %}
-<div id="dashboard-content" hx-get="{{ url_for('dashboard.dashboard') }}" hx-trigger="every 1s" hx-select="#dashboard-content"
-    hx-target="#dashboard-content" hx-swap="outerHTML" class="h-100 d-flex flex-column">
+<div id="dashboard-content" hx-get="{{ url_for('dashboard.dashboard') }}" hx-trigger="every 1s"
+    hx-select="#dashboard-content" hx-target="#dashboard-content" hx-swap="outerHTML" class="h-100 d-flex flex-column">
 
     <!-- Scrollable Content Area -->
     <div class="container-fluid flex-grow-1">
@@ -164,7 +164,28 @@
 </style>
 
 <script>
+    // Führt die Funktion alle 5 Minuten (300.000 Millisekunden) aus
+    const SYNC_INTERVAL_MS = 1 * 60 * 1000;
+
+    function triggerAgent() {
+        // Ein unsichtbarer Call an dein Flask Backend
+        fetch('/api/trigger_agent', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            }
+        })
+            .then(response => {
+                if (response.ok) {
+                    console.log("Automatischer Background Sync erfolgreich angestoßen.");
+                }
+            })
+            .catch(error => console.error("Sync fehlgeschlagen:", error));
+    }
+
     document.addEventListener('DOMContentLoaded', function () {
+        setInterval(triggerAgent, SYNC_INTERVAL_MS);
+
         // Track whether the rejection panel should re-open after an error. This allows
         // reviewers to dismiss the inline error and immediately continue editing.
         let reopenRejectionPanelOnError = false;
@@ -178,7 +199,7 @@
             }
             // Send plan review action to the backend. HTMX refreshes every second, so the
             // promise handlers also toggle the reopen flag/state accordingly.
-            fetch('/issue/review_plan', {
+            fetch('/api/issue/review_plan', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',

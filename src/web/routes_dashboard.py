@@ -27,7 +27,7 @@ async def dashboard():
     return render_template("dashboard.html", **context)
 
 
-@dashboard_bp.route("/issue/review_plan", methods=["POST"])
+@dashboard_bp.route("/api/issue/review_plan", methods=["POST"])
 async def review_plan():
     """Updates the plan state of the current issue."""
     user_id = users_service.get_current_user_id()
@@ -43,3 +43,14 @@ async def review_plan():
     except Exception:  # pylint: disable=broad-exception-caught
         logger.exception("Unexpected error while updating plan state")
         return jsonify({"error": "Failed to update issue"}), 500
+
+
+@dashboard_bp.route("/api/trigger_agent", methods=["POST"])
+async def trigger_agent():
+    """Triggers the agent to process the current issue."""
+    user_id = users_service.get_current_user_id()
+    # Supabase handling
+    issue = await dashboard_service.get_next_open_issue(user_id)
+    if issue:
+        await dashboard_service.trigger_agent_job(user_id, issue)
+    return jsonify({"status": "Sync triggered"}), 200
