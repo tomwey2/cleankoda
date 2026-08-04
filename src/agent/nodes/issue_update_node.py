@@ -61,7 +61,7 @@ def create_issue_update_node(runtime: RuntimeSettings):
 
             return {
                 "current_node": "issue_update",
-                "working_state": WorkingState.FINISHED,
+                "working_state": WorkingState.FINISHED.value,
                 "issue_state": IssueStateType.IN_REVIEW,
             }
         except ValueError as exc:

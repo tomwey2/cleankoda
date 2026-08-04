@@ -12,7 +12,7 @@ from src.core.extern.its.issue_tracking_system import IssueTrackingSystem, Issue
 from src.core.extern.vcs.version_control_system import VersionControlSystem
 from src.core.services.issues_service import fetch_comments_since
 from src.agent.state import AgentState
-from src.core.types import IssueStateType
+from src.core.types import IssueStateType, WorkingState
 from src.agent.runtime import RuntimeSettings
 
 logger = logging.getLogger(__name__)
@@ -80,6 +80,7 @@ def create_issue_fetch_node(runtime: RuntimeSettings):
                 "issue_from_todo": issue_from_todo,
                 "issue_url": issue.url,
                 "pr_review_message": pr_review_message,
+                "working_state": WorkingState.WORKING.value,
             }
 
         except Exception as e:  # pylint: disable=broad-exception-caught

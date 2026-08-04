@@ -95,7 +95,7 @@ async def get_template_context(user_id: str) -> dict:
         "issue_description_html": issue_description_html,
         "current_node": "todo",
         "agent_actions": agent_actions,
-        "working_state": agent_state.working_state.value if agent_state else None,
+        "working_state": agent_state.working_state if agent_state else None,
         "user_message": agent_state.user_message if agent_state else None,
         "repo_pr_url": agent_state.repo_pr_url if agent_state else None,
         "agent_skill_level": agent_settings.agent_skill_level if agent_settings else None,
