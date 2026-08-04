@@ -1,5 +1,7 @@
-import docker
+"""Docker Agent Service"""
+
 import logging
+import docker
 
 logger = logging.getLogger(__name__)
 

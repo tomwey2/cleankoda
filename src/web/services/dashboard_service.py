@@ -300,5 +300,5 @@ async def trigger_agent_job(user_id: str, issue: Issue) -> bool:
     """Triggers the worker to process the current issue."""
 
     # trigger worker
-    logger.info("Issue found %s. Triggering worker.", issue.id)
+    logger.info("Issue found %s. Triggering worker for user %s.", issue.id, user_id)
     return True
