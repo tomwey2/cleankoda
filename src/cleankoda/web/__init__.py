@@ -25,13 +25,12 @@ def create_app(config_class=settings) -> Flask:
     # 1. Logging & Env Setup
     logger = setup_logging()
     logger.info("Initializing Web Server app...")
-    config_class.log_settings(logger)
-
+    config_class.log_settings()
 
     app = Flask(__name__, instance_relative_config=True)
 
     # Load static config from module
-    app.config.from_object("src.cleankoda.core.config")
+    app.config.from_object("cleankoda.core.config")
 
     # Load dynamic config from environment settings
     app.config["SECRET_KEY"] = config_class.secret_key

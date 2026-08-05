@@ -2,9 +2,6 @@ import asyncio
 import sys
 from pathlib import Path
 
-# Path resolution for root-level running
-sys.path.insert(0, str(Path(__file__).parent / "src"))
-
 from cleankoda.agent.runtime import prepare_runtime, RuntimeSettings
 from cleankoda.agent.worker import run_agent_cycle
 from cleankoda.core.config import settings
@@ -21,10 +18,7 @@ async def main():
     logger = setup_logging()
     logger.info("Starting Agent (Async)...")
 
-    # 2. Env Validierung
-    settings.log_settings(logger)
-
-    # 3. App Context erstellen (Nötig für DB Zugriff)
+    # 2. App Context erstellen (Nötig für DB Zugriff)
     # Wir starten KEINEN Server, wir nutzen app nur als Hülle für die DB
     app = create_app()
 

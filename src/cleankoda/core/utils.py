@@ -7,8 +7,6 @@ import os
 from pathlib import Path
 from typing import Any
 
-from cryptography.fernet import Fernet
-
 
 def setup_logging(
     config_file_path: Path | None = None,

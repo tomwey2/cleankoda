@@ -26,7 +26,7 @@ services:
       context: .
       dockerfile: Dockerfile.cleankoda-agent
     container_name: cleankoda-agent
-    command: uv run run_agent.py
+    command: uv run src/run_agent.py
     env_file: .env
     environment:
       - WORKSPACE=/coding-agent-workspace

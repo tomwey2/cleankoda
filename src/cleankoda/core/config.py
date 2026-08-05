@@ -75,7 +75,7 @@ class Settings(BaseSettings):
             )
         return self.encryption_key
 
-    def log_settings(self, logger: logging.Logger) -> None:
+    def log_settings(self) -> None:
         """Log loaded environment settings."""
         logger.info("MCP enabled: %s", self.enable_mcp_servers)
         logger.info("INSTANCE_DIR: %s", self.instance_dir or "Not set")
@@ -88,11 +88,8 @@ class Settings(BaseSettings):
 # Instantiation of the settings, which can be imported throughout the project
 settings = Settings()
 
-
-
 # Database configuration
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 SQLALCHEMY_TRACK_MODIFICATIONS = False
 SCHEDULER_API_ENABLED = True
-

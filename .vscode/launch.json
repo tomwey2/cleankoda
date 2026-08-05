@@ -5,7 +5,7 @@
             "name": "Python: Run Agent",
             "type": "debugpy",
             "request": "launch",
-            "program": "${workspaceFolder}/run_agent.py",
+            "program": "${workspaceFolder}/src/run_agent.py",
             "console": "integratedTerminal",
             "envFile": "${workspaceFolder}/.env",
             "cwd": "${workspaceFolder}",
