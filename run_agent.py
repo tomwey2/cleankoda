@@ -1,7 +1,11 @@
 import asyncio
 import sys
+from pathlib import Path
 
 from dotenv import load_dotenv
+
+# Path resolution for root-level running
+sys.path.insert(0, str(Path(__file__).parent / "src"))
 
 from cleankoda.agent.worker import run_agent_cycle
 from cleankoda.core.config import get_env_settings
@@ -9,6 +13,7 @@ from cleankoda.core.extensions import db
 from cleankoda.core.utils import log_and_validate_env, setup_logging
 from cleankoda.web import create_app
 from cleankoda.agent.runtime import RuntimeSettings, prepare_runtime
+
 
 
 DEFAULT_POLLING_INTERVAL_SECONDS = 60
@@ -21,11 +26,11 @@ async def main():
 
     env_settings = get_env_settings()
     # 2. Env Validierung
-    encryption_key = log_and_validate_env(logger, env_settings)
+    log_and_validate_env(logger, env_settings)
 
     # 3. App Context erstellen (Nötig für DB Zugriff)
     # Wir starten KEINEN Server, wir nutzen app nur als Hülle für die DB
-    app = create_app(encryption_key)
+    app = create_app()
 
     with app.app_context():
         # TODO: good for local dev, but not for production. Must be changed for production.

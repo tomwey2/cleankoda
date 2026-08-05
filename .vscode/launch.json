@@ -18,12 +18,21 @@
             "name": "Python: Run Web",
             "type": "debugpy",
             "request": "launch",
-            "program": "${workspaceFolder}/run_web.py",
+            "module": "flask",
+            "args": [
+                "--app",
+                "src/cleankoda/web",
+                "run",
+                "--debug",
+                "--no-debugger",
+                "--no-reload"
+            ],
             "console": "integratedTerminal",
             "envFile": "${workspaceFolder}/.env",
             "cwd": "${workspaceFolder}",
             "env": {
                 "WORKSPACE": "${workspaceFolder}/.local/workspace",
+                "PYTHONPATH": "${workspaceFolder}/src"
             }
         }
     ]
