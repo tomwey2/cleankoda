@@ -18,7 +18,7 @@ from cleankoda.agent.runtime import RuntimeSettings
 from cleankoda.agent.services.graph_assets import save_graph_as_mermaid, save_graph_as_png
 from cleankoda.agent.state import AgentState, init_agent_state
 from cleankoda.agent.utils import get_workspace, save_state_to_instance
-from cleankoda.core.config import get_env_settings
+from cleankoda.core.config import settings
 from cleankoda.core.services.agent_actions_service import create_agent_action
 from cleankoda.core.services.agent_states_service import (
     delete_agent_state,
@@ -35,7 +35,7 @@ logger = logging.getLogger(__name__)
 async def run_agent_cycle(runtime: RuntimeSettings) -> None:
     """Internal helper that orchestrates one graph execution."""
     async with AsyncExitStack() as stack:
-        enable_mcp = get_env_settings().enable_mcp_servers
+        enable_mcp = settings.enable_mcp_servers
 
         if enable_mcp:
             git_mcp = McpServerClient(

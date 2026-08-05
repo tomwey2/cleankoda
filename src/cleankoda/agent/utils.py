@@ -8,7 +8,7 @@ import shutil
 from datetime import datetime
 from typing import Final
 
-from cleankoda.core.config import get_env_settings
+from cleankoda.core.config import settings
 
 __all__ = [
     "get_workbench",
@@ -26,7 +26,7 @@ def get_workspace() -> str:
 
     This is where the agent operates and may be a host path when running locally.
     """
-    return get_env_settings().workspace
+    return settings.workspace
 
 
 def get_workbench_workspace() -> str:
@@ -35,17 +35,17 @@ def get_workbench_workspace() -> str:
     This is where commands are executed inside the workbench container.
     Defaults to the workspace value if WORKBENCH_WORKSPACE is not set.
     """
-    return get_env_settings().workbench_workspace
+    return settings.workbench_workspace
 
 
 def get_instance_dir() -> str:
     """Return the instance directory path."""
-    return get_env_settings().instance_dir
+    return settings.instance_dir
 
 
 def get_workbench() -> str:
     """Return the workbench container name."""
-    return get_env_settings().workbench
+    return settings.workbench
 
 
 def save_state_to_instance(state: dict, filename: str = "agent_state.json") -> str:

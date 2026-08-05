@@ -4,7 +4,7 @@ from cryptography.fernet import Fernet
 from flask import current_app
 from sqlalchemy import LargeBinary, TypeDecorator
 
-from cleankoda.core.config import get_env_settings
+from cleankoda.core.config import settings
 
 
 # pylint: disable=too-many-ancestors
@@ -28,7 +28,7 @@ class EncryptedString(TypeDecorator):
 
         if not key:
             # Fallback to environment settings for non-app contexts (e.g., shell)
-            key = get_env_settings().encryption_key
+            key = settings.encryption_key
 
         if not key:
             raise ValueError("ENCRYPTION_KEY is not set in app config or environment.")

@@ -22,7 +22,7 @@ from langchain_core.messages import (
 from cleankoda.agent.services.logging import log_agent_response
 from cleankoda.agent.services.message_processing import filter_messages_for_llm, sanitize_response
 from cleankoda.agent.state import AgentState
-from cleankoda.core.config import get_env_settings
+from cleankoda.core.config import settings
 
 logger = logging.getLogger(__name__)
 
@@ -205,7 +205,7 @@ async def invoke_tool_node(  # pylint: disable=too-many-arguments,too-many-local
 
 async def _apply_rate_limit() -> None:
     """Enforce the configured LLM calls-per-second limit, if set."""
-    calls_per_second = get_env_settings().llm_calls_per_second
+    calls_per_second = settings.llm_calls_per_second
     if calls_per_second <= 0:
         return
     min_interval = 1.0 / calls_per_second

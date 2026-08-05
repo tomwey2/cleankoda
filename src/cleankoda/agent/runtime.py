@@ -12,7 +12,7 @@ from langchain_core.language_models import BaseChatModel
 from cleankoda.agent.services.git_workspace import ensure_repository_exists
 from cleankoda.agent.system_mappings import MCP_SYSTEM_DEFINITIONS
 from cleankoda.agent.utils import get_workbench, get_workspace
-from cleankoda.core.config import get_env_settings
+from cleankoda.core.config import settings
 from cleankoda.core.database.models import AgentSettingsDb
 from cleankoda.core.extern.its.issue_tracking_system import IssueTrackingSystem
 from cleankoda.core.extern.its.its_factory import create_its
@@ -62,8 +62,7 @@ def prepare_runtime() -> RuntimeSettings | None:
         logger.error("Issue tracking system '%s' not defined.", agent_settings.its_type)
         return None
 
-    env_settings = get_env_settings()
-    agent_stack = _resolve_agent_stack(env_settings.agent_stack)
+    agent_stack = _resolve_agent_stack(settings.agent_stack)
     mcp_system_def = MCP_SYSTEM_DEFINITIONS[agent_settings.its_type]
     its = create_its(agent_settings)
     vcs = create_vcs(agent_settings)

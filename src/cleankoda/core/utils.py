@@ -9,7 +9,7 @@ from typing import Any
 
 from cryptography.fernet import Fernet
 
-from cleankoda.core.environment_settings import EnvironmentSettings
+from cleankoda.core.config import Settings
 
 
 def setup_logging(
@@ -109,7 +109,7 @@ def mask_secret(value: str) -> str:
     return f"{head}{'*' * (len(value) - 4)}{tail}"
 
 
-def log_and_validate_env(logger, env_settings: EnvironmentSettings):
+def log_and_validate_env(logger, env_settings: Settings):
     """Log environment variables and validate required settings, return encryption key.
 
     Only ENCRYPTION_KEY and WORKSPACE are validated here.
