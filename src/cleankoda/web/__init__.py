@@ -27,7 +27,7 @@ def create_app(config_class=settings) -> Flask:
     logger.info("Initializing Web Server app...")
     config_class.log_settings()
 
-    app = Flask(__name__, instance_relative_config=True)
+    app = Flask(__name__, instance_relative_config=True, instance_path=config_class.instance_dir)
 
     # Load static config from module
     app.config.from_object("cleankoda.core.config")

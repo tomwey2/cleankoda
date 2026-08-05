@@ -1,14 +1,12 @@
 import asyncio
 import sys
-from pathlib import Path
 
-from cleankoda.agent.runtime import prepare_runtime, RuntimeSettings
+from cleankoda.agent.runtime import RuntimeSettings, prepare_runtime
 from cleankoda.agent.worker import run_agent_cycle
 from cleankoda.core.config import settings
 from cleankoda.core.extensions import db
 from cleankoda.core.utils import setup_logging
 from cleankoda.web import create_app
-
 
 DEFAULT_POLLING_INTERVAL_SECONDS = 60
 

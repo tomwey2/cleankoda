@@ -24,18 +24,17 @@ def setup_logging(
         if env_config:
             config_path = Path(env_config)
 
-    if config_path:
-        if config_path.exists():
-            suffix = config_path.suffix.lower()
-            if suffix == ".json":
-                with config_path.open("r", encoding="utf-8") as config_file_handle:
-                    config_data: dict[str, Any] = json.load(config_file_handle)
-                config_data.setdefault("disable_existing_loggers", False)
-                _ensure_log_handler_directories(config_data)
-                logging.config.dictConfig(config_data)
-            else:
-                logging.config.fileConfig(config_path, disable_existing_loggers=False)
-            return logging.getLogger("entrypoint")
+    if config_path and config_path.exists():
+        suffix = config_path.suffix.lower()
+        if suffix == ".json":
+            with config_path.open("r", encoding="utf-8") as config_file_handle:
+                config_data: dict[str, Any] = json.load(config_file_handle)
+            config_data.setdefault("disable_existing_loggers", False)
+            _ensure_log_handler_directories(config_data)
+            logging.config.dictConfig(config_data)
+        else:
+            logging.config.fileConfig(config_path, disable_existing_loggers=False)
+        return logging.getLogger("entrypoint")
 
     logging_config = {
         "version": 1,
