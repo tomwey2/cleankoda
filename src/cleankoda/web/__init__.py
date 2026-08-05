@@ -13,7 +13,7 @@ from flask import Flask
 
 from cleankoda.core.config import get_env_settings
 from cleankoda.core.extensions import db
-from cleankoda.core.utils import setup_logging, log_and_validate_env
+from cleankoda.core.utils import log_and_validate_env, setup_logging
 from cleankoda.web.routes import web_bp
 from cleankoda.web.routes_credentials import credentials_bp
 from cleankoda.web.routes_dashboard import dashboard_bp
@@ -64,5 +64,3 @@ def create_app() -> Flask:
     app.register_blueprint(dashboard_bp)
     app.register_blueprint(settings_bp)
     return app
-
-
