@@ -1,0 +1,137 @@
+"""
+Database repository functions for managing issues and their corresponding branches.
+"""
+
+import logging
+from typing import Any
+
+from sqlalchemy import select
+from sqlalchemy.exc import IntegrityError
+
+from cleankoda.core.database.models import AgentStatesDb
+from cleankoda.core.extensions import db
+
+logger = logging.getLogger(__name__)
+
+
+def get_agent_state_by_id(
+    user_id: str, id: int | None = None, issue_id: str | None = None
+) -> AgentStatesDb | None:  # pylint: disable=redefined-builtin
+    """Load the saved issue from the database."""
+    logger.debug("Reading issue from database with id: %s, issue_id: %s", id, issue_id)
+    agent_state = None
+    if id is not None:
+        agent_state = db.session.get(AgentStatesDb, id)
+
+    # Priority 2: search by issue_id
+    elif issue_id is not None:
+        stmt = (
+            select(AgentStatesDb)
+            .filter_by(user_id=user_id)
+            .where(AgentStatesDb.issue_id == issue_id)
+        )
+        agent_state = db.session.execute(stmt).scalar_one_or_none()
+
+    # Priority 3 (Fallback): get the first issue
+    # We sort by ID, so "the first" is uniquely defined.
+    else:
+        stmt = (
+            select(AgentStatesDb)
+            .filter_by(user_id=user_id)
+            .where(AgentStatesDb.issue_is_active.is_(True))
+            .order_by(AgentStatesDb.id.asc())
+            .limit(1)
+        )
+        agent_state = db.session.execute(stmt).scalar_one_or_none()
+
+    if agent_state is None:
+        logger.debug("No issue found in database")
+    else:
+        logger.debug("Current issue found: %s (%s)", agent_state.issue_id, agent_state.issue_name)
+    return agent_state
+
+
+def save_agent_state(user_id: str, issue_id: str, issue_name: str) -> AgentStatesDb:
+    """insert issue into sqlalchemy database"""
+    logger.debug("Creating issue in database: %s (%s)", issue_id, issue_name)
+    try:
+        new_issue = AgentStatesDb(
+            # pyrefly: ignore [unexpected-keyword]
+            user_id=user_id,
+            # pyrefly: ignore [unexpected-keyword]
+            issue_id=issue_id,
+            # pyrefly: ignore [unexpected-keyword]
+            issue_name=issue_name,
+        )
+        db.session.add(new_issue)
+        db.session.commit()
+        return new_issue
+
+    except IntegrityError as e:
+        # Happens if issue_id (unique=True) is already assigned
+        db.session.rollback()
+        logging.error("Error creating issue: %s for user %s: %s", new_issue, user_id, e)
+        return None
+    except Exception as e:  # pylint: disable=broad-exception-caught
+        db.session.rollback()
+        logging.error("Error creating issue: %s for user %s: %s", new_issue, user_id, e)
+        return None
+
+
+def update_agent_state(user_id: str, issue_id: str, **kwargs: Any) -> AgentStatesDb | None:
+    """
+    Updates any fields of an issue.
+    Call e.g.: update_issue(1, issue_name="New", status="Done", priority=5)
+    """
+    agent_state = get_agent_state_by_id(user_id=user_id, issue_id=issue_id)
+    if not agent_state:
+        agent_state = save_agent_state(user_id, issue_id, "")
+
+    if not agent_state:
+        return None
+
+    # Iteriere über alle übergebenen Argumente
+    for key, value in kwargs.items():
+        # Sicherheits-Check: Hat das Model dieses Attribut überhaupt?
+        if hasattr(agent_state, key):
+            # Verhindern, dass man aus Versehen die ID ändert (optional, aber empfohlen)
+            if key == "id":
+                continue
+
+            # Setzt den Wert dynamisch: issue.key = value
+            setattr(agent_state, key, value)
+        else:
+            logging.warning(
+                "Attribute '%s' does not exist in issue model and will be ignored.", key
+            )
+
+    try:
+        logger.debug(
+            "Updating user %s issue %d (%s) in database with values: %s",
+            agent_state.user_id,
+            agent_state.id,
+            agent_state.issue_id,
+            kwargs,
+        )
+        db.session.commit()
+        return agent_state
+    except Exception as e:  # pylint: disable=broad-exception-caught
+        db.session.rollback()
+        logging.error("Error updating issue: %s", e)
+        return None
+
+
+def delete_agent_state(user_id: str, issue_id: str) -> bool:
+    """
+    Removes the issue mapping from the database.
+    Returns True if a record was deleted, False otherwise.
+    """
+    issue = get_agent_state_by_id(user_id=user_id, issue_id=issue_id)
+
+    if issue:
+        logger.debug("Deleting issue from database: %s for user %s", issue_id, user_id)
+        db.session.delete(issue)
+        db.session.commit()
+        return True
+
+    return False

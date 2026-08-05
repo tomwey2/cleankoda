@@ -15,4 +15,4 @@ jobs:
       with:
         python-version: ${{ matrix.python-version }}
     - run: uv sync --locked
-    - run: uv run --with pylint -- pylint src/
+    - run: uv run --with pylint -- pylint src/cleankoda

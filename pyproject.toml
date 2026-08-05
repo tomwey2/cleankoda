@@ -1,5 +1,5 @@
 [project]
-name = "ai-coding-agent-langchain-flask"
+name = "cleankoda"
 version = "0.1.0"
 description = "Add your description here"
 readme = "README.md"
@@ -29,9 +29,6 @@ dependencies = [
     "markdown>=3.5",
 ]
 
-[tool.setuptools.packages.find]
-include = ["app*"]
-
 [dependency-groups]
 dev = [
     "pytest-asyncio>=1.3.0",
@@ -40,3 +37,4 @@ dev = [
 
 [tool.ruff]
 line-length = 100
+src = ["src"]

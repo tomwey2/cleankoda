@@ -1,11 +1,11 @@
 from dotenv import load_dotenv
 
-from src.core.config import get_env_settings
-from src.core.extensions import db
-from src.core.utils import log_and_validate_env, setup_logging
+from cleankoda.core.config import get_env_settings
+from cleankoda.core.extensions import db
+from cleankoda.core.utils import log_and_validate_env, setup_logging
 
 # Importe angepasst für Root-Level Execution
-from src.web import create_app
+from cleankoda.web import create_app
 
 load_dotenv()
 
@@ -27,4 +27,3 @@ if __name__ == "__main__":
     # 5. Server Starten
     # debug=True ist okay lokal, aber use_reloader=False hilft gegen doppelte Logs
     app.run(debug=True, use_reloader=False, host="0.0.0.0", port=5000)
-    
