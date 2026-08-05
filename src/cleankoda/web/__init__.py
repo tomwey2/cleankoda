@@ -8,26 +8,24 @@ SQLAlchemy and APScheduler, and registering blueprints.
 import os
 from pathlib import Path
 
-from dotenv import load_dotenv
 from flask import Flask
 
 from cleankoda.core.config import settings
 from cleankoda.core.extensions import db
-from cleankoda.core.utils import log_and_validate_env, setup_logging
+from cleankoda.core.utils import setup_logging
 from cleankoda.web.routes import web_bp
 from cleankoda.web.routes_credentials import credentials_bp
 from cleankoda.web.routes_dashboard import dashboard_bp
 from cleankoda.web.routes_settings import settings_bp
 
 
-def create_app() -> Flask:
+def create_app(config_class=settings) -> Flask:
     """Create and configure an instance of the Flask application."""
-    load_dotenv()
 
     # 1. Logging & Env Setup
     logger = setup_logging()
     logger.info("Initializing Web Server app...")
-    log_and_validate_env(logger, settings)
+    config_class.log_settings(logger)
 
 
     app = Flask(__name__, instance_relative_config=True)
@@ -36,14 +34,14 @@ def create_app() -> Flask:
     app.config.from_object("src.cleankoda.core.config")
 
     # Load dynamic config from environment settings
-    app.config["SECRET_KEY"] = settings.secret_key
+    app.config["SECRET_KEY"] = config_class.secret_key
 
     # Set database URI
     base_dir = Path(__file__).resolve().parent.parent
-    app.config["SQLALCHEMY_DATABASE_URI"] = settings.get_database_uri(base_dir)
+    app.config["SQLALCHEMY_DATABASE_URI"] = config_class.get_database_uri(base_dir)
 
     # Set encryption key
-    app.config["ENCRYPTION_KEY"] = settings.encryption_key
+    app.config["ENCRYPTION_KEY"] = config_class.encryption_key
 
     try:
         os.makedirs(app.instance_path)

@@ -2,18 +2,15 @@ import asyncio
 import sys
 from pathlib import Path
 
-from dotenv import load_dotenv
-
 # Path resolution for root-level running
 sys.path.insert(0, str(Path(__file__).parent / "src"))
 
+from cleankoda.agent.runtime import prepare_runtime, RuntimeSettings
 from cleankoda.agent.worker import run_agent_cycle
-from cleankoda.core.config import get_env_settings
+from cleankoda.core.config import settings
 from cleankoda.core.extensions import db
-from cleankoda.core.utils import log_and_validate_env, setup_logging
+from cleankoda.core.utils import setup_logging
 from cleankoda.web import create_app
-from cleankoda.agent.runtime import RuntimeSettings, prepare_runtime
-
 
 
 DEFAULT_POLLING_INTERVAL_SECONDS = 60
@@ -24,9 +21,8 @@ async def main():
     logger = setup_logging()
     logger.info("Starting Agent (Async)...")
 
-    env_settings = get_env_settings()
     # 2. Env Validierung
-    log_and_validate_env(logger, env_settings)
+    settings.log_settings(logger)
 
     # 3. App Context erstellen (Nötig für DB Zugriff)
     # Wir starten KEINEN Server, wir nutzen app nur als Hülle für die DB
@@ -36,10 +32,8 @@ async def main():
         # TODO: good for local dev, but not for production. Must be changed for production.
         db.create_all()
 
-    deployment_mode = env_settings.deployment_mode
-
     # ----- SERVERLESS MODE IN GCP RUN -----
-    if deployment_mode == "SERVERLESS":
+    if settings.deployment_mode == "SERVERLESS":
         logger.info("Agent is running in SERVERLESS mode")
         try:
             await run_cycle(app, logger)
@@ -50,7 +44,7 @@ async def main():
         sys.exit(0)
 
     # ----- ON PREMISE MODE (LOCAL OR ON SERVER) -----
-    elif deployment_mode == "ON_PREMISE":
+    elif settings.deployment_mode == "ON_PREMISE":
         logger.info("Agent is running in ON_PREMISE mode, endless loop")
         while True:
             try:
@@ -79,5 +73,4 @@ async def run_cycle(app, logger) -> int:
 
 
 if __name__ == "__main__":
-    load_dotenv()
     asyncio.run(main())

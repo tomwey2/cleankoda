@@ -75,6 +75,15 @@ class Settings(BaseSettings):
             )
         return self.encryption_key
 
+    def log_settings(self, logger: logging.Logger) -> None:
+        """Log loaded environment settings."""
+        logger.info("MCP enabled: %s", self.enable_mcp_servers)
+        logger.info("INSTANCE_DIR: %s", self.instance_dir or "Not set")
+        logger.info("WORKBENCH: %s", self.workbench or "Not set")
+        logger.info("WORKSPACE: %s", self.workspace)
+        logger.info("AGENT_STACK: %s", self.agent_stack or "Not set")
+        logger.info("LLM_CALLS_PER_SECOND: %s", self.llm_calls_per_second)
+
 
 # Instantiation of the settings, which can be imported throughout the project
 settings = Settings()

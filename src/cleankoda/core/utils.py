@@ -9,8 +9,6 @@ from typing import Any
 
 from cryptography.fernet import Fernet
 
-from cleankoda.core.config import Settings
-
 
 def setup_logging(
     config_file_path: Path | None = None,
@@ -107,20 +105,3 @@ def mask_secret(value: str) -> str:
     head = value[:2]
     tail = value[-2:]
     return f"{head}{'*' * (len(value) - 4)}{tail}"
-
-
-def log_and_validate_env(logger, env_settings: Settings):
-    """Log environment variables and validate required settings, return encryption key.
-
-    Only ENCRYPTION_KEY and WORKSPACE are validated here.
-    """
-    logger.info("MCP enabled: %s", env_settings.enable_mcp_servers)
-    logger.info("INSTANCE_DIR: %s", env_settings.instance_dir or "Not set")
-    logger.info("WORKBENCH: %s", env_settings.workbench or "Not set")
-    logger.info("WORKSPACE: %s", env_settings.workspace)
-    logger.info("AGENT_STACK: %s", env_settings.agent_stack or "Not set")
-    logger.info("LLM_CALLS_PER_SECOND: %s", env_settings.llm_calls_per_second)
-
-    encryption_key = Fernet(env_settings.encryption_key.encode())
-
-    return encryption_key
