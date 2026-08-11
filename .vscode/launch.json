@@ -5,12 +5,13 @@
             "name": "Python: Run Agent",
             "type": "debugpy",
             "request": "launch",
-            "program": "${workspaceFolder}/run_agent.py",
+            "program": "${workspaceFolder}/src/run_agent.py",
             "console": "integratedTerminal",
             "envFile": "${workspaceFolder}/.env",
             "cwd": "${workspaceFolder}",
             "env": {
                 "WORKSPACE": "${workspaceFolder}/.local/workspace",
+                "INSTANCE_DIR": "${workspaceFolder}/.local/instance",
                 "WORKBENCH": "cleankoda-workbench-local"
             }
         },
@@ -18,12 +19,22 @@
             "name": "Python: Run Web",
             "type": "debugpy",
             "request": "launch",
-            "program": "${workspaceFolder}/run_web.py",
+            "module": "flask",
+            "args": [
+                "--app",
+                "src/cleankoda/web",
+                "run",
+                "--debug",
+                "--no-debugger",
+                "--no-reload"
+            ],
             "console": "integratedTerminal",
             "envFile": "${workspaceFolder}/.env",
             "cwd": "${workspaceFolder}",
             "env": {
                 "WORKSPACE": "${workspaceFolder}/.local/workspace",
+                "INSTANCE_DIR": "${workspaceFolder}/.local/instance",
+                "PYTHONPATH": "${workspaceFolder}/src"
             }
         }
     ]

@@ -21,9 +21,8 @@ COPY pyproject.toml uv.lock ./
 RUN uv sync --frozen --no-install-project
 
 # 3. Code kopieren
-COPY run_web.py ./
 COPY src ./src
 COPY prompts ./prompts
 
 # 4. Startbefehl
-CMD ["uv", "run", "run_web.py"]
+CMD ["uv", "run", "flask", "--app", "src/cleankoda/web", "run", "--host", "0.0.0.0", "--port", "5000"]

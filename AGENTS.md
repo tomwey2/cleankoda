@@ -24,7 +24,7 @@ The source code was recently refactored to the `src/` directory:
 ## Style Guide & Best Practices
 
 1. **Imports:**
-   - Always use absolute imports referencing the `src` module (e.g., `from src.agent.utils import ...` instead of `from app...`).
+   - Always use absolute imports referencing the `src` module (e.g., `from cleankoda.agent.utils import ...` instead of `from app...`).
    - Group imports logically (Standard Library -> Third Party -> Local/`src`).
 
 2. **Typing & Validation:**
