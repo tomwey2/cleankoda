@@ -248,10 +248,11 @@ class TUI:
             layout=self.layout,
             key_bindings=self.kb,
             full_screen=True,
-            mouse_support=False,
+            mouse_support=True,
             style=TUI_STYLE,
         )
         self.app.float_container = self.float_container
+        self.app.tui = self
 
     def on_status_changed(self, status: str = "") -> None:
         self.update_status_line()
