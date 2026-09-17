@@ -1,31 +1,35 @@
-from cleankoda.memory.memory_in_file import MemoryInFile
 import io
 import sys
+import tempfile
 import unittest
 from pathlib import Path
-from unittest.mock import ANY, MagicMock, patch
+from unittest.mock import ANY, patch
 
 from cleankoda.agent import Agent
-from cleankoda.llm import LLMService
 from cleankoda.main import main, run_headless
-from cleankoda.memory import Memory
+from cleankoda.memory.memory_in_file import MemoryInFile
 from cleankoda.sandbox import Sandbox
-from cleankoda.tools import ToolRegistry
+from cleankoda.tools import BashCommand, ListDir, ReadFile, WriteFile
+from cleankoda.tui import TUI
 
 
 class TestMainDualMode(unittest.TestCase):
 
     def test_run_headless_slash_command(self):
-        import tempfile
-
         with tempfile.TemporaryDirectory() as tmpdir:
-            mem = MemoryInFile(system_prompt="Test", file=Path(tmpdir) / "mem.json")
-            sb = Sandbox(default_image_id=None, workspace=Path(tmpdir))
-            tools = ToolRegistry(sandbox=sb)
+            ws_path = Path(tmpdir)
+            mem = MemoryInFile(system_prompt="Test", file=ws_path / "mem.json")
+            sb = Sandbox(default_image_id=None, workspace=ws_path)
+            tools = [
+                ListDir(workspace=ws_path),
+                ReadFile(workspace=ws_path),
+                WriteFile(workspace=ws_path),
+                BashCommand(sandbox=sb),
+            ]
             agent = Agent(
                 memory=mem,
-                llm_service=LLMService(),
                 tools=tools,
+                sandbox=sb,
             )
             captured_output = io.StringIO()
             with patch("sys.stdout", captured_output):
@@ -36,21 +40,25 @@ class TestMainDualMode(unittest.TestCase):
 
     @patch("cleankoda.agent.Agent.run")
     def test_run_headless_agent_call(self, mock_agent_run):
-        import tempfile
-
         async def _mock_run_agent(*args, **kwargs):
             yield "Test response from agent"
 
         mock_agent_run.side_effect = _mock_run_agent
 
         with tempfile.TemporaryDirectory() as tmpdir:
-            mem = MemoryInFile(system_prompt="Test", file=Path(tmpdir) / "mem.json")
-            sb = Sandbox(default_image_id=None, workspace=Path(tmpdir))
-            tools = ToolRegistry(sandbox=sb)
+            ws_path = Path(tmpdir)
+            mem = MemoryInFile(system_prompt="Test", file=ws_path / "mem.json")
+            sb = Sandbox(default_image_id=None, workspace=ws_path)
+            tools = [
+                ListDir(workspace=ws_path),
+                ReadFile(workspace=ws_path),
+                WriteFile(workspace=ws_path),
+                BashCommand(sandbox=sb),
+            ]
             agent = Agent(
                 memory=mem,
-                llm_service=LLMService(),
                 tools=tools,
+                sandbox=sb,
             )
             captured_output = io.StringIO()
             with patch("sys.stdout", captured_output):
@@ -84,14 +92,17 @@ class TestMainDualMode(unittest.TestCase):
                 self.assertEqual(cm.exception.code, 1)
 
     def test_status_line_structure(self):
-        import tempfile
-        from cleankoda.tui import TUI
-
         with tempfile.TemporaryDirectory() as tmpdir:
-            mem = MemoryInFile(system_prompt="Test", file=Path(tmpdir) / "mem.json")
-            sb = Sandbox(default_image_id=None, workspace=Path(tmpdir))
-            tools = ToolRegistry(sandbox=sb)
-            agent = Agent(memory=mem, llm_service=LLMService(), tools=tools)
+            ws_path = Path(tmpdir)
+            mem = MemoryInFile(system_prompt="Test", file=ws_path / "mem.json")
+            sb = Sandbox(default_image_id=None, workspace=ws_path)
+            tools = [
+                ListDir(workspace=ws_path),
+                ReadFile(workspace=ws_path),
+                WriteFile(workspace=ws_path),
+                BashCommand(sandbox=sb),
+            ]
+            agent = Agent(memory=mem, tools=tools, sandbox=sb)
             tui = TUI(agent)
             tui.update_status_line()
             lines = tui.status_line.text.splitlines()
@@ -104,8 +115,6 @@ class TestMainDualMode(unittest.TestCase):
     @patch("cleankoda.main.run_tui")
     @patch("cleankoda.main.set_workspace")
     def test_main_workspace_valid(self, mock_set_workspace, mock_run_tui):
-        import tempfile
-
         with tempfile.TemporaryDirectory() as tmpdir:
             tmp_path = Path(tmpdir)
             main(["-ws", str(tmp_path), "--tui"])
@@ -113,8 +122,6 @@ class TestMainDualMode(unittest.TestCase):
 
     @patch("cleankoda.main.set_workspace")
     def test_main_workspace_invalid(self, mock_set_workspace):
-        import tempfile
-
         with tempfile.TemporaryDirectory() as tmpdir:
             non_existent = Path(tmpdir) / "does_not_exist"
             with patch("sys.stderr", io.StringIO()) as mock_stderr:

@@ -1,5 +1,4 @@
 import asyncio
-import tempfile
 import unittest
 from pathlib import Path
 from unittest.mock import AsyncMock, MagicMock, patch
@@ -9,24 +8,29 @@ from cleankoda.llm import LLMService
 from cleankoda.memory import Memory
 from cleankoda.sandbox import Sandbox
 from cleankoda.statusline import statusline
-from cleankoda.tools import TOOL_SCHEMAS, ToolRegistry
+from cleankoda.tools import BashCommand, ListDir, ReadFile, ToolRegistry, WriteFile
 
 
 class TestAgentLoop(unittest.TestCase):
 
     def test_agent_class_instantiation(self):
         mem = Memory(system_prompt="Test")
-        ls = LLMService()
         sb = Sandbox(default_image_id=None, workspace=Path.cwd())
-        tools = ToolRegistry(sandbox=sb)
+        tools = [
+            ListDir(workspace=Path.cwd()),
+            ReadFile(workspace=Path.cwd()),
+            WriteFile(workspace=Path.cwd()),
+            BashCommand(sandbox=sb),
+        ]
         agent = Agent(
             memory=mem,
-            llm_service=ls,
             tools=tools,
+            sandbox=sb,
         )
         self.assertEqual(agent.memory, mem)
-        self.assertEqual(agent.llm_service, ls)
-        self.assertEqual(agent.tools, tools)
+        self.assertEqual(agent.sandbox, sb)
+        self.assertIsInstance(agent.llm_service, LLMService)
+        self.assertIsInstance(agent.tool_registry, ToolRegistry)
 
     def test_run_agent_basic_completion(self):
         async def _test():
@@ -52,8 +56,13 @@ class TestAgentLoop(unittest.TestCase):
             with patch("cleankoda.agent.LLMService.stream_completion", side_effect=mock_stream_llm):
                 tokens = []
                 sb = Sandbox(default_image_id=None, workspace=Path.cwd())
-                tools = ToolRegistry(sandbox=sb)
-                agent = Agent(memory=mem, llm_service=LLMService(), tools=tools)
+                tools = [
+                    ListDir(workspace=Path.cwd()),
+                    ReadFile(workspace=Path.cwd()),
+                    WriteFile(workspace=Path.cwd()),
+                    BashCommand(sandbox=sb),
+                ]
+                agent = Agent(memory=mem, tools=tools, sandbox=sb)
                 async for token in agent.run():
                     tokens.append(token)
 
@@ -77,12 +86,12 @@ class TestAgentLoop(unittest.TestCase):
             with patch("cleankoda.agent.LLMService.stream_completion", side_effect=mock_stream_llm):
                 tokens = []
                 sb = MagicMock()
-                tools = MagicMock()
-                tools.get_schemas.return_value = [{"type": "function", "function": {"name": "custom_tool"}}]
+                mock_tool = MagicMock()
+                mock_tool.schema = [{"type": "function", "function": {"name": "custom_tool"}}]
                 agent = Agent(
                     memory=mem,
-                    llm_service=LLMService(),
-                    tools=tools,
+                    tools=[mock_tool],
+                    sandbox=sb,
                 )
                 async for token in agent.run(cancel_event=cancel_event):
                     tokens.append(token)
@@ -146,9 +155,9 @@ class TestAgentLoop(unittest.TestCase):
                     yield "Done."
 
             mock_sandbox = MagicMock()
-            mock_tools = MagicMock()
-            mock_tools.get_schemas.return_value = TOOL_SCHEMAS
-            mock_tools.run_tool = AsyncMock(return_value="file1.txt")
+            mock_tool = MagicMock()
+            mock_tool.schema = [{"type": "function", "function": {"name": "list_files"}}]
+            mock_tool.execute = AsyncMock(return_value="file1.txt")
 
             statusline.on_change = status_cb
             try:
@@ -156,8 +165,8 @@ class TestAgentLoop(unittest.TestCase):
                     tokens = []
                     agent = Agent(
                         memory=mem,
-                        llm_service=LLMService(),
-                        tools=mock_tools,
+                        tools=[mock_tool],
+                        sandbox=mock_sandbox,
                     )
                     async for token in agent.run():
                         tokens.append(token)

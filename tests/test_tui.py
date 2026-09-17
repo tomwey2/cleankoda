@@ -1,12 +1,18 @@
 import unittest
 from pathlib import Path
+from unittest.mock import MagicMock, patch
 
+from prompt_toolkit.buffer import CompletionState
+from prompt_toolkit.completion import Completion
 from prompt_toolkit.document import Document
 
+from cleankoda.agent import Agent
 from cleankoda.commands import registry
 from cleankoda.memory import Memory
 from cleankoda.sandbox import Sandbox
-from cleankoda.tui import SlashCommandCompleter, TUI_STYLE
+from cleankoda.statusline import statusline
+from cleankoda.tools import BashCommand, ListDir, ReadFile, WriteFile
+from cleankoda.tui import ChatLexer, SlashCommandCompleter, TUI, TUI_STYLE
 
 
 class TestSlashCommandCompleter(unittest.TestCase):
@@ -49,7 +55,6 @@ class TestSlashCommandCompleter(unittest.TestCase):
 class TestChatLexer(unittest.TestCase):
 
     def test_rich_color_tags(self):
-        from cleankoda.tui import ChatLexer
         doc = Document("[yellow]LLM startup aborted.[/yellow]\n[green]✔ Model ready.[/green]", 0)
         lexer = ChatLexer()
         get_line = lexer.lex_document(doc)
@@ -61,7 +66,6 @@ class TestChatLexer(unittest.TestCase):
         self.assertEqual(line1, [("fg:ansigreen", "✔ Model ready.")])
 
     def test_markdown_inline(self):
-        from cleankoda.tui import ChatLexer
         doc = Document("Hello **bold** and *italic* and `code` and [link](http://test)", 0)
         lexer = ChatLexer()
         get_line = lexer.lex_document(doc)
@@ -83,7 +87,6 @@ class TestChatLexer(unittest.TestCase):
         )
 
     def test_headers_and_code_blocks(self):
-        from cleankoda.tui import ChatLexer
         doc = Document("# Header 1\n```python\nprint('hello')\n```", 0)
         lexer = ChatLexer()
         get_line = lexer.lex_document(doc)
@@ -97,25 +100,21 @@ class TestChatLexer(unittest.TestCase):
 class TestTUIStyleAndConfig(unittest.TestCase):
 
     def test_tui_style_keys(self):
-        style_dict = dict(TUI_STYLE.style_rules)
-        # Verify completion menu style rules exist
-        style_str = str(TUI_STYLE)
         self.assertTrue(len(TUI_STYLE.style_rules) > 0)
 
 
 class TestTUIEscapeKeybinding(unittest.TestCase):
 
     def test_escape_clears_slash_command_prompt(self):
-        from unittest.mock import MagicMock
-        from cleankoda.agent import Agent
-        from cleankoda.llm import LLMService
-        from cleankoda.tools import ToolRegistry
-        from cleankoda.tui import TUI
-
         memory = Memory(system_prompt="Test")
         sb = Sandbox(default_image_id=None, workspace=Path.cwd())
-        tools = ToolRegistry(sandbox=sb)
-        agent = Agent(memory=memory, llm_service=LLMService(), tools=tools)
+        tools = [
+            ListDir(workspace=Path.cwd()),
+            ReadFile(workspace=Path.cwd()),
+            WriteFile(workspace=Path.cwd()),
+            BashCommand(sandbox=sb),
+        ]
+        agent = Agent(memory=memory, tools=tools, sandbox=sb)
         tui = TUI(agent)
         tui.input_field.text = "/model"
 
@@ -125,16 +124,15 @@ class TestTUIEscapeKeybinding(unittest.TestCase):
         self.assertEqual(tui.input_field.text, "")
 
     def test_escape_preserves_regular_prompt(self):
-        from unittest.mock import MagicMock
-        from cleankoda.agent import Agent
-        from cleankoda.llm import LLMService
-        from cleankoda.tools import ToolRegistry
-        from cleankoda.tui import TUI
-
         memory = Memory(system_prompt="Test")
         sb = Sandbox(default_image_id=None, workspace=Path.cwd())
-        tools = ToolRegistry(sandbox=sb)
-        agent = Agent(memory=memory, llm_service=LLMService(), tools=tools)
+        tools = [
+            ListDir(workspace=Path.cwd()),
+            ReadFile(workspace=Path.cwd()),
+            WriteFile(workspace=Path.cwd()),
+            BashCommand(sandbox=sb),
+        ]
+        agent = Agent(memory=memory, tools=tools, sandbox=sb)
         tui = TUI(agent)
         tui.input_field.text = "Hello world"
 
@@ -146,18 +144,8 @@ class TestTUIEscapeKeybinding(unittest.TestCase):
 
 class TestTUIEnterCompletionKeybinding(unittest.TestCase):
 
-    from unittest.mock import patch
-
     @patch("prompt_toolkit.buffer.get_app")
     def test_enter_applies_completion_without_executing(self, mock_get_app):
-        from unittest.mock import MagicMock
-        from prompt_toolkit.buffer import CompletionState
-        from prompt_toolkit.completion import Completion
-        from cleankoda.agent import Agent
-        from cleankoda.llm import LLMService
-        from cleankoda.tools import ToolRegistry
-        from cleankoda.tui import TUI
-
         mock_app = MagicMock()
         def _close_coro(coro):
             if hasattr(coro, "close"):
@@ -167,8 +155,13 @@ class TestTUIEnterCompletionKeybinding(unittest.TestCase):
 
         memory = Memory(system_prompt="Test")
         sb = Sandbox(default_image_id=None, workspace=Path.cwd())
-        tools = ToolRegistry(sandbox=sb)
-        agent = Agent(memory=memory, llm_service=LLMService(), tools=tools)
+        tools = [
+            ListDir(workspace=Path.cwd()),
+            ReadFile(workspace=Path.cwd()),
+            WriteFile(workspace=Path.cwd()),
+            BashCommand(sandbox=sb),
+        ]
+        agent = Agent(memory=memory, tools=tools, sandbox=sb)
         tui = TUI(agent)
         tui.input_field.text = "/m"
         tui.input_field.buffer.cursor_position = 2
@@ -191,18 +184,15 @@ class TestTUIEnterCompletionKeybinding(unittest.TestCase):
 class TestTUIStatusManager(unittest.TestCase):
 
     def test_status_manager_updates_status_line(self):
-        from unittest.mock import MagicMock
-        from cleankoda.agent import Agent
-        from cleankoda.llm import LLMService
-        from cleankoda.memory import Memory
-        from cleankoda.statusline import statusline
-        from cleankoda.tools import ToolRegistry
-        from cleankoda.tui import TUI
-
         memory = Memory(system_prompt="Test")
         sb = Sandbox(default_image_id=None, workspace=Path.cwd())
-        tools = ToolRegistry(sandbox=sb)
-        agent = Agent(memory=memory, llm_service=LLMService(), tools=tools)
+        tools = [
+            ListDir(workspace=Path.cwd()),
+            ReadFile(workspace=Path.cwd()),
+            WriteFile(workspace=Path.cwd()),
+            BashCommand(sandbox=sb),
+        ]
+        agent = Agent(memory=memory, tools=tools, sandbox=sb)
         tui = TUI(agent)
         statusline.on_change = tui.on_status_changed
         mock_app = MagicMock()

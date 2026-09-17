@@ -10,10 +10,10 @@ from prompt_toolkit.layout.layout import Layout
 
 from cleankoda.agent import Agent
 from cleankoda.commands import CommandContext, registry
-from cleankoda.llm import LLMService
+from cleankoda.commands.cmd_sandbox import _show_tui_modal_sandbox_dialog
 from cleankoda.memory import Memory
 from cleankoda.sandbox import AVAILABLE_IMAGES, Sandbox
-from cleankoda.tools import ToolRegistry
+from cleankoda.tools import BashCommand, ListDir, ReadFile, WriteFile
 from cleankoda.tui import SlashCommandCompleter
 
 
@@ -21,11 +21,16 @@ class TestSandboxCommand(unittest.TestCase):
 
     def setUp(self):
         self.sandbox = Sandbox(default_image_id=None, workspace=Path.cwd())
-        self.tools = ToolRegistry(sandbox=self.sandbox)
+        self.tools = [
+            ListDir(workspace=Path.cwd()),
+            ReadFile(workspace=Path.cwd()),
+            WriteFile(workspace=Path.cwd()),
+            BashCommand(sandbox=self.sandbox),
+        ]
         self.agent = Agent(
             memory=Memory(system_prompt="Test"),
-            llm_service=LLMService(),
             tools=self.tools,
+            sandbox=self.sandbox,
         )
 
     def test_sandbox_command_registered(self):
@@ -65,8 +70,6 @@ class TestSandboxCommand(unittest.TestCase):
         self.assertEqual(self.sandbox.get_sandbox_image().id, "host")
 
     def test_sandbox_interactive_selection_in_tui(self):
-        from cleankoda.commands.cmd_sandbox import _show_tui_modal_sandbox_dialog
-
         float_container = FloatContainer(content=Window(), floats=[])
         layout = Layout(float_container)
         app = Application(layout=layout)

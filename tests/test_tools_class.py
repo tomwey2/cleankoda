@@ -5,7 +5,7 @@ from pathlib import Path
 from unittest.mock import MagicMock
 
 from cleankoda.sandbox import Sandbox
-from cleankoda.tools import ToolRegistry
+from cleankoda.tools import BashCommand, ListDir, ReadFile, ToolRegistry, WriteFile
 
 
 class TestToolsClass(unittest.TestCase):
@@ -14,17 +14,29 @@ class TestToolsClass(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmpdir:
             ws_path = Path(tmpdir).resolve()
             sandbox = Sandbox(default_image_id=None, workspace=ws_path)
-            tools = ToolRegistry(sandbox=sandbox)
+            list_dir = ListDir(workspace=ws_path)
+            read_file = ReadFile(workspace=ws_path)
+            write_file = WriteFile(workspace=ws_path)
+            bash_cmd = BashCommand(sandbox=sandbox)
 
-            self.assertEqual(tools.sandbox.workspace, ws_path)
-            self.assertEqual(tools.fs.workspace_root, ws_path)
+            self.assertEqual(sandbox.workspace, ws_path)
+            self.assertEqual(list_dir.workspace_root, ws_path)
+            self.assertEqual(read_file.workspace_root, ws_path)
+            self.assertEqual(write_file.workspace_root, ws_path)
+            self.assertEqual(bash_cmd.sandbox, sandbox)
 
     def test_tools_file_operations(self):
         async def _test():
             with tempfile.TemporaryDirectory() as tmpdir:
                 ws_path = Path(tmpdir).resolve()
                 sandbox = Sandbox(default_image_id=None, workspace=ws_path)
-                tools = ToolRegistry(sandbox=sandbox)
+                tools_list = [
+                    ListDir(workspace=ws_path),
+                    ReadFile(workspace=ws_path),
+                    WriteFile(workspace=ws_path),
+                    BashCommand(sandbox=sandbox),
+                ]
+                tools = ToolRegistry(tools=tools_list)
 
                 # Test write_file
                 mock_call_write = MagicMock()
@@ -56,11 +68,17 @@ class TestToolsClass(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmpdir:
             ws_path = Path(tmpdir).resolve()
             sandbox = Sandbox(default_image_id=None, workspace=ws_path)
-            tools = ToolRegistry(sandbox=sandbox)
+            tools_list = [
+                ListDir(workspace=ws_path),
+                ReadFile(workspace=ws_path),
+                WriteFile(workspace=ws_path),
+                BashCommand(sandbox=sandbox),
+            ]
+            tools = ToolRegistry(tools=tools_list)
 
             schemas = tools.get_schemas()
             self.assertIsInstance(schemas, list)
-            self.assertTrue(len(schemas) > 0)
+            self.assertEqual(len(schemas), 4)
 
 
 if __name__ == "__main__":

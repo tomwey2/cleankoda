@@ -1,18 +1,18 @@
-from cleankoda.memory import MemoryInFile
 import asyncio
+import tempfile
 import unittest
+from pathlib import Path
 from unittest.mock import AsyncMock, MagicMock, patch
 
-import litellm
 from litellm.exceptions import (
     APIConnectionError,
     AuthenticationError,
-    RateLimitError,
 )
 
 from cleankoda.agent import Agent
 from cleankoda.config import AppConfig, config
 from cleankoda.llm import LLMService
+from cleankoda.memory import MemoryInFile
 
 
 class TestLLMService(unittest.TestCase):
@@ -91,10 +91,6 @@ class TestLLMService(unittest.TestCase):
 
     def test_run_agent_tool_execution(self):
         async def _test():
-            import tempfile
-            from pathlib import Path
-            from cleankoda.memory import Memory
-
             with tempfile.TemporaryDirectory() as tmpdir:
                 file_path = Path(tmpdir) / "memory.json"
                 mem = MemoryInFile(system_prompt="Test", file=file_path)
@@ -143,16 +139,21 @@ class TestLLMService(unittest.TestCase):
                 else:
                     yield chunk_text_2
 
-            from cleankoda.tools import TOOL_SCHEMAS
-
             mock_sandbox = MagicMock()
-            mock_tools = MagicMock()
-            mock_tools.get_schemas.return_value = TOOL_SCHEMAS
-            mock_tools.run_tool = AsyncMock(return_value="file1.txt\nfile2.txt")
+            mock_tool = MagicMock()
+            mock_tool.schema = [{
+                "type": "function",
+                "function": {
+                    "name": "list_files",
+                    "description": "List files",
+                    "parameters": {"type": "object", "properties": {"path": {"type": "string"}}},
+                },
+            }]
+            mock_tool.execute = AsyncMock(return_value="file1.txt\nfile2.txt")
 
             with patch("litellm.acompletion", side_effect=mock_acompletion):
                 chunks = []
-                agent = Agent(memory=mem, llm_service=LLMService(), tools=mock_tools)
+                agent = Agent(memory=mem, tools=[mock_tool], sandbox=mock_sandbox)
                 async for token in agent.run():
                     chunks.append(token)
 
@@ -160,14 +161,12 @@ class TestLLMService(unittest.TestCase):
                 self.assertIn("list_files(.)", output)
                 self.assertNotIn("Tool Output", output)
                 self.assertIn("Done listing files.", output)
-                mock_tools.run_tool.assert_called_once()
+                mock_tool.execute.assert_called_once_with(path=".")
                 self.assertEqual(call_count, 2)
 
         asyncio.run(_test())
 
     def test_llm_service_class_instance_methods(self):
-        from cleankoda.llm import LLMService
-
         service = LLMService()
         self.assertEqual(service.format_tool_call_display("read_file", '{"path": "test.py"}'), "read_file(test.py)")
         err = APIConnectionError(message="OpenAIException - Loading model", llm_provider="custom", model="qwen")
