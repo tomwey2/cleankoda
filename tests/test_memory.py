@@ -1,3 +1,4 @@
+from cleankoda.memory import MemoryInFile
 import json
 import tempfile
 import unittest
@@ -10,7 +11,7 @@ class TestMemory(unittest.TestCase):
     def test_init_without_existing_file(self):
         with tempfile.TemporaryDirectory() as tmpdir:
             file_path = Path(tmpdir) / "memory.json"
-            mem = Memory(system_prompt="Test System Prompt", file=file_path)
+            mem = MemoryInFile(system_prompt="Test System Prompt", file=file_path)
             self.assertEqual(len(mem), 1)
             self.assertEqual(mem[0], {"role": "system", "content": "Test System Prompt"})
             self.assertTrue(file_path.exists())
@@ -25,7 +26,7 @@ class TestMemory(unittest.TestCase):
             ]
             file_path.write_text(json.dumps(saved_messages), encoding="utf-8")
 
-            mem = Memory(system_prompt="New System Prompt", file=file_path)
+            mem = MemoryInFile(system_prompt="New System Prompt", file=file_path)
             self.assertEqual(len(mem), 3)
             self.assertEqual(mem.messages, saved_messages)
 
@@ -34,14 +35,14 @@ class TestMemory(unittest.TestCase):
             file_path = Path(tmpdir) / "memory.json"
             file_path.write_text("invalid json content", encoding="utf-8")
 
-            mem = Memory(system_prompt="Fallback Prompt", file=file_path)
+            mem = MemoryInFile(system_prompt="Fallback Prompt", file=file_path)
             self.assertEqual(len(mem), 1)
             self.assertEqual(mem[0]["content"], "Fallback Prompt")
 
     def test_load_memory_explicit(self):
         with tempfile.TemporaryDirectory() as tmpdir:
             file_path = Path(tmpdir) / "memory.json"
-            mem = Memory(system_prompt="Initial", file=file_path)
+            mem = MemoryInFile(system_prompt="Initial", file=file_path)
             self.assertEqual(len(mem), 1)
 
             saved_messages = [

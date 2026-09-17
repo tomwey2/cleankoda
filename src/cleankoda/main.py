@@ -7,7 +7,7 @@ from cleankoda.agent import SYSTEM_PROMPT, Agent
 from cleankoda.commands import CommandContext, registry
 from cleankoda.config import config
 from cleankoda.llm import LLMService
-from cleankoda.memory import Memory
+from cleankoda.memory import MemoryInFile
 from cleankoda.sandbox import Sandbox
 from cleankoda.sandbox.config import DEFAULT_IMAGE
 from cleankoda.tools import Tools
@@ -106,7 +106,7 @@ def main(argv: list[str] | None = None) -> None:
         default_image_id=config.sandbox if config.sandbox else DEFAULT_IMAGE,
     )
 
-    memory = Memory(system_prompt=SYSTEM_PROMPT, file=".agents/memory.json")
+    memory = MemoryInFile(file=".agents/memory.json", system_prompt=SYSTEM_PROMPT)
 
     agent = Agent(
         memory=memory,

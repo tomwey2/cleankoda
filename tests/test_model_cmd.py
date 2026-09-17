@@ -1,3 +1,4 @@
+from cleankoda.memory.memory_in_file import MemoryInFile
 import asyncio
 import tempfile
 import unittest
@@ -22,7 +23,7 @@ class TestModelCommand(unittest.TestCase):
 
     def test_model_direct_argument(self):
         with tempfile.TemporaryDirectory() as tmpdir:
-            memory = Memory(system_prompt="Test", file=Path(tmpdir) / "mem.json")
+            memory = MemoryInFile(system_prompt="Test", file=Path(tmpdir) / "mem.json")
             ctx = CommandContext(memory=memory)
 
             res = registry.dispatch("/model gpt-4o", ctx)
@@ -33,7 +34,7 @@ class TestModelCommand(unittest.TestCase):
     def test_model_interactive_selection(self, mock_select):
         mock_select.return_value = "claude-3-5-sonnet-latest"
         with tempfile.TemporaryDirectory() as tmpdir:
-            memory = Memory(system_prompt="Test", file=Path(tmpdir) / "mem.json")
+            memory = MemoryInFile(system_prompt="Test", file=Path(tmpdir) / "mem.json")
             ctx = CommandContext(memory=memory)
 
             res = registry.dispatch("/model", ctx)
@@ -45,7 +46,7 @@ class TestModelCommand(unittest.TestCase):
     def test_model_interactive_cancellation(self, mock_select):
         mock_select.return_value = None  # User pressed ESC
         with tempfile.TemporaryDirectory() as tmpdir:
-            memory = Memory(system_prompt="Test", file=Path(tmpdir) / "mem.json")
+            memory = MemoryInFile(system_prompt="Test", file=Path(tmpdir) / "mem.json")
             ctx = CommandContext(memory=memory)
 
             res = registry.dispatch("/model", ctx)

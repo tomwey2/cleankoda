@@ -34,7 +34,7 @@ class Agent:
         llm_service: LLMService,
         tools: Tools,
     ) -> None:
-        self.memory = memory
+        self.memory: Memory = memory
         self.llm_service = llm_service
         self.tools = tools
         self.sandbox = tools.sandbox
@@ -63,7 +63,7 @@ class Agent:
                 chunks: list[Any] = []
 
                 async for chunk in self.llm_service.stream_completion(
-                    messages=self.memory,
+                    messages=self.memory.get_messages(),
                     tools=self.tools.get_schemas(),
                     cancel_event=cancel_event,
                     chunks_out=chunks,

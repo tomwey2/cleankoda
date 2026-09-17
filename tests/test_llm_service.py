@@ -1,3 +1,4 @@
+from cleankoda.memory import MemoryInFile
 import asyncio
 import unittest
 from unittest.mock import AsyncMock, MagicMock, patch
@@ -96,7 +97,7 @@ class TestLLMService(unittest.TestCase):
 
             with tempfile.TemporaryDirectory() as tmpdir:
                 file_path = Path(tmpdir) / "memory.json"
-                mem = Memory(system_prompt="Test", file=file_path)
+                mem = MemoryInFile(system_prompt="Test", file=file_path)
                 mem.add_user("List files")
 
             chunk_tool_1 = {

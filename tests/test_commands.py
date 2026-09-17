@@ -1,3 +1,4 @@
+from cleankoda.memory.memory_in_file import MemoryInFile
 import unittest
 import tempfile
 from pathlib import Path
@@ -19,7 +20,7 @@ class TestCommandRegistry(unittest.TestCase):
     def test_cmd_exit(self):
         with tempfile.TemporaryDirectory() as tmpdir:
             file_path = Path(tmpdir) / "memory.json"
-            memory = Memory(system_prompt="Test System Prompt", file=file_path)
+            memory = MemoryInFile(system_prompt="Test System Prompt", file=file_path)
             ctx = CommandContext(memory=memory)
 
             res = registry.dispatch("/exit", ctx)
@@ -33,7 +34,7 @@ class TestCommandRegistry(unittest.TestCase):
     def test_cmd_clear(self):
         with tempfile.TemporaryDirectory() as tmpdir:
             file_path = Path(tmpdir) / "memory.json"
-            memory = Memory(system_prompt="Test System Prompt", file=file_path)
+            memory = MemoryInFile(system_prompt="Test System Prompt", file=file_path)
             ctx = CommandContext(memory=memory)
 
             memory.add_user("Hello agent")
@@ -46,7 +47,7 @@ class TestCommandRegistry(unittest.TestCase):
     def test_cmd_help(self):
         with tempfile.TemporaryDirectory() as tmpdir:
             file_path = Path(tmpdir) / "memory.json"
-            memory = Memory(system_prompt="Test System Prompt", file=file_path)
+            memory = MemoryInFile(system_prompt="Test System Prompt", file=file_path)
             ctx = CommandContext(memory=memory)
 
             res = registry.dispatch("/help", ctx)
@@ -58,7 +59,7 @@ class TestCommandRegistry(unittest.TestCase):
     def test_unknown_command(self):
         with tempfile.TemporaryDirectory() as tmpdir:
             file_path = Path(tmpdir) / "memory.json"
-            memory = Memory(system_prompt="Test System Prompt", file=file_path)
+            memory = MemoryInFile(system_prompt="Test System Prompt", file=file_path)
             ctx = CommandContext(memory=memory)
 
             res = registry.dispatch("/foobar", ctx)

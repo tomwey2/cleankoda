@@ -1,3 +1,4 @@
+from cleankoda.memory.memory_in_file import MemoryInFile
 import io
 import sys
 import unittest
@@ -18,7 +19,7 @@ class TestMainDualMode(unittest.TestCase):
         import tempfile
 
         with tempfile.TemporaryDirectory() as tmpdir:
-            mem = Memory(system_prompt="Test", file=Path(tmpdir) / "mem.json")
+            mem = MemoryInFile(system_prompt="Test", file=Path(tmpdir) / "mem.json")
             sb = Sandbox(default_image_id=None, workspace=Path(tmpdir))
             tools = Tools(sandbox=sb)
             agent = Agent(
@@ -43,7 +44,7 @@ class TestMainDualMode(unittest.TestCase):
         mock_agent_run.side_effect = _mock_run_agent
 
         with tempfile.TemporaryDirectory() as tmpdir:
-            mem = Memory(system_prompt="Test", file=Path(tmpdir) / "mem.json")
+            mem = MemoryInFile(system_prompt="Test", file=Path(tmpdir) / "mem.json")
             sb = Sandbox(default_image_id=None, workspace=Path(tmpdir))
             tools = Tools(sandbox=sb)
             agent = Agent(
@@ -87,7 +88,7 @@ class TestMainDualMode(unittest.TestCase):
         from cleankoda.tui import TUI
 
         with tempfile.TemporaryDirectory() as tmpdir:
-            mem = Memory(system_prompt="Test", file=Path(tmpdir) / "mem.json")
+            mem = MemoryInFile(system_prompt="Test", file=Path(tmpdir) / "mem.json")
             sb = Sandbox(default_image_id=None, workspace=Path(tmpdir))
             tools = Tools(sandbox=sb)
             agent = Agent(memory=mem, llm_service=LLMService(), tools=tools)

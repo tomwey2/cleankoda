@@ -1,3 +1,4 @@
+from cleankoda.memory import MemoryInFile
 import asyncio
 import tempfile
 import unittest
@@ -24,7 +25,7 @@ class TestProviderCommand(unittest.TestCase):
     @patch("cleankoda.commands.cmd_provider.prompt_for_api_key_interactive", new_callable=AsyncMock)
     def test_provider_direct_argument_valid_ollama(self, mock_prompt_key):
         with tempfile.TemporaryDirectory() as tmpdir:
-            memory = Memory(system_prompt="Test", file=Path(tmpdir) / "mem.json")
+            memory = MemoryInFile(system_prompt="Test", file=Path(tmpdir) / "mem.json")
             ctx = CommandContext(memory=memory)
 
             res = registry.dispatch("/provider ollama", ctx)
@@ -37,7 +38,7 @@ class TestProviderCommand(unittest.TestCase):
         mock_prompt_key.return_value = "sk-new-openai-key"
         with tempfile.TemporaryDirectory() as tmpdir:
             cred_file = Path(tmpdir) / "credentials.json"
-            memory = Memory(system_prompt="Test", file=Path(tmpdir) / "mem.json")
+            memory = MemoryInFile(system_prompt="Test", file=Path(tmpdir) / "mem.json")
             ctx = CommandContext(memory=memory)
 
             with patch("cleankoda.llm.credentials.DEFAULT_CREDENTIALS_FILE", cred_file):
@@ -48,7 +49,7 @@ class TestProviderCommand(unittest.TestCase):
 
     def test_provider_direct_argument_invalid(self):
         with tempfile.TemporaryDirectory() as tmpdir:
-            memory = Memory(system_prompt="Test", file=Path(tmpdir) / "mem.json")
+            memory = MemoryInFile(system_prompt="Test", file=Path(tmpdir) / "mem.json")
             ctx = CommandContext(memory=memory)
 
             res = registry.dispatch("/provider unknown_llm", ctx)
@@ -64,7 +65,7 @@ class TestProviderCommand(unittest.TestCase):
 
         with tempfile.TemporaryDirectory() as tmpdir:
             cred_file = Path(tmpdir) / "credentials.json"
-            memory = Memory(system_prompt="Test", file=Path(tmpdir) / "mem.json")
+            memory = MemoryInFile(system_prompt="Test", file=Path(tmpdir) / "mem.json")
             ctx = CommandContext(memory=memory)
 
             with patch("cleankoda.llm.credentials.DEFAULT_CREDENTIALS_FILE", cred_file):
@@ -78,7 +79,7 @@ class TestProviderCommand(unittest.TestCase):
     def test_provider_interactive_cancellation(self, mock_select):
         mock_select.return_value = None  # User pressed ESC
         with tempfile.TemporaryDirectory() as tmpdir:
-            memory = Memory(system_prompt="Test", file=Path(tmpdir) / "mem.json")
+            memory = MemoryInFile(system_prompt="Test", file=Path(tmpdir) / "mem.json")
             ctx = CommandContext(memory=memory)
 
             res = registry.dispatch("/provider", ctx)
