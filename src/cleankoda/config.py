@@ -22,6 +22,17 @@ class AppConfig(BaseModel):
     max_tokens: int = Field(default=4096, gt=0)
     sandbox: str = ""
 
+    # Issue tracking system: e.g., "TRELLO", "JIRA", "GITHUB ISSUES"
+    its_type: str = ""
+    its_base_url: str = ""
+    its_container_id: str = ""
+    its_parent_id: str = ""
+    its_state_backlog: str = "backlog"
+    its_state_todo: str = "todo"
+    its_state_in_progress: str = "in progress"
+    its_state_in_review: str = "in review"
+    its_state_done: str = "done"
+
     @property
     def litellm_model_identifier(self) -> str:
         """Mappt Provider und Modell auf LiteLLM-kompatible Präfixe."""
@@ -77,6 +88,11 @@ class AppConfig(BaseModel):
         """Holt den aktiven API-Key über den CredentialsStore."""
         store = CredentialsStore.load(file_path=credentials_file)
         return store.get_key(self.provider)
+
+    def get_credential_by_key(self, key: str, credentials_file: Path | None = None) -> str | None:
+        """Holt den aktiven API-Key über den CredentialsStore."""
+        store = CredentialsStore.load(file_path=credentials_file)
+        return store.get_key(key)
 
 
 config = AppConfig.load()
