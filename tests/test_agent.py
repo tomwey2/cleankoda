@@ -9,7 +9,7 @@ from cleankoda.llm import LLMService
 from cleankoda.memory import Memory
 from cleankoda.sandbox import Sandbox
 from cleankoda.statusline import statusline
-from cleankoda.tools import TOOL_SCHEMAS, Tools
+from cleankoda.tools import TOOL_SCHEMAS, ToolRegistry
 
 
 class TestAgentLoop(unittest.TestCase):
@@ -18,7 +18,7 @@ class TestAgentLoop(unittest.TestCase):
         mem = Memory(system_prompt="Test")
         ls = LLMService()
         sb = Sandbox(default_image_id=None, workspace=Path.cwd())
-        tools = Tools(sandbox=sb)
+        tools = ToolRegistry(sandbox=sb)
         agent = Agent(
             memory=mem,
             llm_service=ls,
@@ -52,7 +52,7 @@ class TestAgentLoop(unittest.TestCase):
             with patch("cleankoda.agent.LLMService.stream_completion", side_effect=mock_stream_llm):
                 tokens = []
                 sb = Sandbox(default_image_id=None, workspace=Path.cwd())
-                tools = Tools(sandbox=sb)
+                tools = ToolRegistry(sandbox=sb)
                 agent = Agent(memory=mem, llm_service=LLMService(), tools=tools)
                 async for token in agent.run():
                     tokens.append(token)

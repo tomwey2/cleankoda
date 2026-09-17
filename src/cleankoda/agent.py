@@ -7,7 +7,9 @@ from litellm import stream_chunk_builder
 from cleankoda.llm import LLMService
 from cleankoda.memory import Memory
 from cleankoda.statusline import statusline
-from cleankoda.tools import Tools
+from cleankoda.tools import ToolRegistry
+from cleankoda.tools import Tool
+from cleankoda.sandbox import Sandbox
 
 SYSTEM_PROMPT = """You are a coding agent running in the user's terminal.
 You can list files, read files, write files, and run bash commands.
@@ -31,13 +33,13 @@ class Agent:
     def __init__(
         self,
         memory: Memory,
-        llm_service: LLMService,
-        tools: Tools,
+        tools: list[Tool],
+        sandbox: Sandbox
     ) -> None:
         self.memory: Memory = memory
-        self.llm_service = llm_service
-        self.tools = tools
-        self.sandbox = tools.sandbox
+        self.sandbox = sandbox
+        self.llm_service = LLMService()
+        self.tool_registry = ToolRegistry(tools)
         self.state = AgentLifecycle.IDLE
 
     async def run(
@@ -62,9 +64,10 @@ class Agent:
                 iteration += 1
                 chunks: list[Any] = []
 
+                schemas = self.tool_registry.get_schemas()
                 async for chunk in self.llm_service.stream_completion(
                     messages=self.memory.get_messages(),
-                    tools=self.tools.get_schemas(),
+                    tools=schemas,
                     cancel_event=cancel_event,
                     chunks_out=chunks,
                 ):
@@ -124,7 +127,7 @@ class Agent:
 
                     try:
                         self._set_state(AgentLifecycle.EXECUTING, f"Execute tool: {func_name}...")
-                        tool_result = await self.tools.run_tool(tool_call)
+                        tool_result = await self.tool_registry.run_tool(tool_call)
                     finally:
                         self._set_state(AgentLifecycle.THINKING)
 

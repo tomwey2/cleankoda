@@ -5,7 +5,7 @@ from pathlib import Path
 from unittest.mock import MagicMock
 
 from cleankoda.sandbox import Sandbox
-from cleankoda.tools import Tools
+from cleankoda.tools import ToolRegistry
 
 
 class TestToolsClass(unittest.TestCase):
@@ -14,7 +14,7 @@ class TestToolsClass(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmpdir:
             ws_path = Path(tmpdir).resolve()
             sandbox = Sandbox(default_image_id=None, workspace=ws_path)
-            tools = Tools(sandbox=sandbox)
+            tools = ToolRegistry(sandbox=sandbox)
 
             self.assertEqual(tools.sandbox.workspace, ws_path)
             self.assertEqual(tools.fs.workspace_root, ws_path)
@@ -24,7 +24,7 @@ class TestToolsClass(unittest.TestCase):
             with tempfile.TemporaryDirectory() as tmpdir:
                 ws_path = Path(tmpdir).resolve()
                 sandbox = Sandbox(default_image_id=None, workspace=ws_path)
-                tools = Tools(sandbox=sandbox)
+                tools = ToolRegistry(sandbox=sandbox)
 
                 # Test write_file
                 mock_call_write = MagicMock()
@@ -56,7 +56,7 @@ class TestToolsClass(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmpdir:
             ws_path = Path(tmpdir).resolve()
             sandbox = Sandbox(default_image_id=None, workspace=ws_path)
-            tools = Tools(sandbox=sandbox)
+            tools = ToolRegistry(sandbox=sandbox)
 
             schemas = tools.get_schemas()
             self.assertIsInstance(schemas, list)

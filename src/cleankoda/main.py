@@ -10,9 +10,10 @@ from cleankoda.llm import LLMService
 from cleankoda.memory import MemoryInFile
 from cleankoda.sandbox import Sandbox
 from cleankoda.sandbox.config import DEFAULT_IMAGE
-from cleankoda.tools import Tools
+from cleankoda.tools import ToolRegistry
 from cleankoda.statusline import statusline
 from cleankoda.tui import run_tui
+from cleankoda.tools import ReadFile, WriteFile, ListDir, BashCommand
 
 
 def set_workspace(workspace: Path) -> None:
@@ -110,8 +111,12 @@ def main(argv: list[str] | None = None) -> None:
 
     agent = Agent(
         memory=memory,
-        llm_service=LLMService(),
-        tools=Tools(sandbox=sandbox),
+        tools=[
+            ListDir(workspace=config.workspace),
+            ReadFile(workspace=config.workspace),
+            WriteFile(workspace=config.workspace),
+            BashCommand(sandbox)],
+        sandbox=sandbox
     )
 
     if args.headless or final_prompt is not None:

@@ -10,7 +10,7 @@ from cleankoda.llm import LLMService
 from cleankoda.main import main, run_headless
 from cleankoda.memory import Memory
 from cleankoda.sandbox import Sandbox
-from cleankoda.tools import Tools
+from cleankoda.tools import ToolRegistry
 
 
 class TestMainDualMode(unittest.TestCase):
@@ -21,7 +21,7 @@ class TestMainDualMode(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmpdir:
             mem = MemoryInFile(system_prompt="Test", file=Path(tmpdir) / "mem.json")
             sb = Sandbox(default_image_id=None, workspace=Path(tmpdir))
-            tools = Tools(sandbox=sb)
+            tools = ToolRegistry(sandbox=sb)
             agent = Agent(
                 memory=mem,
                 llm_service=LLMService(),
@@ -46,7 +46,7 @@ class TestMainDualMode(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmpdir:
             mem = MemoryInFile(system_prompt="Test", file=Path(tmpdir) / "mem.json")
             sb = Sandbox(default_image_id=None, workspace=Path(tmpdir))
-            tools = Tools(sandbox=sb)
+            tools = ToolRegistry(sandbox=sb)
             agent = Agent(
                 memory=mem,
                 llm_service=LLMService(),
@@ -90,7 +90,7 @@ class TestMainDualMode(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmpdir:
             mem = MemoryInFile(system_prompt="Test", file=Path(tmpdir) / "mem.json")
             sb = Sandbox(default_image_id=None, workspace=Path(tmpdir))
-            tools = Tools(sandbox=sb)
+            tools = ToolRegistry(sandbox=sb)
             agent = Agent(memory=mem, llm_service=LLMService(), tools=tools)
             tui = TUI(agent)
             tui.update_status_line()
