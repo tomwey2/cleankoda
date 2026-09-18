@@ -230,7 +230,8 @@ async def cmd_issue_to_plan(args: list[str], ctx: CommandContext) -> CommandResu
             return CommandResult(output=f"Error fetching ticket details for '{card_id}': {e}")
 
         prompt = (
-            f"Create a detailed implementation plan for the following user story:\n\n"
+            f"Inspect the local workspace using your tools (e.g., list_dir, read_file) "
+            f"to gather necessary context, then create a detailed implementation plan for the following user story:\n\n"
             f"### Ticket: {title} (ID: {card_id})\n"
             f"### Description:\n"
             f"{description}\n\n"
