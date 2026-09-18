@@ -6,10 +6,11 @@ from litellm import stream_chunk_builder
 
 from cleankoda.llm import LLMService
 from cleankoda.memory import Memory
-from cleankoda.statusline import statusline
-from cleankoda.tools import ToolRegistry
-from cleankoda.tools import Tool
 from cleankoda.sandbox import Sandbox
+from cleankoda.state import get_active_issue
+from cleankoda.statusline import statusline
+from cleankoda.tools import Tool
+from cleankoda.tools import ToolRegistry
 
 SYSTEM_PROMPT = """You are a coding agent running in the user's terminal.
 You can list files, read files, write files, and run bash commands.
@@ -34,13 +35,15 @@ class Agent:
         self,
         memory: Memory,
         tools: list[Tool],
-        sandbox: Sandbox
+        sandbox: Sandbox,
+        base_system_prompt: str | None = None,
     ) -> None:
         self.memory: Memory = memory
         self.sandbox = sandbox
         self.llm_service = LLMService()
         self.tool_registry = ToolRegistry(tools)
         self.state = AgentLifecycle.IDLE
+        self.base_system_prompt: str = base_system_prompt or SYSTEM_PROMPT
 
     async def run(
         self,
@@ -49,6 +52,13 @@ class Agent:
     ) -> AsyncGenerator[str, None]:
         """Iteratively calls LLM service, streams responses, executes tools,
         and records assistant and tool messages in memory."""
+        active = get_active_issue()
+        if active:
+            dynamic_system_prompt = f"{self.base_system_prompt}{active.to_system_prompt_snippet()}"
+        else:
+            dynamic_system_prompt = self.base_system_prompt
+        self.memory.set_system_prompt(dynamic_system_prompt)
+
         iteration = 0
 
         try:

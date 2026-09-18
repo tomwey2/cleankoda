@@ -16,6 +16,7 @@ from prompt_toolkit.widgets import Frame, TextArea
 from cleankoda.agent import Agent
 from cleankoda.commands import CommandContext, registry
 from cleankoda.config import config
+from cleankoda.state import get_active_issue
 from cleankoda.statusline import statusline
 
 BANNER = """
@@ -254,6 +255,12 @@ class TUI:
         self.app.float_container = self.float_container
         self.app.tui = self
 
+    def _get_bottom_toolbar_text(self) -> str:
+        active = get_active_issue()
+        if active:
+            return f"[Issue: #{active.id} {active.title}]"
+        return "[No active Issue]"
+
     def on_status_changed(self, status: str = "") -> None:
         self.update_status_line()
         try:
@@ -269,9 +276,15 @@ class TUI:
         return self._cancel_event
 
     def get_session_status_text(self) -> str:
+        active = get_active_issue()
+        issue_str = (
+            f"[Issue: #{active.id} {active.title}]"
+            if active
+            else "[No active Issue]"
+        )
         sb_image = self.agent.sandbox.get_sandbox_image()
         sb_status = "Sandbox: " + sb_image.name if sb_image and sb_image.id != "host" else "no Sandbox"
-        return f"Provider: {config.provider} | Model: {config.model} | Temp: {config.temperature} | {sb_status}"
+        return f"{issue_str} | Provider: {config.provider} | Model: {config.model} | Temp: {config.temperature} | {sb_status}"
 
     def update_status_line(self) -> None:
         session_text = self.get_session_status_text()
