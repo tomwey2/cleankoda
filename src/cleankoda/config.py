@@ -3,8 +3,6 @@ import os
 from pathlib import Path
 from pydantic import BaseModel, Field
 
-from cleankoda.llm.credentials import CredentialsStore
-
 CONFIG_DIR = Path.home() / ".config" / "cleankoda"
 CONFIG_FILE = CONFIG_DIR / "config.json"
 
@@ -86,11 +84,15 @@ class AppConfig(BaseModel):
 
     def get_active_api_key(self, credentials_file: Path | None = None) -> str | None:
         """Holt den aktiven API-Key über den CredentialsStore."""
+        from cleankoda.llm.credentials import CredentialsStore
+
         store = CredentialsStore.load(file_path=credentials_file)
         return store.get_key(self.provider)
 
     def get_credential_by_key(self, key: str, credentials_file: Path | None = None) -> str | None:
         """Holt den aktiven API-Key über den CredentialsStore."""
+        from cleankoda.llm.credentials import CredentialsStore
+
         store = CredentialsStore.load(file_path=credentials_file)
         return store.get_key(key)
 

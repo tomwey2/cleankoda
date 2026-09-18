@@ -30,7 +30,7 @@ async def test_cmd_issue_to_plan_with_card_id_arg():
 
     mock_issue = Issue(
         id="card123",
-        name="Add Feature X",
+        title="Add Feature X",
         description="Feature X description",
         state_id="todo_list",
         state_name="Todo",
@@ -57,7 +57,7 @@ async def test_cmd_issue_to_plan_with_url_arg():
 
     mock_issue = Issue(
         id="CardShortlink",
-        name="URL Story",
+        title="URL Story",
         description="URL Story description",
         state_id="todo_list",
         state_name="Todo",
@@ -85,14 +85,14 @@ async def test_cmd_issue_to_plan_interactive_selection():
     mock_issues = [
         Issue(
             id="c1",
-            name="Story 1",
+            title="Story 1",
             description="Desc 1",
             state_id="todo",
             state_name="Todo",
         ),
         Issue(
             id="c2",
-            name="Story 2",
+            title="Story 2",
             description="Desc 2",
             state_id="todo",
             state_name="Todo",
@@ -143,7 +143,7 @@ async def test_cmd_issue_to_plan_interactive_cancel():
     mock_issues = [
         Issue(
             id="c1",
-            name="Story 1",
+            title="Story 1",
             description="Desc 1",
             state_id="todo",
             state_name="Todo",

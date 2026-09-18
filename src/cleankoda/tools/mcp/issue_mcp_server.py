@@ -1,13 +1,13 @@
 import os
 import sys
-from mcp.server.fastmcp import FastMCP
+from mcp.server.mcpserver import MCPServer
 
-from cleankoda.its.its import IssueTrackingSystem, IssueState
+from cleankoda.its.its import IssueState, IssueTrackingSystem
 from cleankoda.its.trello_client import TrelloClient
 
 
 # Initialize MCP instance and tracker
-mcp = FastMCP("Issue-Tracker-Bridge")
+mcp = MCPServer("Issue-Tracker-Bridge")
 its: IssueTrackingSystem = TrelloClient()
 
 
