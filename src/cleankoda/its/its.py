@@ -19,7 +19,7 @@ class Issue:
     """
 
     id: str
-    name: str
+    title: str
     description: str
     state_id: str
     state_name: str

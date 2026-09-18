@@ -31,7 +31,7 @@ async def _show_tui_modal_issue_dialog(
     loop = asyncio.get_running_loop()
     fut: asyncio.Future[str | None] = loop.create_future()
 
-    values = [(issue.id, issue.name) for issue in issues]
+    values = [(issue.id, issue.title) for issue in issues]
     radio_list = RadioList(values=values, default=issues[0].id if issues else None)
 
     def on_ok() -> None:
@@ -97,7 +97,7 @@ async def select_issue_interactive(
     if app and float_container:
         return await _show_tui_modal_issue_dialog(app, float_container, issues)
 
-    values = [(issue.id, issue.name) for issue in issues]
+    values = [(issue.id, issue.title) for issue in issues]
     dialog = radiolist_dialog(
         title="Trello: Todo Cards",
         text="Select a user story to create an implementation plan:",
@@ -143,7 +143,7 @@ async def cmd_issue_to_plan(args: list[str], ctx: CommandContext) -> CommandResu
 
     prompt = (
         "Create a detailed implementation plan for the following user story:\n\n"
-        f"### Ticket: {issue.name}\n"
+        f"### Ticket: {issue.title}\n"
         f"### Description:\n"
         f"{issue.description}\n\n"
         "### Requirements for the plan:\n"

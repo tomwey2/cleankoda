@@ -44,7 +44,7 @@ class TrelloClient(IssueTrackingSystem):
         list_info = data.get("list") or {}
         return Issue(
             id=data.get("id", issue_id),
-            name=data.get("name", ""),
+            title=data.get("name", ""),
             description=data.get("desc", ""),
             state_id=data.get("idList", ""),
             state_name=list_info.get("name", ""),
@@ -68,7 +68,7 @@ class TrelloClient(IssueTrackingSystem):
         return [
             Issue(
                 id=card["id"],
-                name=card["name"],
+                title=card["name"],
                 description=card["desc"],
                 state_id=list_id,
                 state_name=list_name,
