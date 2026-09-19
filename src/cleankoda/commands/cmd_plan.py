@@ -38,10 +38,10 @@ def is_tool_call_display(chunk: str, registry_inst: ToolRegistry) -> bool:
 )
 async def cmd_plan(args: list[str], ctx: CommandContext) -> CommandResult:
     """Slash-command handler for /plan generating an implementation plan saved to disk."""
-    active = get_active_issue()
+    active_issue = get_active_issue()
     goal_arg = " ".join(args).strip() if args else ""
 
-    if not active and not goal_arg:
+    if not active_issue and not goal_arg:
         return CommandResult(
             output=(
                 "No active issue set and no goal specified. "
@@ -54,11 +54,11 @@ async def cmd_plan(args: list[str], ctx: CommandContext) -> CommandResult:
         "to gather necessary context, then create a detailed implementation plan."
     ]
 
-    if active:
+    if active_issue:
         prompt_parts.append(
-            f"Active Ticket: #{active.id} - {active.title}\n"
-            f"Status: {active.status}\n"
-            f"Description:\n{active.description or 'No description available.'}"
+            f"Active Ticket: #{active_issue.id} - {active_issue.title}\n"
+            f"Status: {active_issue.status}\n"
+            f"Description:\n{active_issue.description or 'No description available.'}"
         )
 
     if goal_arg:
@@ -81,7 +81,7 @@ async def cmd_plan(args: list[str], ctx: CommandContext) -> CommandResult:
         plan_chunks: list[str] = []
 
         if tui:
-            target_desc = f"#{active.id} ({active.title})" if active else f"'{goal_arg}'"
+            target_desc = f"#{active_issue.id} ({active_issue.title})" if active_issue else f"'{goal_arg}'"
             user_msg = f"> /plan {goal_arg}\n\n  [Planer] Generating implementation plan for {target_desc}...\n"
             tui.history_area.text += f"\n\n{user_msg}"
             tui.history_area.buffer.cursor_position = len(tui.history_area.text)
@@ -114,9 +114,9 @@ async def cmd_plan(args: list[str], ctx: CommandContext) -> CommandResult:
             plans_dir = workspace_path / ".cleankoda" / "plans"
             plans_dir.mkdir(parents=True, exist_ok=True)
 
-            if active:
-                safe_title = sanitize_filename(active.title)
-                file_name = f"plan_{safe_title}_{active.id}.md"
+            if active_issue:
+                safe_title = sanitize_filename(active_issue.title)
+                file_name = f"plan_{safe_title}_{active_issue.id}.md"
             else:
                 safe_title = sanitize_filename(goal_arg[:30])
                 file_name = f"plan_{safe_title}.md"

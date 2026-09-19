@@ -11,13 +11,7 @@ from cleankoda.state import get_active_issue
 from cleankoda.statusline import statusline
 from cleankoda.tools import Tool
 from cleankoda.tools import ToolRegistry
-
-SYSTEM_PROMPT = """You are a coding agent running in the user's terminal.
-You can list files, read files, write files, and run bash commands.
-Use your tools to complete the user's task, then briefly summarize what you did.
-The working directory is the folder the user launched you from.
-After modifying code, you MUST always verify your changes by running static checks
-and relevant unit tests before concluding your work."""
+from cleankoda.prompts import SYSTEM_PROMPT
 
 
 class AgentLifecycle(Enum):
