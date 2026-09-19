@@ -5,7 +5,12 @@
     "request": "launch",
     "module": "cleankoda.main",
     "python": "$ZED_WORKTREE_ROOT/.venv/bin/python",
-    "cwd": "$ZED_WORKTREE_ROOT"
+    "cwd": "$ZED_WORKTREE_ROOT",
+    "console": "integratedTerminal",
+          "subProcess": false,
+          "env": {
+            "PYDEVD_DISABLE_FILE_VALIDATION": "1"
+          }
   },
   {
     "label": "Debug Active File",

@@ -42,7 +42,7 @@ class Agent:
     async def run(
         self,
         cancel_event: asyncio.Event | None = None,
-        max_tool_iterations: int = 10,
+        max_tool_iterations: int = 25,
     ) -> AsyncGenerator[str, None]:
         """Iteratively calls LLM service, streams responses, executes tools,
         and records assistant and tool messages in memory."""

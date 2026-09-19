@@ -10,26 +10,23 @@ USER_PROMPT_PLAN = """You are a Senior Software Architect.
 Create a comprehensive Implementation Plan for the currently active issue.{additional_focus}
 
 ### Required Workflow:
-1. **Workspace Inspection First:**
-    - Be sure to read `.agents/AGENTS.md` and all referenced architecture rules to understand the project's context and boundaries.
-    - Use inspection tools (`list_dir`, `read_file`, `grep_search`) to analyze existing patterns, models, dependencies, and tests relevant to the active issue.
-    - Verify actual file paths and project conventions—do not guess or assume.
+### Required Workflow:
+1. **Targeted Inspection (Max 4-5 tool steps):**
+   - Quickly inspect relevant source files and tests using `read_file` or `grep_search`.
+   - Do not read every file in the repository—focus strictly on the service and controller affected by this feature.
 
 2. **Formulate the Plan:**
-    - Once your inspection is complete, output the plan following the schema below.
-    - Do NOT write the full implementation code yet. Focus on actionable specifications.
+   - As soon as you understand the existing structure, stop calling tools and immediately output the complete Markdown plan in your next response.
+   - Do NOT call write_file; output the Markdown text directly.
 
 ## RULES FOR THE PLAN:
-- Do NOT write any executable code (no Python scripts, no HTML).
-- The plan MUST be formatted as Markdown.
-- Each step to be implemented MUST have a checkbox (`- [ ]`) so that it can be processed iteratively later.
+- The plan MUST be formatted strictly as Markdown following the schema above.
+- Each implementation step MUST have a checkbox (`- [ ]`).
 - Structure the plan strictly according to Test-Driven Development (TDD):
-  1. Dependencies & Configuration.
-  2. Write unit/integration tests (based on the acceptance criteria).
-  3. Run tests (they MUST fail at this point / Red Phase).
-  4. Implement the application/service layer (business logic).
-  5. Implement the API layer (routing).
-  6. Run tests again (they MUST now pass / Green Phase).
-- Save the generated plan in the `.agents/plans/` directory (e.g., as `.agents/plans/01_feature_name.md`).
-- Finally, issue a brief confirmation in the terminal that the plan has been created and is ready for human review.
+  1. Dependencies & Configuration
+  2. Unit/Integration Tests (Red Phase)
+  3. Service Layer implementation
+  4. Controller/API Layer implementation
+  5. Test execution & verification (Green Phase)
+- Do NOT call write_file to save the plan; output the complete Markdown plan directly in your final response text.
 """
