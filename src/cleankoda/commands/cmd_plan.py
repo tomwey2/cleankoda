@@ -1,9 +1,15 @@
 import re
 from pathlib import Path
+from typing import TYPE_CHECKING
 
+from cleankoda.agent import Agent
 from cleankoda.commands.command_registry import CommandContext, CommandResult, registry
-from cleankoda.state import get_active_issue
+from cleankoda.prompts import USER_PROMPT_PLAN
+from cleankoda.state import ActiveIssueContext, get_active_issue
 from cleankoda.tools.tool_registry import ToolRegistry
+
+if TYPE_CHECKING:
+    from cleankoda.tui import TUI
 
 
 def sanitize_filename(text: str) -> str:
@@ -31,6 +37,50 @@ def is_tool_call_display(chunk: str, registry_inst: ToolRegistry) -> bool:
     return False
 
 
+async def create_plan_with_tui(
+    tui: "TUI",
+    agent: Agent,
+    active_issue: ActiveIssueContext | None,
+    goal_arg: str,
+) -> list[str]:
+    """Executes the agent in TUI mode and updates the TUI interface with output and tool calls."""
+    app = getattr(tui, "app", None)
+    plan_chunks: list[str] = []
+
+    target_desc = (
+        f"#{active_issue.id} ({active_issue.title})"
+        if active_issue
+        else f"'{goal_arg}'"
+    )
+    user_msg = f"> /plan {goal_arg}\n\n  [Planer] Generating implementation plan for {target_desc}...\n"
+    tui.history_area.text += f"\n\n{user_msg}"
+    tui.history_area.buffer.cursor_position = len(tui.history_area.text)
+    if app:
+        app.invalidate()
+
+    cancel_ev = getattr(tui, "cancel_event", None)
+    async for chunk in agent.run(cancel_event=cancel_ev):
+        if is_tool_call_display(chunk, agent.tool_registry):
+            tool_line = f"  [Tool] {chunk.strip()}\n"
+            tui.history_area.text += tool_line
+            tui.history_area.buffer.cursor_position = len(tui.history_area.text)
+            if app:
+                app.invalidate()
+        else:
+            plan_chunks.append(chunk)
+
+    return plan_chunks
+
+
+async def create_plan_headless(agent: Agent) -> list[str]:
+    """Executes the agent in headless mode and collects plan output chunks."""
+    plan_chunks: list[str] = []
+    async for chunk in agent.run():
+        if not is_tool_call_display(chunk, agent.tool_registry):
+            plan_chunks.append(chunk)
+    return plan_chunks
+
+
 @registry.register(
     "plan",
     description="Create a step-by-step implementation plan incorporating active issue context",
@@ -49,59 +99,31 @@ async def cmd_plan(args: list[str], ctx: CommandContext) -> CommandResult:
             )
         )
 
-    prompt_parts = [
-        "Inspect the local workspace using your tools (e.g., list_dir, read_file) "
-        "to gather necessary context, then create a detailed implementation plan."
-    ]
-
+    additional_focus_parts: list[str] = []
     if active_issue:
-        prompt_parts.append(
+        additional_focus_parts.append(
             f"Active Ticket: #{active_issue.id} - {active_issue.title}\n"
-            f"Status: {active_issue.status}\n"
+            f"Status: {active_issue.state}\n"
             f"Description:\n{active_issue.description or 'No description available.'}"
         )
 
     if goal_arg:
-        prompt_parts.append(f"Additional Directive / Goal: {goal_arg}")
+        additional_focus_parts.append(f"Additional Directive / Goal: {goal_arg}")
 
-    prompt_parts.append(
-        "Requirements for the plan:\n"
-        "1. Architectural approach & affected modules/files.\n"
-        "2. Step-by-step implementation order.\n"
-        "3. Necessary unit tests & validation strategy."
+    additional_focus = (
+        "\n\n" + "\n\n".join(additional_focus_parts) if additional_focus_parts else ""
     )
-
-    prompt = "\n\n".join(prompt_parts)
+    prompt = USER_PROMPT_PLAN.format(additional_focus=additional_focus)
     ctx.memory.add_user(prompt)
 
     if ctx.agent:
         app = ctx.app
         tui = getattr(app, "tui", None) if app else None
 
-        plan_chunks: list[str] = []
-
         if tui:
-            target_desc = f"#{active_issue.id} ({active_issue.title})" if active_issue else f"'{goal_arg}'"
-            user_msg = f"> /plan {goal_arg}\n\n  [Planer] Generating implementation plan for {target_desc}...\n"
-            tui.history_area.text += f"\n\n{user_msg}"
-            tui.history_area.buffer.cursor_position = len(tui.history_area.text)
-            app.invalidate()
-
-            cancel_ev = getattr(tui, "cancel_event", None)
-            async for chunk in ctx.agent.run(cancel_event=cancel_ev):
-                if is_tool_call_display(chunk, ctx.agent.tool_registry):
-                    tool_line = f"  [Tool] {chunk.strip()}\n"
-                    tui.history_area.text += tool_line
-                    tui.history_area.buffer.cursor_position = len(tui.history_area.text)
-                    app.invalidate()
-                else:
-                    plan_chunks.append(chunk)
+            plan_chunks = await create_plan_with_tui(tui, ctx.agent, active_issue, goal_arg)
         else:
-            async for chunk in ctx.agent.run():
-                if is_tool_call_display(chunk, ctx.agent.tool_registry):
-                    pass
-                else:
-                    plan_chunks.append(chunk)
+            plan_chunks = await create_plan_headless(ctx.agent)
 
         full_plan = "".join(plan_chunks).strip()
 

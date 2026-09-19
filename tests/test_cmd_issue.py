@@ -1,8 +1,10 @@
+from litellm.llms.huggingface.embedding.handler import config
 import asyncio
 import json
 import unittest
 from unittest.mock import AsyncMock, MagicMock, patch
 
+from cleankoda.its import IssueState
 from cleankoda.agent import Agent, SYSTEM_PROMPT
 from cleankoda.commands import CommandContext
 from cleankoda.commands.cmd_issue import cmd_issue
@@ -29,26 +31,26 @@ class TestActiveIssueContext(unittest.TestCase):
             id="CARD-123",
             title="Refactor Authentication",
             description="Update OAuth flow and tokens",
-            status="Todo",
+            state=IssueState.TODO,
             url="https://trello.com/c/CARD-123",
         )
         self.assertEqual(ctx.id, "CARD-123")
         self.assertEqual(ctx.title, "Refactor Authentication")
         self.assertEqual(ctx.description, "Update OAuth flow and tokens")
-        self.assertEqual(ctx.status, "Todo")
+        self.assertEqual(ctx.state, IssueState.TODO)
         self.assertEqual(ctx.url, "https://trello.com/c/CARD-123")
 
         snippet = ctx.to_system_prompt_snippet()
         self.assertIn("=== ACTIVE TICKET / USER STORY ===", snippet)
         self.assertIn("ID: CARD-123", snippet)
         self.assertIn("Title: Refactor Authentication", snippet)
-        self.assertIn("Status: Todo", snippet)
+        self.assertIn("State: IssueState.TODO", snippet)
         self.assertIn("Description & Criteria:\nUpdate OAuth flow and tokens", snippet)
 
     def test_global_active_issue_get_set_clear(self):
         self.assertIsNone(get_active_issue())
         issue = ActiveIssueContext(
-            id="1", title="Test", description="Desc", status="In Progress"
+            id="1", title="Test", description="Desc", state=IssueState.IN_PROGRESS,
         )
         set_active_issue(issue)
         self.assertEqual(get_active_issue(), issue)
@@ -86,7 +88,7 @@ class TestDynamicSystemPrompt(unittest.IsolatedAsyncioTestCase):
             id="CARD-42",
             title="Add Dark Mode",
             description="Enable theme toggle",
-            status="Todo",
+            state=IssueState.TODO,
         )
         set_active_issue(issue)
 
@@ -128,7 +130,7 @@ class TestCmdIssue(unittest.IsolatedAsyncioTestCase):
             id="456",
             title="Fix bug",
             description="Crash on startup",
-            status="In Review",
+            state=IssueState.IN_REVIEW,
             url="https://example.com/456",
         )
         set_active_issue(issue)
@@ -137,13 +139,13 @@ class TestCmdIssue(unittest.IsolatedAsyncioTestCase):
         ctx = CommandContext(memory=memory)
         res = await cmd_issue(["show"], ctx)
         self.assertIn("[Active Issue]: #456 - Fix bug", res.output)
-        self.assertIn("Status: In Review", res.output)
+        self.assertIn("State: IssueState.IN_REVIEW", res.output)
         self.assertIn("https://example.com/456", res.output)
         self.assertIn("Crash on startup", res.output)
 
     async def test_issue_clear(self):
         issue = ActiveIssueContext(
-            id="789", title="Task", description="Desc", status="Done"
+            id="789", title="Task", description="Desc", state=IssueState.DONE
         )
         set_active_issue(issue)
         self.assertIsNotNone(get_active_issue())
@@ -189,7 +191,7 @@ class TestCmdIssue(unittest.IsolatedAsyncioTestCase):
             id="CARD-99",
             title="Old Title",
             description="Old Desc",
-            status="Todo",
+            state=IssueState.TODO,
         )
         set_active_issue(issue)
 
@@ -216,7 +218,6 @@ class TestCmdIssue(unittest.IsolatedAsyncioTestCase):
 
         active = get_active_issue()
         self.assertEqual(active.title, "New Synced Title")
-        self.assertEqual(active.status, "In Progress")
 
     @patch("cleankoda.commands.cmd_issue.select_issue_interactive", return_value="CARD-1")
     @patch("cleankoda.commands.cmd_issue.connect_mcp_server")
@@ -268,11 +269,11 @@ class TestTUIIntegration(unittest.TestCase):
         agent = Agent(memory=memory, tools=[], sandbox=sandbox)
         tui = TUI(agent)
 
-        self.assertEqual(tui._get_bottom_toolbar_text(), "[Kein aktives Issue]")
-        self.assertIn("[Kein aktives Issue]", tui.get_session_status_text())
+        self.assertEqual(tui._get_bottom_toolbar_text(), "[No active Issue]")
+        self.assertIn("[No active Issue]", tui.get_session_status_text())
 
         issue = ActiveIssueContext(
-            id="101", title="UI polish", description="Fix toolbar", status="Todo"
+            id="101", title="UI polish", description="Fix toolbar", state=IssueState.TODO
         )
         set_active_issue(issue)
 

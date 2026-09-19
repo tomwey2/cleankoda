@@ -196,6 +196,7 @@ class TUI:
             text=BANNER
             + " Welcome to cleankoda!\n"
             + " The coding agent for clean code software development.\n"
+            + f" Workspace: {config.workspace}\n"
             + ("─" * 60)
             + "\n",
             scrollbar=True,
@@ -365,9 +366,21 @@ class TUI:
             self.history_area.buffer.cursor_position = len(self.history_area.text)
         finally:
             self.is_processing = False
+            self.showing_shortcuts = False
+            self.input_field.read_only = False
+            self.input_field.text = ""
+            self.input_field.buffer.cursor_position = 0
             self.update_status_line()
-            if not self.showing_shortcuts:
-                self.input_field.read_only = False
+            try:
+                self.app.layout.focus(self.input_field)
+            except Exception:
+                pass
+            self.app.invalidate()
+            await asyncio.sleep(0.01)
+            try:
+                self.app.layout.focus(self.input_field)
+            except Exception:
+                pass
             self.app.invalidate()
 
     async def stream_response(self, user_text: str) -> None:

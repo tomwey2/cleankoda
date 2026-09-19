@@ -3,9 +3,16 @@ import unittest
 from pathlib import Path
 from unittest.mock import AsyncMock, MagicMock, patch
 
+from cleankoda.its import IssueState
 from cleankoda.agent import Agent
 from cleankoda.commands import CommandContext
-from cleankoda.commands.cmd_plan import cmd_plan, is_tool_call_display, sanitize_filename
+from cleankoda.commands.cmd_plan import (
+    cmd_plan,
+    create_plan_headless,
+    create_plan_with_tui,
+    is_tool_call_display,
+    sanitize_filename,
+)
 from cleankoda.memory import Memory
 from cleankoda.state import (
     ActiveIssueContext,
@@ -75,7 +82,7 @@ class TestCmdPlan(unittest.IsolatedAsyncioTestCase):
             id="CARD-500",
             title="Implement User Profiles",
             description="Add profile page and avatar upload",
-            status="Todo",
+            state=IssueState.TODO,
         )
         set_active_issue(issue)
 
@@ -102,6 +109,42 @@ class TestCmdPlan(unittest.IsolatedAsyncioTestCase):
 
             user_msg = memory.messages[-1]
             self.assertIn("Active Ticket: #CARD-500 - Implement User Profiles", user_msg["content"])
+
+    async def test_create_plan_headless(self):
+        memory = Memory()
+        sandbox = MagicMock()
+        sandbox.workspace = Path("/tmp")
+        agent = Agent(memory=memory, tools=[], sandbox=sandbox)
+
+        async def mock_stream(*args, **kwargs):
+            yield "Plan output content"
+
+        with patch.object(agent.llm_service, "stream_completion", side_effect=mock_stream):
+            chunks = await create_plan_headless(agent)
+
+        self.assertEqual(chunks, ["Plan output content"])
+
+    async def test_create_plan_with_tui(self):
+        memory = Memory()
+        sandbox = MagicMock()
+        sandbox.workspace = Path("/tmp")
+        agent = Agent(memory=memory, tools=[], sandbox=sandbox)
+
+        tui_mock = MagicMock()
+        tui_mock.history_area.text = ""
+        tui_mock.cancel_event = None
+        app_mock = MagicMock()
+        app_mock.tui = tui_mock
+
+        async def mock_stream(*args, **kwargs):
+            yield "TUI Plan content"
+
+        with patch.object(agent.llm_service, "stream_completion", side_effect=mock_stream):
+            issue = ActiveIssueContext(id="1", title="Test", description="Desc", state=IssueState.TODO)
+            chunks = await create_plan_with_tui(tui_mock, agent, issue, "goal")
+
+        self.assertEqual(chunks, ["TUI Plan content"])
+        self.assertIn("[Planer] Generating implementation plan", tui_mock.history_area.text)
 
 
 if __name__ == "__main__":

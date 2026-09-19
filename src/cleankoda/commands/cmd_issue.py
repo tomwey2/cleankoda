@@ -4,6 +4,7 @@ import os
 from pathlib import Path
 import re
 import sys
+from typing import Any
 
 from prompt_toolkit.application import Application
 from prompt_toolkit.key_binding import KeyBindings
@@ -113,8 +114,19 @@ async def _show_tui_modal_issue_dialog(
     finally:
         if dialog_float in float_container.floats:
             float_container.floats.remove(dialog_float)
-        if original_focused:
-            app.layout.focus(original_focused)
+        tui = getattr(app, "tui", None)
+        if tui and hasattr(tui, "input_field"):
+            tui.input_field.text = ""
+            tui.input_field.buffer.cursor_position = 0
+            try:
+                app.layout.focus(tui.input_field)
+            except Exception:
+                pass
+        elif original_focused:
+            try:
+                app.layout.focus(original_focused)
+            except Exception:
+                pass
         app.invalidate()
 
     return result
@@ -138,15 +150,18 @@ async def select_issue_interactive(
         values=values,
         default=issues[0].id if issues else None,
     )
-    return dialog.run()
+    return await dialog.run_async()
 
 
-async def _fetch_and_set_issue(session: str, card_id: str) -> CommandResult:
+async def _fetch_and_set_issue(
+    session: Any, issue_id: str, ctx: CommandContext | None = None
+) -> CommandResult:
     """Helper to fetch details via MCP session and update global active_issue."""
     try:
-        res_details = await session.call_tool(
-            "get_issue_details", arguments={"issue_id": card_id}
-        )
+        async with asyncio.timeout(10.0):
+            res_details = await session.call_tool(
+                "get_issue_details", arguments={"issue_id": issue_id}
+            )
         text_blocks = []
         if res_details and res_details.content:
             text_blocks = [
@@ -156,19 +171,31 @@ async def _fetch_and_set_issue(session: str, card_id: str) -> CommandResult:
         details_dict = json.loads(details_json) if details_json else {}
 
         active = ActiveIssueContext(
-            id=details_dict.get("id", card_id),
-            title=details_dict.get("title", f"Ticket {card_id}"),
+            id=details_dict.get("id", issue_id),
+            title=details_dict.get("title", f"Issue {issue_id}"),
             description=details_dict.get("description", ""),
-            status=details_dict.get("state_name", "Todo"),
+            state=IssueState.TODO,
+            state_id=details_dict.get("state_id", ""),
+            state_name=details_dict.get("state_name", ""),
             url=details_dict.get("url"),
         )
         set_active_issue(active)
+        if ctx and ctx.app:
+            tui = getattr(ctx.app, "tui", None)
+            if tui and hasattr(tui, "on_status_changed"):
+                tui.on_status_changed()
+            ctx.app.invalidate()
+
         return CommandResult(
             output=f"Active issue set: #{active.id} - {active.title}"
         )
+    except (TimeoutError, asyncio.TimeoutError):
+        return CommandResult(
+            output=f"Error fetching ticket details for '{issue_id}': Request timed out after 10.0 seconds."
+        )
     except Exception as e:
         return CommandResult(
-            output=f"Error fetching ticket details for '{card_id}': {e}"
+            output=f"Error fetching ticket details for '{issue_id}': {e}"
         )
 
 
@@ -189,7 +216,7 @@ async def cmd_issue(args: list[str], ctx: CommandContext) -> CommandResult:
         desc_str = active.description.strip() or "No description available."
         output = (
             f"[Active Issue]: #{active.id} - {active.title}\n"
-            f"Status: {active.status}\n"
+            f"State: {active.state}\n"
             f"URL: {url_str}\n\n"
             f"Description:\n{desc_str}"
         )
@@ -197,6 +224,11 @@ async def cmd_issue(args: list[str], ctx: CommandContext) -> CommandResult:
 
     if subcommand == "clear":
         clear_active_issue()
+        if ctx and ctx.app:
+            tui = getattr(ctx.app, "tui", None)
+            if tui and hasattr(tui, "on_status_changed"):
+                tui.on_status_changed()
+            ctx.app.invalidate()
         return CommandResult(output="Active issue cleared.")
 
     server_path = str(
@@ -218,17 +250,18 @@ async def cmd_issue(args: list[str], ctx: CommandContext) -> CommandResult:
             active = get_active_issue()
             if not active:
                 return CommandResult(output="No active issue to sync.")
-            return await _fetch_and_set_issue(session, active.id)
+            return await _fetch_and_set_issue(session, active.id, ctx=ctx)
 
         if subcommand:
             card_id = extract_trello_card_id(subcommand)
-            return await _fetch_and_set_issue(session, card_id)
+            return await _fetch_and_set_issue(session, card_id, ctx=ctx)
 
         # No args: fetch Todo list via get_issues
         try:
-            res_issues = await session.call_tool(
-                "get_issues", arguments={"state": IssueState.TODO}
-            )
+            async with asyncio.timeout(10.0):
+                res_issues = await session.call_tool(
+                    "get_issues", arguments={"state": IssueState.TODO}
+                )
             text_content = ""
             if res_issues and res_issues.content:
                 text_blocks = [
@@ -237,6 +270,10 @@ async def cmd_issue(args: list[str], ctx: CommandContext) -> CommandResult:
                 text_content = "\n".join(text_blocks)
 
             todo_issues = parse_mcp_issues_response(text_content)
+        except (TimeoutError, asyncio.TimeoutError):
+            return CommandResult(
+                output="Error fetching Todo cards via MCP: Request timed out after 10.0 seconds."
+            )
         except Exception as e:
             return CommandResult(output=f"Error fetching Todo cards via MCP: {e}")
 
@@ -247,7 +284,11 @@ async def cmd_issue(args: list[str], ctx: CommandContext) -> CommandResult:
         if selected_id is None:
             return CommandResult(output="Issue selection cancelled.")
 
-        return await _fetch_and_set_issue(session, selected_id)
+        return await _fetch_and_set_issue(session, selected_id, ctx=ctx)
 
     finally:
-        await exit_stack.aclose()
+        try:
+            async with asyncio.timeout(2.0):
+                await exit_stack.aclose()
+        except Exception:
+            pass

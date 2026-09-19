@@ -1,12 +1,15 @@
 from dataclasses import dataclass
 
+from cleankoda.its import IssueState
 
 @dataclass
 class ActiveIssueContext:
   id: str
   title: str
   description: str
-  status: str
+  state: IssueState
+  state_id: str | None = None
+  state_name: str | None = None
   url: str | None = None
 
   def to_system_prompt_snippet(self) -> str:
@@ -16,7 +19,7 @@ class ActiveIssueContext:
         "\n\n=== ACTIVE TICKET / USER STORY ===\n"
         f"ID: {self.id}\n"
         f"Title: {self.title}\n"
-        f"Status: {self.status}\n"
+        f"State: {self.state}\n"
         f"Description & Criteria:\n{desc}\n"
         "====================================\n"
         "Take into account the specifications, criteria, and constraints of this ticket "
