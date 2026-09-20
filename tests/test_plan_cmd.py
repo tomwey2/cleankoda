@@ -108,7 +108,7 @@ class TestCmdPlan(unittest.IsolatedAsyncioTestCase):
             self.assertIn("## Profile Feature Plan", file_content)
 
             user_msg = memory.messages[-1]
-            self.assertIn("Active Ticket: #CARD-500 - Implement User Profiles", user_msg["content"])
+            self.assertIn("Implementation Plan for the currently active issue", user_msg["content"])
 
     async def test_create_plan_headless(self):
         memory = Memory()

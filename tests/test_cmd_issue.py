@@ -270,15 +270,16 @@ class TestTUIIntegration(unittest.TestCase):
         tui = TUI(agent)
 
         self.assertEqual(tui._get_bottom_toolbar_text(), "[No active Issue]")
-        self.assertIn("[No active Issue]", tui.get_session_status_text())
+        self.assertIn("[No active Issue]", tui.status_line.text)
 
         issue = ActiveIssueContext(
             id="101", title="UI polish", description="Fix toolbar", state=IssueState.TODO
         )
         set_active_issue(issue)
+        tui.update_status_line()
 
         self.assertEqual(tui._get_bottom_toolbar_text(), "[Issue: #101 UI polish]")
-        self.assertIn("[Issue: #101 UI polish]", tui.get_session_status_text())
+        self.assertIn("[Issue: #101 UI polish]", tui.status_line.text)
 
 
 if __name__ == "__main__":

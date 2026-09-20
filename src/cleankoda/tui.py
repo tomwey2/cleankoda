@@ -218,7 +218,7 @@ class TUI:
 
         self.status_line = TextArea(
             height=2,
-            text=f"{self.get_session_status_text()}\nCtrl+O for shortcuts",
+            text=f"{self.get_session_status_text()}\n{self._get_bottom_toolbar_text()}",
             multiline=True,
             wrap_lines=True,
         )
@@ -277,18 +277,13 @@ class TUI:
         return self._cancel_event
 
     def get_session_status_text(self) -> str:
-        active = get_active_issue()
-        issue_str = (
-            f"[Issue: #{active.id} {active.title}]"
-            if active
-            else "[No active Issue]"
-        )
         sb_image = self.agent.sandbox.get_sandbox_image()
         sb_status = "Sandbox: " + sb_image.name if sb_image and sb_image.id != "host" else "no Sandbox"
-        return f"{issue_str} | Provider: {config.provider} | Model: {config.model} | Temp: {config.temperature} | {sb_status}"
+        return f"Provider: {config.provider} | Model: {config.model} | Temp: {config.temperature} | {sb_status}"
 
     def update_status_line(self) -> None:
         session_text = self.get_session_status_text()
+        issue_text = self._get_bottom_toolbar_text()
         if self.showing_shortcuts:
             self.status_line.window.height = 5
             self.status_line.text = (
@@ -304,7 +299,7 @@ class TUI:
             if active_status:
                 self.status_line.text = f"{session_text}\n{active_status}"
             else:
-                self.status_line.text = f"{session_text}\nCtrl+O for shortcuts"
+                self.status_line.text = f"{session_text}\n{issue_text}"
 
     def _register_keybindings(self) -> None:
         @self.kb.add("c-c")
