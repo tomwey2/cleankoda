@@ -1,6 +1,6 @@
-# cleankoda cli
+# cleankoda
 
-`cleankoda` cli is a terminal-based AI coding agent for clean code software development. It features a full TUI (Terminal User Interface) with multi-provider LLM support, interactive tool execution (listing files, reading/writing files, running shell commands), secure credentials management, and isolated Docker sandbox environments.
+`cleankoda` is a terminal-based AI coding agent for clean code software development. It features a full TUI (Terminal User Interface) with multi-provider LLM support, interactive tool execution (listing files, reading/writing files, running shell commands), secure credentials management, and isolated Docker sandbox environments.
 
 ## Features
 
