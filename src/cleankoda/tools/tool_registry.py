@@ -3,8 +3,11 @@ import inspect
 import json
 from typing import Any, Callable
 
+from mcp import ClientSession
+
 from cleankoda.sandbox import Sandbox
-from cleankoda.tools import Tool
+from cleankoda.tools.mcp_adapter import McpToolAdapter
+from cleankoda.tools.tool_base import Tool
 
 
 class ToolRegistry:
@@ -28,6 +31,16 @@ class ToolRegistry:
                 raise ValueError("Tool schema must include a function name.")
             self._tools[name] = tool.execute
             self._schemas.append(schema)
+
+    async def register_mcp_session(self, session: ClientSession) -> list[str]:
+        """Discovers and registers all tools provided by an active MCP ClientSession."""
+        tools_result = await session.list_tools()
+        registered_names: list[str] = []
+        for mcp_tool in tools_result.tools:
+            adapter = McpToolAdapter(mcp_tool=mcp_tool, session=session)
+            self.register(adapter)
+            registered_names.append(mcp_tool.name)
+        return registered_names
 
     def get_schemas(self) -> list[dict[str, Any]]:
         """Returns schemas of all registered tools."""

@@ -199,7 +199,7 @@ class TestTUIStatusManager(unittest.TestCase):
         tui.app = mock_app
 
         # Initially default status line text
-        self.assertIn("Ctrl+O for shortcuts", tui.status_line.text)
+        self.assertIn("[No active Issue]", tui.status_line.text)
 
         # Setting status via statusline automatically updates status line
         try:
@@ -214,10 +214,10 @@ class TestTUIStatusManager(unittest.TestCase):
                 tui.status_line.text,
             )
 
-            # Clearing slots reverts back to Ctrl+O for shortcuts when empty
+            # Clearing slots reverts back to active issue status when empty
             statusline.clear("sandbox")
             statusline.clear("llm")
-            self.assertIn("Ctrl+O for shortcuts", tui.status_line.text)
+            self.assertIn("[No active Issue]", tui.status_line.text)
         finally:
             statusline.on_change = None
 

@@ -16,6 +16,7 @@ from prompt_toolkit.widgets import Frame, TextArea
 from cleankoda.agent import Agent
 from cleankoda.commands import CommandContext, registry
 from cleankoda.config import config
+from cleankoda.state import get_active_issue
 from cleankoda.statusline import statusline
 
 BANNER = """
@@ -195,6 +196,7 @@ class TUI:
             text=BANNER
             + " Welcome to cleankoda!\n"
             + " The coding agent for clean code software development.\n"
+            + f" Workspace: {config.workspace}\n"
             + ("─" * 60)
             + "\n",
             scrollbar=True,
@@ -216,7 +218,7 @@ class TUI:
 
         self.status_line = TextArea(
             height=2,
-            text=f"{self.get_session_status_text()}\nCtrl+O for shortcuts",
+            text=f"{self.get_session_status_text()}\n{self._get_bottom_toolbar_text()}",
             multiline=True,
             wrap_lines=True,
         )
@@ -248,10 +250,17 @@ class TUI:
             layout=self.layout,
             key_bindings=self.kb,
             full_screen=True,
-            mouse_support=False,
+            mouse_support=True,
             style=TUI_STYLE,
         )
         self.app.float_container = self.float_container
+        self.app.tui = self
+
+    def _get_bottom_toolbar_text(self) -> str:
+        active = get_active_issue()
+        if active:
+            return f"[Issue: #{active.id} {active.title}]"
+        return "[No active Issue]"
 
     def on_status_changed(self, status: str = "") -> None:
         self.update_status_line()
@@ -274,6 +283,7 @@ class TUI:
 
     def update_status_line(self) -> None:
         session_text = self.get_session_status_text()
+        issue_text = self._get_bottom_toolbar_text()
         if self.showing_shortcuts:
             self.status_line.window.height = 5
             self.status_line.text = (
@@ -289,7 +299,7 @@ class TUI:
             if active_status:
                 self.status_line.text = f"{session_text}\n{active_status}"
             else:
-                self.status_line.text = f"{session_text}\nCtrl+O for shortcuts"
+                self.status_line.text = f"{session_text}\n{issue_text}"
 
     def _register_keybindings(self) -> None:
         @self.kb.add("c-c")
@@ -351,9 +361,21 @@ class TUI:
             self.history_area.buffer.cursor_position = len(self.history_area.text)
         finally:
             self.is_processing = False
+            self.showing_shortcuts = False
+            self.input_field.read_only = False
+            self.input_field.text = ""
+            self.input_field.buffer.cursor_position = 0
             self.update_status_line()
-            if not self.showing_shortcuts:
-                self.input_field.read_only = False
+            try:
+                self.app.layout.focus(self.input_field)
+            except Exception:
+                pass
+            self.app.invalidate()
+            await asyncio.sleep(0.01)
+            try:
+                self.app.layout.focus(self.input_field)
+            except Exception:
+                pass
             self.app.invalidate()
 
     async def stream_response(self, user_text: str) -> None:

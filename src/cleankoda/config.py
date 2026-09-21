@@ -3,8 +3,6 @@ import os
 from pathlib import Path
 from pydantic import BaseModel, Field
 
-from cleankoda.llm.credentials import CredentialsStore
-
 CONFIG_DIR = Path.home() / ".config" / "cleankoda"
 CONFIG_FILE = CONFIG_DIR / "config.json"
 
@@ -21,6 +19,17 @@ class AppConfig(BaseModel):
     temperature: float = Field(default=0.2, ge=0.0, le=2.0)
     max_tokens: int = Field(default=4096, gt=0)
     sandbox: str = ""
+
+    # Issue tracking system: e.g., "TRELLO", "JIRA", "GITHUB ISSUES"
+    its_type: str = ""
+    its_base_url: str = ""
+    its_container_id: str = ""
+    its_parent_id: str = ""
+    its_state_backlog: str = "backlog"
+    its_state_todo: str = "todo"
+    its_state_in_progress: str = "in progress"
+    its_state_in_review: str = "in review"
+    its_state_done: str = "done"
 
     @property
     def litellm_model_identifier(self) -> str:
@@ -75,8 +84,17 @@ class AppConfig(BaseModel):
 
     def get_active_api_key(self, credentials_file: Path | None = None) -> str | None:
         """Holt den aktiven API-Key über den CredentialsStore."""
+        from cleankoda.llm.credentials import CredentialsStore
+
         store = CredentialsStore.load(file_path=credentials_file)
         return store.get_key(self.provider)
+
+    def get_credential_by_key(self, key: str, credentials_file: Path | None = None) -> str | None:
+        """Holt den aktiven API-Key über den CredentialsStore."""
+        from cleankoda.llm.credentials import CredentialsStore
+
+        store = CredentialsStore.load(file_path=credentials_file)
+        return store.get_key(key)
 
 
 config = AppConfig.load()

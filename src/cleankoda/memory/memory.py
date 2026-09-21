@@ -77,6 +77,25 @@ class Memory:
         """
         self.add_message({"role": "system", "content": content})
 
+    def set_system_prompt(self, content: str) -> None:
+        """Sets or replaces the primary system prompt in memory.
+
+        Args:
+            content: Updated system prompt text.
+        """
+        for msg in self._messages:
+            role = msg.get("role") if isinstance(msg, dict) else getattr(msg, "role", None)
+            if role == "system":
+                if isinstance(msg, dict):
+                    msg["content"] = content
+                else:
+                    setattr(msg, "content", content)
+                self._save_memory()
+                return
+
+        self._messages.insert(0, {"role": "system", "content": content})
+        self._save_memory()
+
     def add_user(self, content: str) -> None:
         """Adds a user message to memory.
 
