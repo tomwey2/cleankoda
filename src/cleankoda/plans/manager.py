@@ -100,6 +100,22 @@ class PlanManager:
                 return task
         return None
 
+    def is_phase_boundary(
+        self, previous_task: PlanTask | None, next_task: PlanTask | None
+    ) -> bool:
+        """Check if execution crossed a phase boundary between two tasks.
+
+        Args:
+            previous_task: The task that was executed previously (or None).
+            next_task: The next task to be executed (or None).
+
+        Returns:
+            True if both tasks are present and belong to different phases; False otherwise.
+        """
+        if previous_task is None or next_task is None:
+            return False
+        return previous_task.phase != next_task.phase
+
     def mark_task_completed(self, task: PlanTask) -> bool:
         """Atomically mark a task as completed in the Markdown file.
 

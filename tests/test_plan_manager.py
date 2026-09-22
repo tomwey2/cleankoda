@@ -71,6 +71,17 @@ class TestPlanManager(unittest.TestCase):
             self.assertEqual(next_task.index, 1)
             self.assertEqual(next_task.description, "Create initial test")
 
+    def test_is_phase_boundary(self):
+        mgr = PlanManager(Path("dummy.md"))
+        t1 = PlanTask(index=0, line_number=1, phase="Phase 1", description="Task 1", completed=True)
+        t2 = PlanTask(index=1, line_number=2, phase="Phase 1", description="Task 2", completed=False)
+        t3 = PlanTask(index=2, line_number=3, phase="Phase 2", description="Task 3", completed=False)
+
+        self.assertFalse(mgr.is_phase_boundary(None, t1))
+        self.assertFalse(mgr.is_phase_boundary(t1, None))
+        self.assertFalse(mgr.is_phase_boundary(t1, t2))
+        self.assertTrue(mgr.is_phase_boundary(t2, t3))
+
     def test_mark_task_completed(self):
         content = (
             "### Phase 1\n"

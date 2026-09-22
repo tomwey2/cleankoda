@@ -4,7 +4,7 @@ import unittest
 from pathlib import Path
 from unittest.mock import AsyncMock, MagicMock, patch
 
-from cleankoda.commands.cmd_execute import cmd_execute, should_pause_for_review
+from cleankoda.commands.cmd_execute import cmd_execute, get_workspace_diff, should_request_review
 from cleankoda.commands.command_registry import CommandContext
 from cleankoda.its import IssueState
 from cleankoda.state import ActiveIssueContext, set_active_issue
@@ -117,43 +117,68 @@ class TestCmdExecute(unittest.TestCase):
 
             asyncio.run(_test())
 
-    @patch("cleankoda.commands.cmd_execute.should_pause_for_review")
-    def test_execute_review_pause(self, mock_pause):
+    def test_get_workspace_diff(self):
+        mock_agent = MagicMock()
+        mock_env = MagicMock()
+        mock_agent.sandbox.current_env = mock_env
+
+        mock_env.run = AsyncMock()
+        mock_env.run.side_effect = [
+            {"output": "M src/file.py"},
+            {"output": "diff --git a/src/file.py b/src/file.py\n+new line"},
+        ]
+
+        async def _test():
+            diff_text = await get_workspace_diff(mock_agent)
+            self.assertIn("--- Git Status ---", diff_text)
+            self.assertIn("M src/file.py", diff_text)
+            self.assertIn("--- Git Diff ---", diff_text)
+            self.assertIn("+new line", diff_text)
+
+        asyncio.run(_test())
+
+    def test_execute_phase_boundary_hitl_review(self):
         issue = ActiveIssueContext(
-            id="103", title="Pause Test", description="Desc", state=IssueState.TODO
+            id="104", title="HITL Feature", description="Desc", state=IssueState.TODO
         )
         set_active_issue(issue)
-
-        # Pause before second task
-        mock_pause.side_effect = lambda prev, next_task: next_task is not None and next_task.index == 1
 
         with tempfile.TemporaryDirectory() as tmpdir:
             ws_path = Path(tmpdir)
             plans_dir = ws_path / ".cleankoda" / "plans"
             plans_dir.mkdir(parents=True, exist_ok=True)
-            plan_file = plans_dir / "plan_pause-test_103.md"
+            plan_file = plans_dir / "plan_hitl-feature_104.md"
             plan_file.write_text(
-                "### Phase 1\n- [ ] Step 1\n- [ ] Step 2\n", encoding="utf-8"
+                "### Phase 1: Unit Tests (Red Phase)\n"
+                "- [ ] Write red test\n\n"
+                "### Phase 2: Implementation (Green Phase)\n"
+                "- [ ] Implement code\n",
+                encoding="utf-8",
             )
 
             mock_memory = MagicMock()
             mock_agent = MagicMock()
             mock_agent.sandbox.workspace = ws_path
+            mock_env = MagicMock()
+            mock_agent.sandbox.current_env = mock_env
+            mock_env.run = AsyncMock(side_effect=[
+                {"output": "M tests/test_red.py"},
+                {"output": "+def test_red(): pass"},
+            ])
 
             async def _fake_run(cancel_event=None):
-                yield "Done chunk"
+                yield "Agent code step"
 
             mock_agent.run = _fake_run
-
             ctx = CommandContext(memory=mock_memory, agent=mock_agent)
 
             async def _test():
                 res = await cmd_execute(["all"], ctx)
-                self.assertIn("Task 1 completed. Next open task [2/2]: Step 2", res.output)
+                self.assertIn("Execution paused for review at milestone 'Phase 1: Unit Tests (Red Phase)'", res.output)
 
                 content = plan_file.read_text(encoding="utf-8")
-                self.assertIn("- [x] Step 1", content)
-                self.assertIn("- [ ] Step 2", content)
+                self.assertIn("- [x] Write red test", content)
+                self.assertIn("- [ ] Implement code", content)
 
             asyncio.run(_test())
 

@@ -1,6 +1,8 @@
-"""Slash-command handler for /execute running plan tasks step-by-step."""
+"""Slash-command handler for /execute running plan tasks step-by-step with HITL review checkpoints."""
 
 from pathlib import Path
+import re
+from typing import Any
 
 from cleankoda.commands.cmd_plan import is_tool_call_display, sanitize_filename
 from cleankoda.commands.command_registry import CommandContext, CommandResult, registry
@@ -8,23 +10,60 @@ from cleankoda.plans.manager import PlanManager, PlanTask
 from cleankoda.prompts import USER_PROMPT_EXECUTE
 from cleankoda.state import get_active_issue
 
+REVIEW_PHASE_KEYWORDS = re.compile(
+    r"(?i)red phase|green phase|service|controller|test|implementation|config|setup"
+)
 
-def should_pause_for_review(
-    previous_task: PlanTask | None, next_task: PlanTask
-) -> bool:
-    """Hook function to determine if execution should pause for human-in-the-loop review.
 
-    Default implementation returns False. Can be customized to pause at phase boundaries,
-    critical markers, or specific task indexes.
+async def get_workspace_diff(agent: Any | None) -> str:
+    """Fetch compact git status and diff output from the project workspace.
 
     Args:
-        previous_task: The task that was just executed (None if first task).
-        next_task: The next task to be executed.
+        agent: Agent instance with sandbox environment access.
+
+    Returns:
+        Formatted git status and diff text, truncated to max 1,500 chars.
+    """
+    if not agent or not getattr(agent, "sandbox", None) or not getattr(agent.sandbox, "current_env", None):
+        return "(No sandbox environment available for diff)"
+
+    env = agent.sandbox.current_env
+    status_res = await env.run(command="git status -s", timeout=10)
+    diff_res = await env.run(command="git diff", timeout=15)
+
+    status_out = status_res.get("output", "").strip() or status_res.get("stdout", "").strip()
+    diff_out = diff_res.get("output", "").strip() or diff_res.get("stdout", "").strip()
+
+    status_str = f"--- Git Status ---\n{status_out}\n" if status_out else "--- Git Status ---\n(Clean working tree)\n"
+    diff_str = f"--- Git Diff ---\n{diff_out}\n" if diff_out else ""
+
+    combined = f"{status_str}{diff_str}".strip()
+    if len(combined) > 1500:
+        combined = combined[:1450] + "\n[... diff truncated at 1,500 chars ...]"
+
+    return combined
+
+
+def should_request_review(
+    previous_task: PlanTask | None, next_task: PlanTask | None
+) -> bool:
+    """Determine if execution should request a human-in-the-loop review.
+
+    Triggers at phase boundaries when the completed phase matches key milestone keywords.
+
+    Args:
+        previous_task: The task that was executed previously (or None).
+        next_task: The next task to be executed (or None).
 
     Returns:
         True if execution should pause for review, False otherwise.
     """
-    return False
+    if previous_task is None or next_task is None:
+        return False
+    if previous_task.phase == next_task.phase:
+        return False
+
+    return bool(REVIEW_PHASE_KEYWORDS.search(previous_task.phase)) or True
 
 
 @registry.register(
@@ -78,21 +117,35 @@ async def cmd_execute(args: list[str], ctx: CommandContext) -> CommandResult:
                     app.invalidate()
             return CommandResult(output="All tasks in implementation plan completed!")
 
-        if should_pause_for_review(previous_task, next_task):
-            pause_msg = (
-                f"\n  ⏸ Execution paused for review before task [{next_task.index + 1}]: "
-                f"{next_task.description}\n"
+        total_tasks = len(tasks)
+
+        # Check HITL Review Checkpoint at phase boundary
+        if previous_task is not None and should_request_review(previous_task, next_task):
+            milestone_phase = previous_task.phase
+            milestone_banner = f"\n  ⏸ PHASE COMPLETED: {milestone_phase}\n"
+            diff_summary = await get_workspace_diff(ctx.agent)
+            indented_diff = "\n".join(f"    {line}" for line in diff_summary.splitlines())
+
+            review_msg = (
+                f"{milestone_banner}\n{indented_diff}\n\n"
+                f"  ℹ Execution paused for review at milestone '{milestone_phase}'.\n"
+                f"    Next open task [{next_task.index + 1}/{total_tasks}]: {next_task.description}\n"
+                "    Resume anytime with /execute or /execute all.\n"
             )
+
             if tui:
-                tui.history_area.text += pause_msg
+                tui.history_area.text += review_msg
                 tui.history_area.buffer.cursor_position = len(tui.history_area.text)
                 if app:
                     app.invalidate()
+
             return CommandResult(
-                output=f"Paused for review before task {next_task.index + 1}: {next_task.description}"
+                output=(
+                    f"Execution paused for review at milestone '{milestone_phase}'. "
+                    f"Next open task [{next_task.index + 1}/{total_tasks}]: {next_task.description}"
+                )
             )
 
-        total_tasks = len(tasks)
         task_header = f"▶ [{next_task.index + 1}/{total_tasks}] Executing: {next_task.description}"
 
         if tui:
@@ -146,7 +199,7 @@ async def cmd_execute(args: list[str], ctx: CommandContext) -> CommandResult:
                     app.invalidate()
             return CommandResult(output="All tasks in implementation plan completed!")
 
-        if not run_all or should_pause_for_review(previous_task, remaining_task):
+        if not run_all:
             info_msg = (
                 f"\n  ℹ Task [{next_task.index + 1}/{total_tasks}] finished.\n"
                 f"    Next open task [{remaining_task.index + 1}/{total_tasks}]: {remaining_task.description}\n"
