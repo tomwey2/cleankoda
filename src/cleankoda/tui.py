@@ -204,7 +204,7 @@ class TUI:
             scrollbar=True,
             read_only=True,
             wrap_lines=True,
-            focusable=False,
+            focusable=True,
             lexer=ChatLexer(),
         )
 
@@ -252,7 +252,7 @@ class TUI:
             layout=self.layout,
             key_bindings=self.kb,
             full_screen=True,
-            mouse_support=False,
+            mouse_support=True,
             style=TUI_STYLE,
         )
         self.app.float_container = self.float_container
@@ -347,22 +347,55 @@ class TUI:
                     buff.apply_completion(completion)
                 buff.complete_state = None
 
-        # Tasten-Scrollen für die History (Fokus bleibt immer im Input):
+        # --- SCROLLING VIA TASTATUR (Fokus bleibt im Eingabefeld) ---
+        b = self.history_area.buffer
         @self.kb.add("pageup")
         def _scroll_page_up(event):
-            self.history_area.buffer.cursor_up(count=15)
+            b.cursor_up(count=15)
 
         @self.kb.add("pagedown")
         def _scroll_page_down(event):
-            self.history_area.buffer.cursor_down(count=15)
+            b.cursor_down(count=15)
 
         @self.kb.add("c-up")
-        def _scroll_line_up(event):
-            self.history_area.buffer.cursor_up(count=2)
+        def _scroll_ctrl_up(event):
+            b.cursor_up(count=3)
 
         @self.kb.add("c-down")
-        def _scroll_line_down(event):
-            self.history_area.buffer.cursor_down(count=2)
+        def _scroll_ctrl_down(event):
+            b.cursor_down(count=3)
+
+        # Normale Pfeiltasten (Up/Down) scrollen History, WENN das Prompt leer ist:
+        @Condition
+        def is_input_empty() -> bool:
+            return len(self.input_field.text) == 0
+
+        @self.kb.add("up", filter=is_input_empty)
+        def _arrow_up(event):
+            b.cursor_up(count=2)
+
+        @self.kb.add("down", filter=is_input_empty)
+        def _arrow_down(event):
+            b.cursor_down(count=2)
+
+        # --- SCROLLING VIA MAUSRAD & FOKUS-SCHUTZ ---
+        def history_mouse_handler(mouse_event):
+            from prompt_toolkit.mouse_events import MouseEventType
+
+            # Mausrad bewegt den History-Puffer
+            if mouse_event.event_type == MouseEventType.SCROLL_UP:
+                b.cursor_up(count=4)
+                return None
+            elif mouse_event.event_type == MouseEventType.SCROLL_DOWN:
+                b.cursor_down(count=4)
+                return None
+
+            # Jeder Mausklick in der History hält den Fokus fest im Input-Feld
+            self.app.layout.focus(self.input_field)
+            return None
+
+        self.history_area.window.content.mouse_handler = history_mouse_handler
+
 
     def _accept_handler(self, buff) -> None:
         if self.input_field.read_only or self.is_processing:
