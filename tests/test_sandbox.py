@@ -9,7 +9,7 @@ from cleankoda.sandbox import (
     HostEnvironment,
     Sandbox,
 )
-from cleankoda.tools.bash import BashCommand
+from cleankoda.tools.bash import Bash
 
 
 class TestSandboxPackage(unittest.TestCase):
@@ -65,7 +65,7 @@ class TestSandboxPackage(unittest.TestCase):
 
     def test_bash_command_tool(self):
         sb = Sandbox(default_image_id=None, workspace=self.workspace)
-        bash_tool = BashCommand(sandbox=sb)
+        bash_tool = Bash(sandbox=sb)
 
         async def _run():
             output_json = await bash_tool.execute("echo 'Tool Test'")

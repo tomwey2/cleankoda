@@ -8,7 +8,7 @@ from cleankoda.llm import LLMService
 from cleankoda.memory import Memory
 from cleankoda.sandbox import Sandbox
 from cleankoda.statusline import statusline
-from cleankoda.tools import BashCommand, ListDir, ReadFile, ToolRegistry, WriteFile
+from cleankoda.tools import Bash, ListDir, ReadFile, ToolRegistry, WriteFile
 
 
 class TestAgentLoop(unittest.TestCase):
@@ -20,7 +20,7 @@ class TestAgentLoop(unittest.TestCase):
             ListDir(workspace=Path.cwd()),
             ReadFile(workspace=Path.cwd()),
             WriteFile(workspace=Path.cwd()),
-            BashCommand(sandbox=sb),
+            Bash(sandbox=sb),
         ]
         agent = Agent(
             memory=mem,
@@ -60,7 +60,7 @@ class TestAgentLoop(unittest.TestCase):
                     ListDir(workspace=Path.cwd()),
                     ReadFile(workspace=Path.cwd()),
                     WriteFile(workspace=Path.cwd()),
-                    BashCommand(sandbox=sb),
+                    Bash(sandbox=sb),
                 ]
                 agent = Agent(memory=mem, tools=tools, sandbox=sb)
                 async for token in agent.run():

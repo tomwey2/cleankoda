@@ -13,7 +13,7 @@ from cleankoda.commands import CommandContext, registry
 from cleankoda.commands.cmd_sandbox import _show_tui_modal_sandbox_dialog
 from cleankoda.memory import Memory
 from cleankoda.sandbox import AVAILABLE_IMAGES, Sandbox
-from cleankoda.tools import BashCommand, ListDir, ReadFile, WriteFile
+from cleankoda.tools import Bash, ListDir, ReadFile, WriteFile
 from cleankoda.tui import SlashCommandCompleter
 
 
@@ -25,7 +25,7 @@ class TestSandboxCommand(unittest.TestCase):
             ListDir(workspace=Path.cwd()),
             ReadFile(workspace=Path.cwd()),
             WriteFile(workspace=Path.cwd()),
-            BashCommand(sandbox=self.sandbox),
+            Bash(sandbox=self.sandbox),
         ]
         self.agent = Agent(
             memory=Memory(system_prompt="Test"),

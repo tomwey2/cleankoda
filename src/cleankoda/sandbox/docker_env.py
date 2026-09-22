@@ -32,19 +32,46 @@ class DockerEnvironment(ExecutionEnvironment):
         gid = os.getgid()
 
         try:
+            # Basis-Volumes (immer vorhanden)
+            volumes = {
+                str(self.workspace_path): {
+                    "bind": "/workspace",
+                    "mode": "rw",
+                }
+            }
+
+            container_home = "/home/sandbox"
+
+            # Optionaler Host-Cache für Maven: Nur mounten, wenn er existiert
+            m2_host_dir = Path.home() / ".m2"
+            if m2_host_dir.is_dir():
+                volumes[str(m2_host_dir)] = {
+                    "bind": f"{container_home}/.m2",
+                    "mode": "rw",
+                }
+
+            # Optional: Genauso für Python/Pip-Cache verfahren
+            pip_cache_dir = Path.home() / ".cache" / "pip"
+            if pip_cache_dir.is_dir():
+                volumes[str(pip_cache_dir)] = {
+                    "bind": f"{container_home}/.cache/pip",
+                    "mode": "rw",
+                }
+
+            environment = {
+                "HOME": container_home,
+                "CI": "true",
+            }
+
             self.container = self.client.containers.run(
                 image=self.image.id,
                 command="tail -f /dev/null",  # Hält den Container am Leben
                 detach=True,
-                volumes={
-                    str(self.workspace_path): {
-                        "bind": "/workspace",
-                        "mode": "rw",
-                    }
-                },
+                volumes=volumes,
                 working_dir="/workspace",
                 user=f"{uid}:{gid}",
-                network_mode="none",
+                network_mode="bridge",  # Standard-Netzwerk
+                dns=["8.8.8.8", "1.1.1.1"],  # Verhindert 'Temporary failure in name resolution'
                 mem_limit="2g",
                 nano_cpus=2 * 10**9,  # Max 2 CPUs
                 remove=True,  # Container wird beim Stoppen automatisch gelöscht

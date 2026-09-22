@@ -1,5 +1,5 @@
 from cleankoda.tools.glob import Glob
-from cleankoda.tools.bash import BashCommand
+from cleankoda.tools.bash import Bash
 from cleankoda.tools.list_dir import ListDir
 from cleankoda.tools.mcp_adapter import McpToolAdapter
 from cleankoda.tools.mcp_client import connect_mcp_server, mcp_server_session
@@ -12,7 +12,7 @@ __all__ = [
     "ToolRegistry",
     "Tool",
     "Glob",
-    "BashCommand",
+    "Bash",
     "ListDir",
     "ReadFile",
     "WriteFile",
