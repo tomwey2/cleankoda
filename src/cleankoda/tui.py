@@ -10,6 +10,7 @@ from prompt_toolkit.layout.containers import Float, FloatContainer, HSplit
 from prompt_toolkit.layout.layout import Layout
 from prompt_toolkit.layout.menus import CompletionsMenu
 from prompt_toolkit.lexers import Lexer
+from prompt_toolkit.mouse_events import MouseEventType
 from prompt_toolkit.styles import Style
 from prompt_toolkit.widgets import Frame, TextArea
 
@@ -33,6 +34,7 @@ TUI_STYLE = Style.from_dict({
     "completion-menu.meta.completion": "bg:#d0d0d0 #555555",
     "completion-menu.meta.completion.current": "bg:#005f87 #ffffff noreverse",
     "completion-menu.completion.current.meta": "bg:#005f87 #ffffff noreverse",
+    "selected": "reverse bg:#264f78",  # Hervorhebung für markierten Text
 })
 
 
@@ -250,7 +252,7 @@ class TUI:
             layout=self.layout,
             key_bindings=self.kb,
             full_screen=True,
-            mouse_support=True,
+            mouse_support=False,
             style=TUI_STYLE,
         )
         self.app.float_container = self.float_container
@@ -307,9 +309,10 @@ class TUI:
         def _exit(event):
             event.app.exit()
 
+        # Eingaben sind erlaubt, wenn der Agent NICHT busy ist:
         @Condition
         def is_input_allowed() -> bool:
-            return self.agent.is_busy()
+            return not self.agent.is_busy() and not self.is_processing
 
         @self.kb.add("c-o", eager=True)
         def _show_shortcuts(event):
@@ -330,7 +333,10 @@ class TUI:
             self.update_status_line()
             event.app.invalidate()
 
-        @self.kb.add("enter", filter=(has_completions | completion_is_selected) & is_input_allowed)
+        @self.kb.add(
+            "enter",
+            filter=(has_completions | completion_is_selected) & is_input_allowed,
+        )
         def _accept_completion(event):
             buff = event.current_buffer
             if buff.complete_state:
@@ -340,6 +346,23 @@ class TUI:
                 if completion:
                     buff.apply_completion(completion)
                 buff.complete_state = None
+
+        # Tasten-Scrollen für die History (Fokus bleibt immer im Input):
+        @self.kb.add("pageup")
+        def _scroll_page_up(event):
+            self.history_area.buffer.cursor_up(count=15)
+
+        @self.kb.add("pagedown")
+        def _scroll_page_down(event):
+            self.history_area.buffer.cursor_down(count=15)
+
+        @self.kb.add("c-up")
+        def _scroll_line_up(event):
+            self.history_area.buffer.cursor_up(count=2)
+
+        @self.kb.add("c-down")
+        def _scroll_line_down(event):
+            self.history_area.buffer.cursor_down(count=2)
 
     def _accept_handler(self, buff) -> None:
         if self.input_field.read_only or self.is_processing:
