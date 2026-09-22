@@ -1,3 +1,10 @@
+"""Agent orchestration module for cleankoda.
+
+Provides the `Agent` class and `AgentLifecycle` enum which orchestrate the ReAct
+(Reasoning + Acting + Observation) loop, interfacing with LLM streaming services,
+tool execution in the sandbox, memory retention, and UI status updates.
+"""
+
 import asyncio
 from enum import Enum, auto
 from typing import Any, AsyncGenerator
@@ -6,24 +13,34 @@ from litellm import stream_chunk_builder
 
 from cleankoda.llm import LLMService
 from cleankoda.memory import Memory
+from cleankoda.prompts import SYSTEM_PROMPT
 from cleankoda.sandbox import Sandbox
 from cleankoda.state import get_active_issue
 from cleankoda.statusline import statusline
-from cleankoda.tools import Tool
-from cleankoda.tools import ToolRegistry
-from cleankoda.prompts import SYSTEM_PROMPT
+from cleankoda.tools import Tool, ToolRegistry
 
 
 class AgentLifecycle(Enum):
+    """Lifecycle states of the AI agent."""
+
     IDLE = auto()
+    """Agent is idle and waiting for user input."""
+
     THINKING = auto()
+    """Agent is requesting LLM completion or streaming reasoning chunks."""
+
     EXECUTING = auto()
+    """Agent is currently executing a tool call."""
+
     AWAITING_CONFIRMATION = auto()
+    """Agent is awaiting user confirmation before proceeding with tool execution."""
+
     ERROR = auto()
+    """Agent encountered an error state."""
 
 
 class Agent:
-    """Central agent orchestrator."""
+    """Central agent orchestrator managing the ReAct execution loop."""
 
     def __init__(
         self,
@@ -32,6 +49,14 @@ class Agent:
         sandbox: Sandbox,
         base_system_prompt: str | None = None,
     ) -> None:
+        """Initialize the Agent orchestrator.
+
+        Args:
+            memory: Memory instance maintaining conversation history.
+            tools: List of available Tool instances.
+            sandbox: Sandbox environment for command and tool execution.
+            base_system_prompt: Optional base system prompt override; defaults to SYSTEM_PROMPT.
+        """
         self.memory: Memory = memory
         self.sandbox = sandbox
         self.llm_service = LLMService()
@@ -44,8 +69,18 @@ class Agent:
         cancel_event: asyncio.Event | None = None,
         max_tool_iterations: int = 25,
     ) -> AsyncGenerator[str, None]:
-        """Iteratively calls LLM service, streams responses, executes tools,
-        and records assistant and tool messages in memory."""
+        """Run the main agent ReAct loop.
+
+        Iteratively requests completions from the LLM service, streams responses,
+        executes requested tools via the tool registry, and updates conversation memory.
+
+        Args:
+            cancel_event: Optional asyncio Event to check for cancellation requests.
+            max_tool_iterations: Maximum number of tool reasoning/action iterations allowed.
+
+        Yields:
+            Streamed text response chunks and formatted tool call display strings.
+        """
         active = get_active_issue()
         if active:
             dynamic_system_prompt = f"{self.base_system_prompt}{active.to_system_prompt_snippet()}"
@@ -152,7 +187,11 @@ class Agent:
             statusline.clear("agent")
 
     def is_busy(self) -> bool:
-        """Convenient lookup for TUI keybindings and input locks."""
+        """Check if the agent is currently busy.
+
+        Returns:
+            True if state is THINKING, EXECUTING, or AWAITING_CONFIRMATION; False otherwise.
+        """
         return self.state in (
             AgentLifecycle.THINKING,
             AgentLifecycle.EXECUTING,
@@ -160,6 +199,12 @@ class Agent:
         )
 
     def _set_state(self, new_state: AgentLifecycle, detail: str | None = None) -> None:
+        """Update internal lifecycle state and refresh status line.
+
+        Args:
+            new_state: Target AgentLifecycle state.
+            detail: Optional descriptive text detailing the active state operation.
+        """
         self.state = new_state
         msg = f"[{new_state.name}] {detail}" if detail else new_state.name
         statusline.set("agent", msg)
