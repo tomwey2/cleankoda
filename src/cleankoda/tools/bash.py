@@ -5,7 +5,7 @@ from cleankoda.tools.tool_base import Tool
 from cleankoda.sandbox import Sandbox
 
 
-class BashCommand(Tool):
+class Bash(Tool):
     """Agent tool for running shell commands in a sandbox environment."""
 
     def __init__(self, sandbox: Sandbox, timeout: int = 30) -> None:
@@ -19,7 +19,7 @@ class BashCommand(Tool):
           {
               "type": "function",
               "function": {
-                  "name": "run_bash",
+                  "name": "bash",
                   "description": "Run a shell command and return its output. The user approves it first.",
                   "parameters": {
                       "type": "object",

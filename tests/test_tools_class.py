@@ -5,7 +5,7 @@ from pathlib import Path
 from unittest.mock import MagicMock
 
 from cleankoda.sandbox import Sandbox
-from cleankoda.tools import BashCommand, ListDir, ReadFile, ToolRegistry, WriteFile
+from cleankoda.tools import Bash, ListDir, ReadFile, ToolRegistry, WriteFile
 
 
 class TestToolsClass(unittest.TestCase):
@@ -17,7 +17,7 @@ class TestToolsClass(unittest.TestCase):
             list_dir = ListDir(workspace=ws_path)
             read_file = ReadFile(workspace=ws_path)
             write_file = WriteFile(workspace=ws_path)
-            bash_cmd = BashCommand(sandbox=sandbox)
+            bash_cmd = Bash(sandbox=sandbox)
 
             self.assertEqual(sandbox.workspace, ws_path)
             self.assertEqual(list_dir.workspace_root, ws_path)
@@ -34,7 +34,7 @@ class TestToolsClass(unittest.TestCase):
                     ListDir(workspace=ws_path),
                     ReadFile(workspace=ws_path),
                     WriteFile(workspace=ws_path),
-                    BashCommand(sandbox=sandbox),
+                    Bash(sandbox=sandbox),
                 ]
                 tools = ToolRegistry(tools=tools_list)
 
@@ -72,7 +72,7 @@ class TestToolsClass(unittest.TestCase):
                 ListDir(workspace=ws_path),
                 ReadFile(workspace=ws_path),
                 WriteFile(workspace=ws_path),
-                BashCommand(sandbox=sandbox),
+                Bash(sandbox=sandbox),
             ]
             tools = ToolRegistry(tools=tools_list)
 

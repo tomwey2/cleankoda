@@ -9,7 +9,7 @@ from cleankoda.agent import Agent
 from cleankoda.main import main, run_headless
 from cleankoda.memory.memory_in_file import MemoryInFile
 from cleankoda.sandbox import Sandbox
-from cleankoda.tools import BashCommand, ListDir, ReadFile, WriteFile
+from cleankoda.tools import Bash, ListDir, ReadFile, WriteFile
 from cleankoda.tui import TUI
 
 
@@ -24,7 +24,7 @@ class TestMainDualMode(unittest.TestCase):
                 ListDir(workspace=ws_path),
                 ReadFile(workspace=ws_path),
                 WriteFile(workspace=ws_path),
-                BashCommand(sandbox=sb),
+                Bash(sandbox=sb),
             ]
             agent = Agent(
                 memory=mem,
@@ -53,7 +53,7 @@ class TestMainDualMode(unittest.TestCase):
                 ListDir(workspace=ws_path),
                 ReadFile(workspace=ws_path),
                 WriteFile(workspace=ws_path),
-                BashCommand(sandbox=sb),
+                Bash(sandbox=sb),
             ]
             agent = Agent(
                 memory=mem,
@@ -100,7 +100,7 @@ class TestMainDualMode(unittest.TestCase):
                 ListDir(workspace=ws_path),
                 ReadFile(workspace=ws_path),
                 WriteFile(workspace=ws_path),
-                BashCommand(sandbox=sb),
+                Bash(sandbox=sb),
             ]
             agent = Agent(memory=mem, tools=tools, sandbox=sb)
             tui = TUI(agent)

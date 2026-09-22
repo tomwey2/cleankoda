@@ -3,17 +3,16 @@ import asyncio
 import sys
 from pathlib import Path
 
-from cleankoda.agent import SYSTEM_PROMPT, Agent
+from cleankoda.agent import Agent
 from cleankoda.commands import CommandContext, registry
 from cleankoda.config import config
-from cleankoda.llm import LLMService
 from cleankoda.memory import MemoryInFile
 from cleankoda.sandbox import Sandbox
 from cleankoda.sandbox.config import DEFAULT_IMAGE
-from cleankoda.tools import ToolRegistry
 from cleankoda.statusline import statusline
 from cleankoda.tui import run_tui
-from cleankoda.tools import Glob, ReadFile, WriteFile, ListDir, BashCommand
+from cleankoda.tools import Glob, ReadFile, WriteFile, ListDir, Bash
+from cleankoda.prompts import SYSTEM_PROMPT
 
 
 def set_workspace(workspace: Path) -> None:
@@ -115,7 +114,7 @@ def main(argv: list[str] | None = None) -> None:
             Glob(workspace=config.workspace),
             ReadFile(workspace=config.workspace),
             WriteFile(workspace=config.workspace),
-            BashCommand(sandbox),
+            Bash(sandbox),
             ListDir(workspace=config.workspace)],
         sandbox=sandbox
     )

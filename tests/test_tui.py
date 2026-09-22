@@ -11,7 +11,7 @@ from cleankoda.commands import registry
 from cleankoda.memory import Memory
 from cleankoda.sandbox import Sandbox
 from cleankoda.statusline import statusline
-from cleankoda.tools import BashCommand, ListDir, ReadFile, WriteFile
+from cleankoda.tools import Bash, ListDir, ReadFile, WriteFile
 from cleankoda.tui import ChatLexer, SlashCommandCompleter, TUI, TUI_STYLE
 
 
@@ -112,7 +112,7 @@ class TestTUIEscapeKeybinding(unittest.TestCase):
             ListDir(workspace=Path.cwd()),
             ReadFile(workspace=Path.cwd()),
             WriteFile(workspace=Path.cwd()),
-            BashCommand(sandbox=sb),
+            Bash(sandbox=sb),
         ]
         agent = Agent(memory=memory, tools=tools, sandbox=sb)
         tui = TUI(agent)
@@ -130,7 +130,7 @@ class TestTUIEscapeKeybinding(unittest.TestCase):
             ListDir(workspace=Path.cwd()),
             ReadFile(workspace=Path.cwd()),
             WriteFile(workspace=Path.cwd()),
-            BashCommand(sandbox=sb),
+            Bash(sandbox=sb),
         ]
         agent = Agent(memory=memory, tools=tools, sandbox=sb)
         tui = TUI(agent)
@@ -159,7 +159,7 @@ class TestTUIEnterCompletionKeybinding(unittest.TestCase):
             ListDir(workspace=Path.cwd()),
             ReadFile(workspace=Path.cwd()),
             WriteFile(workspace=Path.cwd()),
-            BashCommand(sandbox=sb),
+            Bash(sandbox=sb),
         ]
         agent = Agent(memory=memory, tools=tools, sandbox=sb)
         tui = TUI(agent)
@@ -190,7 +190,7 @@ class TestTUIStatusManager(unittest.TestCase):
             ListDir(workspace=Path.cwd()),
             ReadFile(workspace=Path.cwd()),
             WriteFile(workspace=Path.cwd()),
-            BashCommand(sandbox=sb),
+            Bash(sandbox=sb),
         ]
         agent = Agent(memory=memory, tools=tools, sandbox=sb)
         tui = TUI(agent)
