@@ -6,11 +6,14 @@
 
 - **Multi-Provider LLM Support (LiteLLM)**: Seamlessly switch between **Mistral**, **OpenAI**, **Anthropic**, **Ollama**, and **Google Gemini**.
 - **Interactive TUI**: Rich terminal interface powered by `prompt-toolkit` with scrollable message history and a status bar displaying the active Session State (`Provider | Model | Temperature | Sandbox`) and shortcut overlay.
+- **TDD Implementation Planning & Step-by-Step Execution (`/plan` & `/execute`)**: Create structured TDD implementation plans stored under `.cleankoda/plans/` and execute them task by task. Features an atomic `PlanManager` for checkbox tracking (`- [ ]` -> `- [x]`) and Human-in-the-Loop (HITL) review checkpoints at phase boundaries displaying compact Git status and diff summaries.
+- **Universal Output Pruning & Robust Tooling**: Language-agnostic output pruning for shell tool executions with a 120-second default timeout, retaining essential error tracebacks and test summaries while enforcing an 8,000-character hard limit per output stream.
+- **Issue Tracking Integration (`/issue`)**: Bind active ITS tickets and user stories directly into the system prompt context for targeted feature development.
 - **Isolated Docker Sandbox**: Execute shell commands safely inside containerized Docker environments (`python:3.11-slim`, `python:3.12-slim`, `node:20-slim`, `rust:latest`, `golang:1.22`, `ubuntu:24.04`) with strict resource limits (`mem_limit="2g"`, max 2 CPUs, disabled network access) or switch to direct host execution.
 - **Interactive Tool Execution**: Support for tool calling in both TUI streaming and Headless modes for directory listing, file inspection, file modification, and shell command execution (with user approval).
 - **Secure Credentials Store**: Secure storage for provider API keys (`~/.config/cleankoda/credentials.json` with `0o600` file permissions) managed interactively via `/provider`.
 - **Headless & Scripting Mode**: Non-interactive execution for automated scripts, CI/CD pipelines, and shell pipes.
-- **Extensible Command Registry**: Interactive modal dialogs and slash command dispatch system (`/provider`, `/model`, `/sandbox`, `/temp`, `/help`, `/clear`, `/exit`).
+- **Extensible Command Registry**: Interactive modal dialogs and slash command dispatch system (`/issue`, `/plan`, `/execute`, `/provider`, `/model`, `/sandbox`, `/temp`, `/help`, `/clear`, `/exit`).
 - **Persistent Memory & Logging**: Automatic conversation tracking and structured JSON logging.
 
 ## Tech Stack
@@ -80,6 +83,9 @@ cleankoda
 
 `cleankoda` includes an extensible command registry. Slash commands work in both TUI mode and Headless mode:
 
+- **`/issue`**: View or select the active ticket/issue context from the Issue Tracking System.
+- **`/plan`** or **`/plan [goal]`**: Create a step-by-step TDD implementation plan for the active issue saved under `.cleankoda/plans/plan_<safe_title>_<id>.md`.
+- **`/execute`** or **`/execute all`**: Execute open implementation plan tasks step-by-step with automatic checkbox updates (`- [x]`) and Human-in-the-Loop (HITL) review pauses at phase boundaries with Git diff summaries.
 - **`/sandbox`** or **`/sandbox [off|image_name]`**: Open an interactive selection modal to configure the execution environment. 
 - **`/provider`** or **`/provider <name>`**: Open an interactive selection modal to switch LLM providers (Mistral, OpenAI, Anthropic, Ollama, Google Gemini) and prompt for API keys when required. Automatically switches the model to the primary default model for that provider.
 - **`/model`** or **`/model <name>`**: Open an interactive selection modal (filtered for the current provider) or set a specific model.
