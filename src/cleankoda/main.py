@@ -13,7 +13,7 @@ from cleankoda.sandbox.config import DEFAULT_IMAGE
 from cleankoda.tools import ToolRegistry
 from cleankoda.statusline import statusline
 from cleankoda.tui import run_tui
-from cleankoda.tools import ReadFile, WriteFile, ListDir, BashCommand
+from cleankoda.tools import Glob, ReadFile, WriteFile, ListDir, BashCommand
 
 
 def set_workspace(workspace: Path) -> None:
@@ -112,10 +112,11 @@ def main(argv: list[str] | None = None) -> None:
     agent = Agent(
         memory=memory,
         tools=[
-            ListDir(workspace=config.workspace),
+            Glob(workspace=config.workspace),
             ReadFile(workspace=config.workspace),
             WriteFile(workspace=config.workspace),
-            BashCommand(sandbox)],
+            BashCommand(sandbox),
+            ListDir(workspace=config.workspace)],
         sandbox=sandbox
     )
 

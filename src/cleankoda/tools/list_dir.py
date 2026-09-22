@@ -18,7 +18,11 @@ class ListDir(Tool):
               "type": "function",
               "function": {
                   "name": "list_dir",
-                  "description": "List the files in a directory. Folders end with /.",
+                  "description": (
+                        "Lists only immediate, top-level contents of a single directory (shallow / non-recursive)."
+                        " Use ONLY for inspecting the root structure or specific single folders."
+                        " Do NOT use this to search or hunt for files across subdirectories—use 'glob' instead."
+                  ),
                   "parameters": {
                       "type": "object",
                       "properties": {

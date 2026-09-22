@@ -9,7 +9,10 @@ and relevant unit tests before concluding your work."""
 USER_PROMPT_PLAN = """You are a Senior Software Architect.
 Create a comprehensive Implementation Plan for the currently active issue.{additional_focus}
 
-### Required Workflow:
+### Tool Usage Strategy:
+- **File Discovery (Primary):** Always use `glob` to locate files, classes, or patterns across the project. It avoids redundant traversal steps.
+- **Directory Inspection (Fallback/Secondary):** Use `list_dir` only when you need a shallow overview of the immediate root directory (e.g., to check project configuration files like `pom.xml` or `pyproject.toml`). Never drill down folder by folder with `list_dir`.
+
 ### Required Workflow:
 1. **Targeted Inspection (Max 4-5 tool steps):**
    - Quickly inspect relevant source files and tests using `read_file` or `grep_search`.
