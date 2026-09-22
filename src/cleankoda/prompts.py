@@ -20,6 +20,7 @@ Create a comprehensive Implementation Plan for the currently active issue.{addit
 
 2. **Formulate the Plan:**
    - As soon as you understand the existing structure, stop calling tools and immediately output the complete Markdown plan in your next response.
+   - Group pure verification/inspection criteria together into actionable coding or test tasks, avoiding redundant checkbox-only steps.
    - Do NOT call write_file; output the Markdown text directly.
 
 ## RULES FOR THE PLAN:
@@ -33,3 +34,18 @@ Create a comprehensive Implementation Plan for the currently active issue.{addit
   5. Test execution & verification (Green Phase)
 - Do NOT call write_file to save the plan; output the complete Markdown plan directly in your final response text.
 """
+
+
+USER_PROMPT_EXECUTE = """You are executing a single, focused task from the approved implementation plan.
+
+### CURRENT TASK TO IMPLEMENT:
+{task_description}
+
+### FULL PLAN CONTEXT:
+{plan_content}
+
+### Execution Directives:
+1. Strict Focus: Implement ONLY what is requested in the CURRENT TASK.
+2. TDD Discipline: Verify tests with `bash` (e.g. `mvn test`, `pytest`).
+3. Sandbox Rules: Run commands strictly in the project directory. Do not modify the plan markdown file yourself.
+4. Conclusion: Conclude your turn with a brief summary of what was changed and verified."""
