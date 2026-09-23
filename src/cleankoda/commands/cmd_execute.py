@@ -8,7 +8,13 @@ from cleankoda.commands.cmd_plan import is_tool_call_display, sanitize_filename
 from cleankoda.commands.command_registry import CommandContext, CommandResult, registry
 from cleankoda.plans.manager import PlanManager, PlanTask
 from cleankoda.prompts import USER_PROMPT_EXECUTE
-from cleankoda.state import AgentActivity, get_active_issue, set_activity
+from cleankoda.state import (
+    AgentActivity,
+    get_activity,
+    get_active_issue,
+    set_activity,
+    set_error_state,
+)
 
 REVIEW_PHASE_KEYWORDS = re.compile(
     r"(?i)red phase|green phase|service|controller|test|implementation|config|setup"
@@ -103,6 +109,7 @@ async def cmd_execute(args: list[str], ctx: CommandContext) -> CommandResult:
 
     previous_task: PlanTask | None = None
     tasks_executed = 0
+    is_paused_for_review = False
 
     try:
         while True:
@@ -116,13 +123,14 @@ async def cmd_execute(args: list[str], ctx: CommandContext) -> CommandResult:
                     tui.history_area.buffer.cursor_position = len(tui.history_area.text)
                     if app:
                         app.invalidate()
+                set_activity(AgentActivity.IDLE)
                 return CommandResult(output="All tasks in implementation plan completed!")
 
             total_tasks = len(tasks)
 
             # Check HITL Review Checkpoint at phase boundary
             if previous_task is not None and should_request_review(previous_task, next_task):
-                set_activity(AgentActivity.REVIEWING)
+                is_paused_for_review = True
                 milestone_phase = previous_task.phase
                 milestone_banner = f"\n  ⏸ PHASE COMPLETED: {milestone_phase}\n"
                 diff_summary = await get_workspace_diff(ctx.agent)
@@ -141,6 +149,7 @@ async def cmd_execute(args: list[str], ctx: CommandContext) -> CommandResult:
                     if app:
                         app.invalidate()
 
+                set_activity(AgentActivity.REVIEWING, f"Reviewing changes after: {previous_task.description}")
                 return CommandResult(
                     output=(
                         f"Execution paused for review at milestone '{milestone_phase}'. "
@@ -200,9 +209,12 @@ async def cmd_execute(args: list[str], ctx: CommandContext) -> CommandResult:
                     tui.history_area.buffer.cursor_position = len(tui.history_area.text)
                     if app:
                         app.invalidate()
+                set_activity(AgentActivity.IDLE)
                 return CommandResult(output="All tasks in implementation plan completed!")
 
             if not run_all:
+                is_paused_for_review = True
+                set_activity(AgentActivity.REVIEWING, f"Review step: {next_task.description}")
                 info_msg = (
                     f"\n  ℹ Task [{next_task.index + 1}/{total_tasks}] finished.\n"
                     f"    Next open task [{remaining_task.index + 1}/{total_tasks}]: {remaining_task.description}\n"
@@ -216,5 +228,9 @@ async def cmd_execute(args: list[str], ctx: CommandContext) -> CommandResult:
                 return CommandResult(
                     output=f"Task {next_task.index + 1} completed. Next open task [{remaining_task.index + 1}/{total_tasks}]: {remaining_task.description}"
                 )
+    except Exception as e:
+        set_error_state(str(e))
+        raise
     finally:
-        set_activity(AgentActivity.IDLE)
+        if not is_paused_for_review and get_activity() not in (AgentActivity.REVIEWING, AgentActivity.ERROR):
+            set_activity(AgentActivity.IDLE)

@@ -7,7 +7,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 from cleankoda.commands.cmd_execute import cmd_execute, get_workspace_diff, should_request_review
 from cleankoda.commands.command_registry import CommandContext
 from cleankoda.its import IssueState
-from cleankoda.state import ActiveIssueContext, set_active_issue
+from cleankoda.state import ActiveIssueContext, AgentActivity, get_activity, set_active_issue
 
 
 class TestCmdExecute(unittest.TestCase):
@@ -74,6 +74,7 @@ class TestCmdExecute(unittest.TestCase):
                 res = await cmd_execute([], ctx)
                 self.assertIn("Task 1 completed", res.output)
                 self.assertIn("Next open task [2/2]: Task Two", res.output)
+                self.assertEqual(get_activity(), AgentActivity.REVIEWING)
 
                 content = plan_file.read_text(encoding="utf-8")
                 self.assertIn("- [x] Task One", content)
@@ -110,6 +111,7 @@ class TestCmdExecute(unittest.TestCase):
             async def _test():
                 res = await cmd_execute(["all"], ctx)
                 self.assertIn("All tasks in implementation plan completed!", res.output)
+                self.assertEqual(get_activity(), AgentActivity.IDLE)
 
                 content = plan_file.read_text(encoding="utf-8")
                 self.assertIn("- [x] Step 1", content)
@@ -175,6 +177,7 @@ class TestCmdExecute(unittest.TestCase):
             async def _test():
                 res = await cmd_execute(["all"], ctx)
                 self.assertIn("Execution paused for review at milestone 'Phase 1: Unit Tests (Red Phase)'", res.output)
+                self.assertEqual(get_activity(), AgentActivity.REVIEWING)
 
                 content = plan_file.read_text(encoding="utf-8")
                 self.assertIn("- [x] Write red test", content)
