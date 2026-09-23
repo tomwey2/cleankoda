@@ -1,6 +1,7 @@
 import os
 from pathlib import Path
 from pydantic import BaseModel, Field
+from importlib.metadata import PackageNotFoundError, version
 
 CONFIG_DIR = Path.home() / ".config" / "cleankoda"
 CONFIG_FILE = CONFIG_DIR / "config.json"
@@ -9,6 +10,13 @@ def get_config_file() -> Path:
   if custom_dir := os.getenv("CLEANKODA_CONFIG_DIR"):
     return Path(custom_dir) / "config.json"
   return CONFIG_FILE
+
+
+def get_version() -> str:
+  try:
+    return version("cleankoda")
+  except PackageNotFoundError:
+    return "dev"
 
 
 class AppConfig(BaseModel):

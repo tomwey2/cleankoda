@@ -16,7 +16,7 @@ from prompt_toolkit.widgets import Frame, TextArea
 
 from cleankoda.agent import Agent
 from cleankoda.commands import CommandContext, registry
-from cleankoda.config import config
+from cleankoda.config import config, get_version
 from cleankoda.state import (
     AgentActivity,
     SessionState,
@@ -216,10 +216,10 @@ class TUI:
 
         self.history_area = TextArea(
             text=BANNER
-            + " Welcome to cleankoda!\n"
-            + " The coding agent for clean code software development.\n"
-            + f" Workspace: {config.workspace}\n"
-            + ("─" * 60)
+            + "\n"
+            + f" cleankoda v{get_version()}\n"
+            #+ f" Workspace {config.workspace}\n"
+            + ("─" * 47)
             + "\n",
             scrollbar=True,
             read_only=True,
