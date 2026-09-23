@@ -180,11 +180,6 @@ async def _fetch_and_set_issue(
             url=details_dict.get("url"),
         )
         set_active_issue(active)
-        if ctx and ctx.app:
-            tui = getattr(ctx.app, "tui", None)
-            if tui and hasattr(tui, "on_status_changed"):
-                tui.on_status_changed()
-            ctx.app.invalidate()
 
         return CommandResult(
             output=f"Active issue set: #{active.id} - {active.title}"
@@ -224,11 +219,6 @@ async def cmd_issue(args: list[str], ctx: CommandContext) -> CommandResult:
 
     if subcommand == "clear":
         clear_active_issue()
-        if ctx and ctx.app:
-            tui = getattr(ctx.app, "tui", None)
-            if tui and hasattr(tui, "on_status_changed"):
-                tui.on_status_changed()
-            ctx.app.invalidate()
         return CommandResult(output="Active issue cleared.")
 
     server_path = str(

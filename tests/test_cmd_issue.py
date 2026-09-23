@@ -256,9 +256,17 @@ class TestTUIIntegration(unittest.TestCase):
 
     def setUp(self):
         clear_active_issue()
+        from cleankoda.state import get_session_state, AgentActivity
+        state = get_session_state()
+        state.activity = AgentActivity.IDLE
+        state.status_slots.clear()
 
     def tearDown(self):
         clear_active_issue()
+        from cleankoda.state import get_session_state, AgentActivity
+        state = get_session_state()
+        state.activity = AgentActivity.IDLE
+        state.status_slots.clear()
 
     def test_tui_bottom_toolbar_text(self):
         memory = Memory()
@@ -269,7 +277,7 @@ class TestTUIIntegration(unittest.TestCase):
         agent = Agent(memory=memory, tools=[], sandbox=sandbox)
         tui = TUI(agent)
 
-        self.assertEqual(tui._get_bottom_toolbar_text(), "[No active Issue]")
+        self.assertEqual(tui._get_status_line_2(), "Issue: [No active Issue]")
         self.assertIn("[No active Issue]", tui.status_line.text)
 
         issue = ActiveIssueContext(
@@ -278,8 +286,8 @@ class TestTUIIntegration(unittest.TestCase):
         set_active_issue(issue)
         tui.update_status_line()
 
-        self.assertEqual(tui._get_bottom_toolbar_text(), "[Issue: #101 UI polish]")
-        self.assertIn("[Issue: #101 UI polish]", tui.status_line.text)
+        self.assertEqual(tui._get_status_line_2(), "Issue: [#101 UI polish]")
+        self.assertIn("Issue: [#101 UI polish]", tui.status_line.text)
 
 
 if __name__ == "__main__":

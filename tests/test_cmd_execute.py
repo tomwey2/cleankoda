@@ -7,16 +7,24 @@ from unittest.mock import AsyncMock, MagicMock, patch
 from cleankoda.commands.cmd_execute import cmd_execute, get_workspace_diff, should_request_review
 from cleankoda.commands.command_registry import CommandContext
 from cleankoda.its import IssueState
-from cleankoda.state import ActiveIssueContext, set_active_issue
+from cleankoda.state import ActiveIssueContext, AgentActivity, get_activity, set_active_issue
 
 
 class TestCmdExecute(unittest.TestCase):
 
     def setUp(self):
-        set_active_issue(None)
+        state = set_active_issue(None)
+        from cleankoda.state import get_session_state, AgentActivity
+        state = get_session_state()
+        state.activity = AgentActivity.IDLE
+        state.status_slots.clear()
 
     def tearDown(self):
         set_active_issue(None)
+        from cleankoda.state import get_session_state, AgentActivity
+        state = get_session_state()
+        state.activity = AgentActivity.IDLE
+        state.status_slots.clear()
 
     def test_execute_without_active_issue(self):
         ctx = CommandContext(memory=MagicMock())
@@ -74,6 +82,7 @@ class TestCmdExecute(unittest.TestCase):
                 res = await cmd_execute([], ctx)
                 self.assertIn("Task 1 completed", res.output)
                 self.assertIn("Next open task [2/2]: Task Two", res.output)
+                self.assertEqual(get_activity(), AgentActivity.REVIEWING_CODE)
 
                 content = plan_file.read_text(encoding="utf-8")
                 self.assertIn("- [x] Task One", content)
@@ -110,6 +119,7 @@ class TestCmdExecute(unittest.TestCase):
             async def _test():
                 res = await cmd_execute(["all"], ctx)
                 self.assertIn("All tasks in implementation plan completed!", res.output)
+                self.assertEqual(get_activity(), AgentActivity.IDLE)
 
                 content = plan_file.read_text(encoding="utf-8")
                 self.assertIn("- [x] Step 1", content)
@@ -175,6 +185,7 @@ class TestCmdExecute(unittest.TestCase):
             async def _test():
                 res = await cmd_execute(["all"], ctx)
                 self.assertIn("Execution paused for review at milestone 'Phase 1: Unit Tests (Red Phase)'", res.output)
+                self.assertEqual(get_activity(), AgentActivity.REVIEWING_CODE)
 
                 content = plan_file.read_text(encoding="utf-8")
                 self.assertIn("- [x] Write red test", content)

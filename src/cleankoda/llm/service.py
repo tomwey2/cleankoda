@@ -12,7 +12,7 @@ from litellm.exceptions import (
 )
 
 from cleankoda.config import config
-from cleankoda.statusline import statusline
+from cleankoda.state import clear_status, set_status
 
 litellm.suppress_debug_info = True
 
@@ -89,7 +89,7 @@ class LLMService:
         """Handles cold start status notifications, exponential backoff delay, and cancellation checks."""
         if attempt > max_attempts:
             err_msg = f"LLM could not be started after {max_attempts} attempts."
-            statusline.clear("llm")
+            clear_status("llm")
             return [f"[LLM Error ({provider}): {err_msg}]\n"], False
 
         # Calculate exponential backoff delay (10s, 20s, 40s, ...)
@@ -98,7 +98,7 @@ class LLMService:
             f"LLM Cold Start: attempt {attempt}/{max_attempts} ({int(current_delay)}s) [Esc to cancel]"
         )
 
-        statusline.set("llm", status_text)
+        set_status("llm", status_text)
 
         output_messages: list[str] = []
         output_messages.append(f"[yellow]⟳ {status_text}[/yellow]\n")
@@ -107,7 +107,7 @@ class LLMService:
         if cancel_event is not None:
             try:
                 await asyncio.wait_for(cancel_event.wait(), timeout=current_delay)
-                statusline.clear("llm")
+                clear_status("llm")
                 output_messages.append("[yellow]LLM startup aborted.[/yellow]\n")
                 return output_messages, False
             except asyncio.TimeoutError:
@@ -172,7 +172,6 @@ class LLMService:
         while True:
             try:
                 # Initiate streaming completion via LiteLLM (`acompletion` returns an async generator of stream chunks)
-                # statusline.set("llm", "call llm")
                 response = await litellm.acompletion(**kwargs)
 
                 # Iterate through incoming streaming chunks as they arrive from the LLM provider
@@ -232,7 +231,7 @@ class LLMService:
                     if not should_retry:
                         return
                 else:
-                    statusline.clear("llm")
+                    clear_status("llm")
                     if isinstance(e, (APIConnectionError, ServiceUnavailableError)):
                         yield f"[Connection Error ({config.provider}): Unable to reach server. {e}]"
                     else:
@@ -242,4 +241,4 @@ class LLMService:
                 yield f"[Unexpected Error ({config.provider}): {type(e).__name__} - {e}]"
                 return
             finally:
-                statusline.clear("llm")
+                clear_status("llm")

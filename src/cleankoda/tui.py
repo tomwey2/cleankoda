@@ -17,8 +17,17 @@ from prompt_toolkit.widgets import Frame, TextArea
 from cleankoda.agent import Agent
 from cleankoda.commands import CommandContext, registry
 from cleankoda.config import config
-from cleankoda.state import get_active_issue
-from cleankoda.statusline import statusline
+from cleankoda.state import (
+    AgentActivity,
+    SessionState,
+    clear_status,
+    get_activity,
+    get_active_issue,
+    get_session_state,
+    set_activity,
+    set_status,
+    get_allowed_commands,
+)
 
 BANNER = """
   ▄▄▄ █  ▄▄▄   ▄▄▄  ▄▄▄▄  █  ▄  ▄▄▄  ▄▄▄█  ▄▄▄
@@ -51,10 +60,18 @@ class SlashCommandCompleter(Completer):
 
     def get_completions(self, document, complete_event):
         text_before_cursor = document.text_before_cursor
+        allowed = get_allowed_commands()
 
+        # 1. Sub-Commands (z.B. /sandbox off) nur anbieten, wenn das Kommando erlaubt ist
         if text_before_cursor.startswith("/sandbox "):
+            if "/sandbox" not in allowed:
+                return
             parts = text_before_cursor.split()
-            word = parts[-1] if len(parts) > 1 and not text_before_cursor.endswith(" ") else ""
+            word = (
+                parts[-1]
+                if len(parts) > 1 and not text_before_cursor.endswith(" ")
+                else ""
+            )
             word_lower = word.lower()
             if "off".startswith(word_lower):
                 yield Completion(
@@ -65,6 +82,7 @@ class SlashCommandCompleter(Completer):
                 )
             return
 
+        # 2. Wort vor dem Cursor ermitteln
         if text_before_cursor.endswith((" ", "\t", "\n")):
             word = ""
         else:
@@ -74,10 +92,12 @@ class SlashCommandCompleter(Completer):
         if not word.startswith("/"):
             return
 
+        # 3. Befehle filtern: Prefix-Match UND im aktuellen State erlaubt
         commands_map = self._get_commands()
         word_lower = word.lower()
+
         for cmd, desc in commands_map.items():
-            if cmd.lower().startswith(word_lower):
+            if cmd in allowed and cmd.lower().startswith(word_lower):
                 yield Completion(
                     text=cmd,
                     start_position=-len(word),
@@ -220,7 +240,7 @@ class TUI:
 
         self.status_line = TextArea(
             height=2,
-            text=f"{self.get_session_status_text()}\n{self._get_bottom_toolbar_text()}",
+            text=f"{self._get_status_line_1()}\n{self._get_status_line_2()}",
             multiline=True,
             wrap_lines=True,
         )
@@ -258,13 +278,9 @@ class TUI:
         self.app.float_container = self.float_container
         self.app.tui = self
 
-    def _get_bottom_toolbar_text(self) -> str:
-        active = get_active_issue()
-        if active:
-            return f"[Issue: #{active.id} {active.title}]"
-        return "[No active Issue]"
+        get_session_state().subscribe(self._on_state_updated)
 
-    def on_status_changed(self, status: str = "") -> None:
+    def _on_state_updated(self, state: SessionState) -> None:
         self.update_status_line()
         try:
             if hasattr(self, "app") and self.app:
@@ -272,36 +288,33 @@ class TUI:
         except Exception:
             pass
 
+    def on_status_changed(self, status: str = "") -> None:
+        self._on_state_updated(get_session_state())
+
     @property
     def cancel_event(self) -> asyncio.Event:
         if self._cancel_event is None:
             self._cancel_event = asyncio.Event()
         return self._cancel_event
 
-    def get_session_status_text(self) -> str:
+    def _get_status_line_1(self) -> str:
         sb_image = self.agent.sandbox.get_sandbox_image()
-        sb_status = "Sandbox: " + sb_image.name if sb_image and sb_image.id != "host" else "no Sandbox"
-        return f"Provider: {config.provider} | Model: {config.model} | Temp: {config.temperature} | {sb_status}"
+        sb_status = sb_image.name if sb_image and sb_image.id != "host" else "no Sandbox"
+        state = get_session_state()
+        return f"State: [{state.activity.value}] | Model: [{config.model}] | Sandbox: [{sb_status}]"
+
+    def _get_status_line_2(self) -> str:
+        state = get_session_state()
+        combined_status = state.get_combined_status()
+        if combined_status:
+            return combined_status
+        else:
+            active = get_active_issue()
+            return f"Issue: [#{active.id} {active.title}]" if active else "Issue: [No active Issue]"
+
 
     def update_status_line(self) -> None:
-        session_text = self.get_session_status_text()
-        issue_text = self._get_bottom_toolbar_text()
-        if self.showing_shortcuts:
-            self.status_line.window.height = 5
-            self.status_line.text = (
-                f"{session_text}\n"
-                "Shortcuts & Help (ESC to close):\n"
-                "• Enter   : Send message\n"
-                "• Ctrl+C  : Exit application\n"
-                "• Ctrl+Q  : Exit application"
-            )
-        else:
-            active_status = statusline.get_combined_status()
-            self.status_line.window.height = 2
-            if active_status:
-                self.status_line.text = f"{session_text}\n{active_status}"
-            else:
-                self.status_line.text = f"{session_text}\n{issue_text}"
+        self.status_line.text = f"{self._get_status_line_1()}\n{self._get_status_line_2()}"
 
     def _register_keybindings(self) -> None:
         @self.kb.add("c-c")
@@ -309,10 +322,18 @@ class TUI:
         def _exit(event):
             event.app.exit()
 
-        # Eingaben sind erlaubt, wenn der Agent NICHT busy ist:
+        # Eingaben sind erlaubt, wenn der Agent im IDLE oder REVIEW Zustand ist:
         @Condition
         def is_input_allowed() -> bool:
-            return not self.agent.is_busy() and not self.is_processing
+            return (
+                get_activity()
+                in (
+                    AgentActivity.IDLE,
+                    AgentActivity.REVIEWING_PLAN,
+                    AgentActivity.REVIEWING_CODE,
+                )
+                and not self.is_processing
+            )
 
         @self.kb.add("c-o", eager=True)
         def _show_shortcuts(event):
@@ -456,18 +477,46 @@ class TUI:
 
         self.cancel_event.clear()
 
-        async for chunk in self.agent.run(
-            cancel_event=self.cancel_event,
-        ):
-            indented_chunk = chunk.replace("\n", "\n  ")
-            self.history_area.text += indented_chunk
-            self.history_area.buffer.cursor_position = len(self.history_area.text)
-            self.app.invalidate()
+        current_act = get_activity()
+        if current_act == AgentActivity.REVIEWING_PLAN:
+            set_status("action_hint", "Refining plan...")
+            set_activity(AgentActivity.PLANNING)
+        elif current_act == AgentActivity.REVIEWING_CODE:
+            clear_status("action_hint")
+            set_activity(AgentActivity.CODING, "Applying feedback")
+
+        try:
+            async for chunk in self.agent.run(
+                cancel_event=self.cancel_event,
+            ):
+                indented_chunk = chunk.replace("\n", "\n  ")
+                self.history_area.text += indented_chunk
+                self.history_area.buffer.cursor_position = len(self.history_area.text)
+                self.app.invalidate()
+        finally:
+            if current_act == AgentActivity.REVIEWING_PLAN:
+                set_activity(AgentActivity.REVIEWING_PLAN, "Plan ready for review")
+                set_status(
+                    "action_hint",
+                    "Run '/execute' to start, type feedback to refine, or '/abort' to discard",
+                )
+            elif current_act == AgentActivity.REVIEWING_CODE:
+                set_activity(AgentActivity.REVIEWING_CODE, "Reviewing changes")
+                set_status(
+                    "action_hint",
+                    "Run '/execute' to continue, type feedback to modify, or '/abort' to pause",
+                )
 
     def run(self) -> None:
         self.update_status_line()
+
+        async def _run() -> None:
+            if self.agent.sandbox:
+                await self.agent.sandbox.start_async()
+            await self.app.run_async()
+
         try:
-            asyncio.run(self.app.run_async())
+            asyncio.run(_run())
         finally:
             if self.agent.sandbox:
                 self.agent.sandbox.stop()
@@ -476,5 +525,4 @@ class TUI:
 def run_tui(agent: Agent) -> None:
     """Start the interactive TUI application with the provided Agent instance."""
     tui = TUI(agent)
-    statusline.on_change = tui.on_status_changed
     tui.run()

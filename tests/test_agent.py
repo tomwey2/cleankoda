@@ -7,7 +7,7 @@ from cleankoda.agent import Agent
 from cleankoda.llm import LLMService
 from cleankoda.memory import Memory
 from cleankoda.sandbox import Sandbox
-from cleankoda.statusline import statusline
+from cleankoda.state import SessionState, get_session_state
 from cleankoda.tools import Bash, ListDir, ReadFile, ToolRegistry, WriteFile
 
 
@@ -105,8 +105,8 @@ class TestAgentLoop(unittest.TestCase):
             mem = Memory(system_prompt="Test")
             statuses = []
 
-            def status_cb(st=""):
-                statuses.append(st)
+            def status_cb(st: SessionState):
+                statuses.append(st.get_combined_status())
 
             tool_chunk = {
                 "id": "1",
@@ -159,24 +159,21 @@ class TestAgentLoop(unittest.TestCase):
             mock_tool.schema = [{"type": "function", "function": {"name": "list_files"}}]
             mock_tool.execute = AsyncMock(return_value="file1.txt")
 
-            statusline.on_change = status_cb
-            try:
-                with patch("cleankoda.agent.LLMService.stream_completion", side_effect=mock_stream_llm):
-                    tokens = []
-                    agent = Agent(
-                        memory=mem,
-                        tools=[mock_tool],
-                        sandbox=mock_sandbox,
-                    )
-                    async for token in agent.run():
-                        tokens.append(token)
+            get_session_state().subscribe(status_cb)
+            with patch("cleankoda.agent.LLMService.stream_completion", side_effect=mock_stream_llm):
+                tokens = []
+                agent = Agent(
+                    memory=mem,
+                    tools=[mock_tool],
+                    sandbox=mock_sandbox,
+                )
+                async for token in agent.run():
+                    tokens.append(token)
 
-                    output = "".join(tokens)
-                    self.assertIn("list_files", output)
-                    self.assertIn("Done.", output)
-                    self.assertTrue(any("Execute tool: list_files" in s for s in statuses if s))
-            finally:
-                statusline.on_change = None
+                output = "".join(tokens)
+                self.assertIn("list_files", output)
+                self.assertIn("Done.", output)
+                self.assertTrue(any("Execute tool: list_files" in s for s in statuses if s))
 
         asyncio.run(_test())
 

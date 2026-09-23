@@ -72,6 +72,20 @@ class TestMainDualMode(unittest.TestCase):
         main(["Explain", "this", "code"])
         mock_run_headless.assert_called_once_with(ANY, "Explain this code")
 
+    def setUp(self):
+        from cleankoda.state import get_session_state, AgentActivity, clear_active_issue
+        clear_active_issue()
+        state = get_session_state()
+        state.activity = AgentActivity.IDLE
+        state.status_slots.clear()
+
+    def tearDown(self):
+        from cleankoda.state import get_session_state, AgentActivity, clear_active_issue
+        clear_active_issue()
+        state = get_session_state()
+        state.activity = AgentActivity.IDLE
+        state.status_slots.clear()
+
     @patch("cleankoda.main.run_tui")
     def test_main_with_tui_flag(self, mock_run_tui):
         main(["--tui"])
@@ -107,9 +121,8 @@ class TestMainDualMode(unittest.TestCase):
             tui.update_status_line()
             lines = tui.status_line.text.splitlines()
             self.assertGreaterEqual(len(lines), 2)
-            self.assertIn("Provider:", lines[0])
             self.assertIn("Model:", lines[0])
-            self.assertEqual(lines[1], "[No active Issue]")
+            self.assertEqual(lines[1], "Issue: [No active Issue]")
             self.assertEqual(tui.status_line.window.height, 2)
 
     @patch("cleankoda.main.run_tui")

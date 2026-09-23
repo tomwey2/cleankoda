@@ -10,7 +10,7 @@ from cleankoda.agent import Agent
 from cleankoda.commands import registry
 from cleankoda.memory import Memory
 from cleankoda.sandbox import Sandbox
-from cleankoda.statusline import statusline
+from cleankoda.state import clear_status, get_session_state, set_status
 from cleankoda.tools import Bash, ListDir, ReadFile, WriteFile
 from cleankoda.tui import ChatLexer, SlashCommandCompleter, TUI, TUI_STYLE
 
@@ -183,6 +183,10 @@ class TestTUIEnterCompletionKeybinding(unittest.TestCase):
 
 class TestTUIStatusManager(unittest.TestCase):
 
+    def setUp(self):
+        state = get_session_state()
+        state.status_slots.clear()
+
     def test_status_manager_updates_status_line(self):
         memory = Memory(system_prompt="Test")
         sb = Sandbox(default_image_id=None, workspace=Path.cwd())
@@ -194,32 +198,28 @@ class TestTUIStatusManager(unittest.TestCase):
         ]
         agent = Agent(memory=memory, tools=tools, sandbox=sb)
         tui = TUI(agent)
-        statusline.on_change = tui.on_status_changed
         mock_app = MagicMock()
         tui.app = mock_app
 
         # Initially default status line text
         self.assertIn("[No active Issue]", tui.status_line.text)
 
-        # Setting status via statusline automatically updates status line
-        try:
-            statusline.set("sandbox", "Sandbox: Startet (docker:latest)...")
-            self.assertIn("Sandbox: Startet (docker:latest)...", tui.status_line.text)
-            mock_app.invalidate.assert_called()
+        # Setting status via set_status automatically updates status line via reactive observer
+        set_status("sandbox", "Sandbox: Startet (docker:latest)...")
+        self.assertIn("Sandbox: Startet (docker:latest)...", tui.status_line.text)
+        mock_app.invalidate.assert_called()
 
-            # Multiple slots are combined
-            statusline.set("llm", "LLM Cold Start: Versuch 1/10 (10s gewartet)")
-            self.assertIn(
-                "Sandbox: Startet (docker:latest)... | LLM Cold Start: Versuch 1/10 (10s gewartet)",
-                tui.status_line.text,
-            )
+        # Multiple slots are combined
+        set_status("llm", "LLM Cold Start: Versuch 1/10 (10s gewartet)")
+        self.assertIn(
+            "Sandbox: Startet (docker:latest)... | LLM Cold Start: Versuch 1/10 (10s gewartet)",
+            tui.status_line.text,
+        )
 
-            # Clearing slots reverts back to active issue status when empty
-            statusline.clear("sandbox")
-            statusline.clear("llm")
-            self.assertIn("[No active Issue]", tui.status_line.text)
-        finally:
-            statusline.on_change = None
+        # Clearing slots reverts back to active issue status when empty
+        clear_status("sandbox")
+        clear_status("llm")
+        self.assertIn("[No active Issue]", tui.status_line.text)
 
 
 if __name__ == "__main__":

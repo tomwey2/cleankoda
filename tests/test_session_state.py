@@ -8,6 +8,13 @@ from unittest.mock import patch
 
 from cleankoda.config import AppConfig, get_config_file
 from cleankoda.llm import CredentialsStore
+from cleankoda.state import (
+    AgentActivity,
+    get_activity,
+    get_session_state,
+    set_activity,
+    set_error_state,
+)
 
 
 class TestAppConfig(unittest.TestCase):
@@ -66,6 +73,39 @@ class TestAppConfig(unittest.TestCase):
         self.assertEqual(loaded_cfg.provider, "anthropic")
         self.assertEqual(loaded_cfg.model, "claude-3-5-haiku-latest")
         self.assertEqual(loaded_cfg.temperature, 0.5)
+
+
+class TestSessionState(unittest.TestCase):
+
+    def setUp(self):
+        state = get_session_state()
+        state.activity = AgentActivity.IDLE
+        state.active_issue = None
+        state.current_task_description = None
+        state.last_error = None
+        state.status_slots.clear()
+        state._listeners.clear()
+
+    def test_set_activity_and_notifications(self):
+        notified = []
+
+        def callback(s):
+            notified.append(s.activity)
+
+        get_session_state().subscribe(callback)
+        set_activity(AgentActivity.PLANNING, "Task 1")
+
+        self.assertEqual(get_activity(), AgentActivity.PLANNING)
+        self.assertEqual(get_session_state().current_task_description, "Task 1")
+        self.assertEqual(notified, [AgentActivity.PLANNING])
+
+    def test_set_error_state(self):
+        set_error_state("Failed to run command")
+        self.assertEqual(get_activity(), AgentActivity.ERROR)
+        self.assertEqual(get_session_state().last_error, "Failed to run command")
+
+        set_activity(AgentActivity.IDLE)
+        self.assertIsNone(get_session_state().last_error)
 
 
 if __name__ == "__main__":

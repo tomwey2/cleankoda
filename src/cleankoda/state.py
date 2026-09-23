@@ -1,40 +1,164 @@
-from dataclasses import dataclass
+from collections.abc import Callable
+from dataclasses import dataclass, field
+from enum import Enum
 
-from cleankoda.its import IssueState
+from cleankoda.its.config import IssueState
+
+
+class AgentActivity(Enum):
+    IDLE = "Idle"
+    PLANNING = "Planning"
+    REVIEWING_PLAN = "Reviewing Plan"
+    CODING = "Coding"
+    TESTING = "Testing"
+    REVIEWING_CODE = "Reviewing Code"
+    ERROR = "Error"
+
 
 @dataclass
 class ActiveIssueContext:
-  id: str
-  title: str
-  description: str
-  state: IssueState
-  state_id: str | None = None
-  state_name: str | None = None
-  url: str | None = None
+    id: str
+    title: str
+    description: str
+    state: IssueState
+    state_id: str | None = None
+    state_name: str | None = None
+    url: str | None = None
 
-  def to_system_prompt_snippet(self) -> str:
-    """Formats the issue as a fixed context section for the LLM."""
-    desc = self.description.strip() or "No description available."
-    return (
-        "\n\n=== ACTIVE TICKET / USER STORY ===\n"
-        f"ID: {self.id}\n"
-        f"Title: {self.title}\n"
-        f"State: {self.state}\n"
-        f"Description & Criteria:\n{desc}\n"
-        "====================================\n"
-        "Take into account the specifications, criteria, and constraints of this ticket "
-        "during all planning, code generation, and responses.\n"
+    def to_system_prompt_snippet(self) -> str:
+        """Formats the issue as a fixed context section for the LLM."""
+        desc = self.description.strip() or "No description available."
+        return (
+            "\n\n=== ACTIVE TICKET / USER STORY ===\n"
+            f"ID: {self.id}\n"
+            f"Title: {self.title}\n"
+            f"State: {self.state}\n"
+            f"Description & Criteria:\n{desc}\n"
+            "====================================\n"
+            "Take into account the specifications, criteria, and constraints of this ticket "
+            "during all planning, code generation, and responses.\n"
+        )
+
+
+@dataclass
+class SessionState:
+    activity: AgentActivity = AgentActivity.IDLE
+    active_issue: ActiveIssueContext | None = None
+    current_task_description: str | None = None
+    last_error: str | None = None
+    status_slots: dict[str, str] = field(default_factory=dict)
+    _listeners: list[Callable[["SessionState"], None]] = field(
+        default_factory=list, repr=False
     )
 
-active_issue: ActiveIssueContext | None = None
+    def subscribe(self, callback: Callable[["SessionState"], None]) -> None:
+        if callback not in self._listeners:
+            self._listeners.append(callback)
+
+    def notify(self) -> None:
+        for listener in list(self._listeners):
+            try:
+                listener(self)
+            except Exception:
+                pass
+
+    def get_combined_status(self) -> str:
+        if not self.status_slots:
+            return ""
+        return " | ".join(self.status_slots.values())
+
+
+_session_state = SessionState()
+
+
+def get_session_state() -> SessionState:
+    return _session_state
+
+
+def get_activity() -> AgentActivity:
+    return _session_state.activity
+
+
+def set_activity(
+    activity: AgentActivity, task_description: str | None = None
+) -> None:
+    _session_state.activity = activity
+    _session_state.current_task_description = task_description
+    if activity != AgentActivity.ERROR:
+        _session_state.last_error = None
+    _session_state.notify()
+
+
+def set_error_state(error_message: str) -> None:
+    _session_state.activity = AgentActivity.ERROR
+    _session_state.last_error = error_message
+    _session_state.notify()
+
 
 def set_active_issue(issue: ActiveIssueContext | None) -> None:
-  global active_issue
-  active_issue = issue
+    _session_state.active_issue = issue
+    _session_state.notify()
+
 
 def get_active_issue() -> ActiveIssueContext | None:
-  return active_issue
+    return _session_state.active_issue
+
 
 def clear_active_issue() -> None:
-  global active_issue
-  active_issue = None
+    _session_state.active_issue = None
+    _session_state.notify()
+
+
+def set_status(source: str, message: str) -> None:
+    _session_state.status_slots[source] = message
+    _session_state.notify()
+
+
+def clear_status(source: str) -> None:
+    if source in _session_state.status_slots:
+        del _session_state.status_slots[source]
+        _session_state.notify()
+
+
+GLOBAL_COMMANDS = {"/help", "/exit", "/quit", "/clear"}
+
+ALLOWED_COMMANDS: dict[AgentActivity, set[str]] = {
+    AgentActivity.IDLE: {
+        *GLOBAL_COMMANDS,
+        # Konfiguration
+        "/provider",
+        "/model",
+        "/temp",
+        "/sandbox",
+        "/issue",
+        # Workflow-Start
+        "/plan",
+        "/execute",
+    },
+    AgentActivity.REVIEWING_PLAN: {
+        *GLOBAL_COMMANDS,
+        "/execute",  # Plan akzeptieren & starten
+        "/abort",  # Plan verwerfen -> IDLE
+    },
+    AgentActivity.REVIEWING_CODE: {
+        *GLOBAL_COMMANDS,
+        "/execute",  # Meilenstein akzeptieren & weiter coden
+        "/abort",  # Pause bestätigen -> IDLE
+        "/diff",  # Änderungen prüfen
+    },
+    AgentActivity.PLANNING: set(),
+    AgentActivity.CODING: set(),
+    AgentActivity.TESTING: set(),
+    AgentActivity.ERROR: {*GLOBAL_COMMANDS, "/abort"},
+}
+
+
+def get_allowed_commands() -> set[str]:
+  """Gibt alle im aktuellen Zustand zulässigen Slash-Kommandos zurück."""
+  return ALLOWED_COMMANDS.get(_session_state.activity, set())
+
+
+def is_command_allowed(command_name: str) -> bool:
+  """Prüft, ob ein konkretes Kommando (z.B. '/plan') gerade erlaubt ist."""
+  cmd = command_name.strip().split()[0].lower()
+  return cmd in get_allowed_commands()
