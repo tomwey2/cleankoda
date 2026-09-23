@@ -15,8 +15,7 @@ from cleankoda.llm import LLMService
 from cleankoda.memory import Memory
 from cleankoda.prompts import SYSTEM_PROMPT
 from cleankoda.sandbox import Sandbox
-from cleankoda.state import get_active_issue
-from cleankoda.statusline import statusline
+from cleankoda.state import clear_status, get_active_issue, set_status
 from cleankoda.tools import Tool, ToolRegistry
 
 
@@ -184,7 +183,7 @@ class Agent:
         finally:
             # Agent loop finished cleanly or cancelled
             self._set_state(AgentLifecycle.IDLE)
-            statusline.clear("agent")
+            clear_status("agent")
 
     def is_busy(self) -> bool:
         """Check if the agent is currently busy.
@@ -207,4 +206,4 @@ class Agent:
         """
         self.state = new_state
         msg = f"[{new_state.name}] {detail}" if detail else new_state.name
-        statusline.set("agent", msg)
+        set_status("agent", msg)

@@ -9,7 +9,7 @@ from litellm.exceptions import (
 )
 
 from cleankoda.llm.service import LLMService
-from cleankoda.statusline import statusline
+from cleankoda.state import SessionState, get_session_state
 
 
 class TestColdStartBackoff(unittest.TestCase):
@@ -165,8 +165,8 @@ class TestColdStartBackoff(unittest.TestCase):
             messages = [{"role": "user", "content": "Hello"}]
             statuses_received = []
 
-            def status_cb(st=""):
-                statuses_received.append(st)
+            def status_cb(st: SessionState):
+                statuses_received.append(st.get_combined_status())
 
             call_count = 0
 
@@ -196,28 +196,25 @@ class TestColdStartBackoff(unittest.TestCase):
             async def mock_wait_for(fut, timeout):
                 raise asyncio.TimeoutError()
 
-            statusline.on_change = status_cb
+            get_session_state().subscribe(status_cb)
 
             cancel_event = asyncio.Event()
-            try:
-                with patch("litellm.acompletion", side_effect=mock_acompletion), patch(
-                    "asyncio.wait_for", side_effect=mock_wait_for
+            with patch("litellm.acompletion", side_effect=mock_acompletion), patch(
+                "asyncio.wait_for", side_effect=mock_wait_for
+            ):
+                chunks = []
+                async for token in LLMService().stream_completion(
+                    messages,
+                    tools=[],
+                    cancel_event=cancel_event,
+                    initial_delay=10.0,
+                    max_attempts=10,
                 ):
-                    chunks = []
-                    async for token in LLMService().stream_completion(
-                        messages,
-                        tools=[],
-                        cancel_event=cancel_event,
-                        initial_delay=10.0,
-                        max_attempts=10,
-                    ):
-                        chunks.append(token)
+                    chunks.append(token)
 
-                    output = "".join(chunks)
-                    self.assertIn("Ready content", output)
-                    self.assertTrue(any("attempt 1/10" in s for s in statuses_received if s))
-            finally:
-                statusline.on_change = None
+                output = "".join(chunks)
+                self.assertIn("Ready content", output)
+                self.assertTrue(any("attempt 1/10" in s for s in statuses_received if s))
 
         asyncio.run(_test())
 

@@ -6,7 +6,7 @@ from cleankoda.sandbox.base_env import ExecutionEnvironment
 from cleankoda.sandbox.config import DEFAULT_IMAGE, get_standbox_image
 from cleankoda.sandbox.docker_env import DockerEnvironment
 from cleankoda.sandbox.host_env import HostEnvironment
-from cleankoda.statusline import statusline
+from cleankoda.state import clear_status, set_status
 
 
 class Sandbox:
@@ -31,7 +31,7 @@ class Sandbox:
 
         if image_id and image_id != "host":
             self.is_starting = True
-            statusline.set("sandbox", f"Sandbox: starting ({image_id})...")
+            set_status("sandbox", f"Sandbox: starting ({image_id})...")
             try:
                 new_env = DockerEnvironment(image_id, self.workspace)
                 await new_env.start_async()
@@ -42,10 +42,10 @@ class Sandbox:
                 return f"Error starting sandbox ({exc}). Fallback to host system."
             finally:
                 self.is_starting = False
-                statusline.clear("sandbox")
+                clear_status("sandbox")
         else:
             self.is_starting = False
-            statusline.clear("sandbox")
+            clear_status("sandbox")
             self.current_env = HostEnvironment(self.workspace)
             return "Sandbox disabled: Commands run directly on the host."
 

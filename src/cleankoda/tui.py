@@ -17,8 +17,12 @@ from prompt_toolkit.widgets import Frame, TextArea
 from cleankoda.agent import Agent
 from cleankoda.commands import CommandContext, registry
 from cleankoda.config import config
-from cleankoda.state import get_active_issue
-from cleankoda.statusline import statusline
+from cleankoda.state import (
+    AgentActivity,
+    SessionState,
+    get_active_issue,
+    get_session_state,
+)
 
 BANNER = """
   ▄▄▄ █  ▄▄▄   ▄▄▄  ▄▄▄▄  █  ▄  ▄▄▄  ▄▄▄█  ▄▄▄
@@ -258,6 +262,16 @@ class TUI:
         self.app.float_container = self.float_container
         self.app.tui = self
 
+        get_session_state().subscribe(self._on_state_updated)
+
+    def _on_state_updated(self, state: SessionState) -> None:
+        self.update_status_line()
+        try:
+            if hasattr(self, "app") and self.app:
+                self.app.invalidate()
+        except Exception:
+            pass
+
     def _get_bottom_toolbar_text(self) -> str:
         active = get_active_issue()
         if active:
@@ -265,12 +279,7 @@ class TUI:
         return "[No active Issue]"
 
     def on_status_changed(self, status: str = "") -> None:
-        self.update_status_line()
-        try:
-            if hasattr(self, "app") and self.app:
-                self.app.invalidate()
-        except Exception:
-            pass
+        self._on_state_updated(get_session_state())
 
     @property
     def cancel_event(self) -> asyncio.Event:
@@ -281,7 +290,11 @@ class TUI:
     def get_session_status_text(self) -> str:
         sb_image = self.agent.sandbox.get_sandbox_image()
         sb_status = "Sandbox: " + sb_image.name if sb_image and sb_image.id != "host" else "no Sandbox"
-        return f"Provider: {config.provider} | Model: {config.model} | Temp: {config.temperature} | {sb_status}"
+        state = get_session_state()
+        activity_str = f"[{state.activity.name}]"
+        #if state.current_task_description:
+        #    activity_str += f" {state.current_task_description}"
+        return f"Provider: {config.provider} | Model: {config.model} | Temp: {config.temperature} | {sb_status} | State: {activity_str}"
 
     def update_status_line(self) -> None:
         session_text = self.get_session_status_text()
@@ -296,7 +309,7 @@ class TUI:
                 "• Ctrl+Q  : Exit application"
             )
         else:
-            active_status = statusline.get_combined_status()
+            active_status = get_session_state().get_combined_status()
             self.status_line.window.height = 2
             if active_status:
                 self.status_line.text = f"{session_text}\n{active_status}"
@@ -476,5 +489,4 @@ class TUI:
 def run_tui(agent: Agent) -> None:
     """Start the interactive TUI application with the provided Agent instance."""
     tui = TUI(agent)
-    statusline.on_change = tui.on_status_changed
     tui.run()

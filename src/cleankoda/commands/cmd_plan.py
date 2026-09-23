@@ -5,7 +5,12 @@ from typing import TYPE_CHECKING
 from cleankoda.agent import Agent
 from cleankoda.commands.command_registry import CommandContext, CommandResult, registry
 from cleankoda.prompts import USER_PROMPT_PLAN
-from cleankoda.state import ActiveIssueContext, get_active_issue
+from cleankoda.state import (
+    ActiveIssueContext,
+    AgentActivity,
+    get_active_issue,
+    set_activity,
+)
 from cleankoda.tools.tool_registry import ToolRegistry
 
 if TYPE_CHECKING:
@@ -130,59 +135,63 @@ async def cmd_plan(args: list[str], ctx: CommandContext) -> CommandResult:
   prompt = USER_PROMPT_PLAN.format(additional_focus=additional_focus)
   ctx.memory.add_user(prompt)
 
-  if ctx.agent:
-    app = ctx.app
-    tui = getattr(app, "tui", None) if app else None
+  set_activity(AgentActivity.PLANNING)
+  try:
+      if ctx.agent:
+        app = ctx.app
+        tui = getattr(app, "tui", None) if app else None
 
-    if tui:
-      plan_chunks = await create_plan_with_tui(
-          tui, ctx.agent, active_issue, goal_arg
-      )
-    else:
-      plan_chunks = await create_plan_headless(ctx.agent)
+        if tui:
+          plan_chunks = await create_plan_with_tui(
+              tui, ctx.agent, active_issue, goal_arg
+          )
+        else:
+          plan_chunks = await create_plan_headless(ctx.agent)
 
-    full_plan = "".join(plan_chunks).strip()
+        full_plan = "".join(plan_chunks).strip()
 
-    if full_plan:
-      workspace_path = (
-          ctx.agent.sandbox.workspace
-          if (ctx.agent and ctx.agent.sandbox)
-          else Path.cwd()
-      )
-      plans_dir = workspace_path / ".cleankoda" / "plans"
-      plans_dir.mkdir(parents=True, exist_ok=True)
+        if full_plan:
+          workspace_path = (
+              ctx.agent.sandbox.workspace
+              if (ctx.agent and ctx.agent.sandbox)
+              else Path.cwd()
+          )
+          plans_dir = workspace_path / ".cleankoda" / "plans"
+          plans_dir.mkdir(parents=True, exist_ok=True)
 
-      if active_issue:
-        safe_title = sanitize_filename(active_issue.title)
-        file_name = f"plan_{safe_title}_{active_issue.id}.md"
-      else:
-        safe_title = sanitize_filename(goal_arg[:30])
-        file_name = f"plan_{safe_title}.md"
+          if active_issue:
+            safe_title = sanitize_filename(active_issue.title)
+            file_name = f"plan_{safe_title}_{active_issue.id}.md"
+          else:
+            safe_title = sanitize_filename(goal_arg[:30])
+            file_name = f"plan_{safe_title}.md"
 
-      target_file = plans_dir / file_name
-      target_file.write_text(full_plan, encoding="utf-8")
+          target_file = plans_dir / file_name
+          target_file.write_text(full_plan, encoding="utf-8")
 
-      rel_path = f".cleankoda/plans/{file_name}"
-      success_msg = (
-          "\n  ✓ Implementation plan successfully generated and saved:\n"
-          f"    → {rel_path}\n"
-      )
-      if tui:
-        tui.history_area.text += success_msg
-        tui.history_area.buffer.cursor_position = len(tui.history_area.text)
-        app.invalidate()
-      else:
-        return CommandResult(output=f"{full_plan}\n\nSaved to {rel_path}")
+          rel_path = f".cleankoda/plans/{file_name}"
+          success_msg = (
+              "\n  ✓ Implementation plan successfully generated and saved:\n"
+              f"    → {rel_path}\n"
+          )
+          if tui:
+            tui.history_area.text += success_msg
+            tui.history_area.buffer.cursor_position = len(tui.history_area.text)
+            app.invalidate()
+          else:
+            return CommandResult(output=f"{full_plan}\n\nSaved to {rel_path}")
 
-      return CommandResult(output=None)
-    else:
-      err_msg = (
-          "\n  ✗ Error: Agent completed work but returned an empty plan."
-      )
-      if tui:
-        tui.history_area.text += err_msg
-        tui.history_area.buffer.cursor_position = len(tui.history_area.text)
-        app.invalidate()
-      return CommandResult(output=err_msg)
+          return CommandResult(output=None)
+        else:
+          err_msg = (
+              "\n  ✗ Error: Agent completed work but returned an empty plan."
+          )
+          if tui:
+            tui.history_area.text += err_msg
+            tui.history_area.buffer.cursor_position = len(tui.history_area.text)
+            app.invalidate()
+          return CommandResult(output=err_msg)
 
-  return CommandResult(output=prompt)
+      return CommandResult(output=prompt)
+  finally:
+      set_activity(AgentActivity.IDLE)

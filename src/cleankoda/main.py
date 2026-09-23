@@ -9,7 +9,7 @@ from cleankoda.config import config
 from cleankoda.memory import MemoryInFile
 from cleankoda.sandbox import Sandbox
 from cleankoda.sandbox.config import DEFAULT_IMAGE
-from cleankoda.statusline import statusline
+from cleankoda.state import SessionState, get_session_state
 from cleankoda.tui import run_tui
 from cleankoda.tools import Glob, ReadFile, WriteFile, ListDir, Bash
 from cleankoda.prompts import SYSTEM_PROMPT
@@ -21,7 +21,8 @@ def set_workspace(workspace: Path) -> None:
         config.save()
 
 
-def headless_status_callback(status: str) -> None:
+def headless_status_callback(state: SessionState) -> None:
+    status = state.get_combined_status()
     if status:
         print(f"▶ {status}", file=sys.stderr)
 
@@ -31,7 +32,7 @@ async def _run_headless_agent(
     prompt_text: str,
 ) -> int:
     agent.memory.add_user(prompt_text)
-    statusline.on_change = headless_status_callback
+    get_session_state().subscribe(headless_status_callback)
     try:
         async for chunk in agent.run():
             print(chunk, end="", flush=True)
