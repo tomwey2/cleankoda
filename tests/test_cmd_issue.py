@@ -256,9 +256,17 @@ class TestTUIIntegration(unittest.TestCase):
 
     def setUp(self):
         clear_active_issue()
+        from cleankoda.state import get_session_state, AgentActivity
+        state = get_session_state()
+        state.activity = AgentActivity.IDLE
+        state.status_slots.clear()
 
     def tearDown(self):
         clear_active_issue()
+        from cleankoda.state import get_session_state, AgentActivity
+        state = get_session_state()
+        state.activity = AgentActivity.IDLE
+        state.status_slots.clear()
 
     def test_tui_bottom_toolbar_text(self):
         memory = Memory()

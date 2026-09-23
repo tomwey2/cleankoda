@@ -10,10 +10,12 @@ from cleankoda.plans.manager import PlanManager, PlanTask
 from cleankoda.prompts import USER_PROMPT_EXECUTE
 from cleankoda.state import (
     AgentActivity,
+    clear_status,
     get_activity,
     get_active_issue,
     set_activity,
     set_error_state,
+    set_status,
 )
 
 REVIEW_PHASE_KEYWORDS = re.compile(
@@ -111,6 +113,8 @@ async def cmd_execute(args: list[str], ctx: CommandContext) -> CommandResult:
     tasks_executed = 0
     is_paused_for_review = False
 
+    clear_status("action_hint")
+
     try:
         while True:
             tasks = plan_mgr.get_tasks()
@@ -123,6 +127,7 @@ async def cmd_execute(args: list[str], ctx: CommandContext) -> CommandResult:
                     tui.history_area.buffer.cursor_position = len(tui.history_area.text)
                     if app:
                         app.invalidate()
+                clear_status("action_hint")
                 set_activity(AgentActivity.IDLE)
                 return CommandResult(output="All tasks in implementation plan completed!")
 
@@ -149,7 +154,11 @@ async def cmd_execute(args: list[str], ctx: CommandContext) -> CommandResult:
                     if app:
                         app.invalidate()
 
-                set_activity(AgentActivity.REVIEWING, f"Reviewing changes after: {previous_task.description}")
+                set_activity(AgentActivity.REVIEWING_CODE, f"Reviewing milestone: {milestone_phase}")
+                set_status(
+                    "action_hint",
+                    "Run '/execute' to continue, type feedback to modify, or '/abort' to pause",
+                )
                 return CommandResult(
                     output=(
                         f"Execution paused for review at milestone '{milestone_phase}'. "
@@ -209,12 +218,17 @@ async def cmd_execute(args: list[str], ctx: CommandContext) -> CommandResult:
                     tui.history_area.buffer.cursor_position = len(tui.history_area.text)
                     if app:
                         app.invalidate()
+                clear_status("action_hint")
                 set_activity(AgentActivity.IDLE)
                 return CommandResult(output="All tasks in implementation plan completed!")
 
             if not run_all:
                 is_paused_for_review = True
-                set_activity(AgentActivity.REVIEWING, f"Review step: {next_task.description}")
+                set_activity(AgentActivity.REVIEWING_CODE, f"Review step: {next_task.description}")
+                set_status(
+                    "action_hint",
+                    "Run '/execute' to continue, type feedback to modify, or '/abort' to pause",
+                )
                 info_msg = (
                     f"\n  ℹ Task [{next_task.index + 1}/{total_tasks}] finished.\n"
                     f"    Next open task [{remaining_task.index + 1}/{total_tasks}]: {remaining_task.description}\n"
@@ -232,5 +246,10 @@ async def cmd_execute(args: list[str], ctx: CommandContext) -> CommandResult:
         set_error_state(str(e))
         raise
     finally:
-        if not is_paused_for_review and get_activity() not in (AgentActivity.REVIEWING, AgentActivity.ERROR):
+        if not is_paused_for_review and get_activity() not in (
+            AgentActivity.REVIEWING_CODE,
+            AgentActivity.REVIEWING_PLAN,
+            AgentActivity.ERROR,
+        ):
+            clear_status("action_hint")
             set_activity(AgentActivity.IDLE)

@@ -72,6 +72,20 @@ class TestMainDualMode(unittest.TestCase):
         main(["Explain", "this", "code"])
         mock_run_headless.assert_called_once_with(ANY, "Explain this code")
 
+    def setUp(self):
+        from cleankoda.state import get_session_state, AgentActivity, clear_active_issue
+        clear_active_issue()
+        state = get_session_state()
+        state.activity = AgentActivity.IDLE
+        state.status_slots.clear()
+
+    def tearDown(self):
+        from cleankoda.state import get_session_state, AgentActivity, clear_active_issue
+        clear_active_issue()
+        state = get_session_state()
+        state.activity = AgentActivity.IDLE
+        state.status_slots.clear()
+
     @patch("cleankoda.main.run_tui")
     def test_main_with_tui_flag(self, mock_run_tui):
         main(["--tui"])

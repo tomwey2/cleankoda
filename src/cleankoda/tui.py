@@ -20,8 +20,12 @@ from cleankoda.config import config
 from cleankoda.state import (
     AgentActivity,
     SessionState,
+    clear_status,
+    get_activity,
     get_active_issue,
     get_session_state,
+    set_activity,
+    set_status,
 )
 
 BANNER = """
@@ -306,10 +310,18 @@ class TUI:
         def _exit(event):
             event.app.exit()
 
-        # Eingaben sind erlaubt, wenn der Agent NICHT busy ist:
+        # Eingaben sind erlaubt, wenn der Agent im IDLE oder REVIEW Zustand ist:
         @Condition
         def is_input_allowed() -> bool:
-            return not self.agent.is_busy() and not self.is_processing
+            return (
+                get_activity()
+                in (
+                    AgentActivity.IDLE,
+                    AgentActivity.REVIEWING_PLAN,
+                    AgentActivity.REVIEWING_CODE,
+                )
+                and not self.is_processing
+            )
 
         @self.kb.add("c-o", eager=True)
         def _show_shortcuts(event):
@@ -453,13 +465,35 @@ class TUI:
 
         self.cancel_event.clear()
 
-        async for chunk in self.agent.run(
-            cancel_event=self.cancel_event,
-        ):
-            indented_chunk = chunk.replace("\n", "\n  ")
-            self.history_area.text += indented_chunk
-            self.history_area.buffer.cursor_position = len(self.history_area.text)
-            self.app.invalidate()
+        current_act = get_activity()
+        if current_act == AgentActivity.REVIEWING_PLAN:
+            set_status("action_hint", "Refining plan...")
+            set_activity(AgentActivity.PLANNING)
+        elif current_act == AgentActivity.REVIEWING_CODE:
+            clear_status("action_hint")
+            set_activity(AgentActivity.CODING, "Applying feedback")
+
+        try:
+            async for chunk in self.agent.run(
+                cancel_event=self.cancel_event,
+            ):
+                indented_chunk = chunk.replace("\n", "\n  ")
+                self.history_area.text += indented_chunk
+                self.history_area.buffer.cursor_position = len(self.history_area.text)
+                self.app.invalidate()
+        finally:
+            if current_act == AgentActivity.REVIEWING_PLAN:
+                set_activity(AgentActivity.REVIEWING_PLAN, "Plan ready for review")
+                set_status(
+                    "action_hint",
+                    "Run '/execute' to start, type feedback to refine, or '/abort' to discard",
+                )
+            elif current_act == AgentActivity.REVIEWING_CODE:
+                set_activity(AgentActivity.REVIEWING_CODE, "Reviewing changes")
+                set_status(
+                    "action_hint",
+                    "Run '/execute' to continue, type feedback to modify, or '/abort' to pause",
+                )
 
     def run(self) -> None:
         self.update_status_line()

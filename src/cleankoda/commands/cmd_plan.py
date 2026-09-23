@@ -8,8 +8,11 @@ from cleankoda.prompts import USER_PROMPT_PLAN
 from cleankoda.state import (
     ActiveIssueContext,
     AgentActivity,
+    clear_status,
+    get_activity,
     get_active_issue,
     set_activity,
+    set_status,
 )
 from cleankoda.tools.tool_registry import ToolRegistry
 
@@ -135,6 +138,7 @@ async def cmd_plan(args: list[str], ctx: CommandContext) -> CommandResult:
   prompt = USER_PROMPT_PLAN.format(additional_focus=additional_focus)
   ctx.memory.add_user(prompt)
 
+  clear_status("action_hint")
   set_activity(AgentActivity.PLANNING)
   try:
       if ctx.agent:
@@ -169,6 +173,12 @@ async def cmd_plan(args: list[str], ctx: CommandContext) -> CommandResult:
           target_file = plans_dir / file_name
           target_file.write_text(full_plan, encoding="utf-8")
 
+          set_activity(AgentActivity.REVIEWING_PLAN, "Plan ready for review")
+          set_status(
+              "action_hint",
+              "Run '/execute' to start, type feedback to refine, or '/abort' to discard",
+          )
+
           rel_path = f".cleankoda/plans/{file_name}"
           success_msg = (
               "\n  ✓ Implementation plan successfully generated and saved:\n"
@@ -194,4 +204,5 @@ async def cmd_plan(args: list[str], ctx: CommandContext) -> CommandResult:
 
       return CommandResult(output=prompt)
   finally:
-      set_activity(AgentActivity.IDLE)
+      if get_activity() != AgentActivity.REVIEWING_PLAN:
+          set_activity(AgentActivity.IDLE)

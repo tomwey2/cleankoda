@@ -8,9 +8,10 @@ from cleankoda.its.config import IssueState
 class AgentActivity(Enum):
     IDLE = "IDLE"
     PLANNING = "PLANNING"
+    REVIEWING_PLAN = "REVIEWING_PLAN"
     CODING = "CODING"
     TESTING = "TESTING"
-    REVIEWING = "REVIEWING"
+    REVIEWING_CODE = "REVIEWING_CODE"
     ERROR = "ERROR"
 
 
