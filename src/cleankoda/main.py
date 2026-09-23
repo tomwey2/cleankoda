@@ -31,6 +31,8 @@ async def _run_headless_agent(
     agent: Agent,
     prompt_text: str,
 ) -> int:
+    if agent.sandbox:
+        await agent.sandbox.start_async()
     agent.memory.add_user(prompt_text)
     get_session_state().subscribe(headless_status_callback)
     try:
@@ -55,7 +57,13 @@ def run_headless(
         # Slash-Command Check
         if prompt_text.startswith("/"):
             ctx = CommandContext(memory=agent.memory, agent=agent)
-            result = registry.dispatch(prompt_text, ctx)
+
+            async def _run_slash():
+                if agent.sandbox:
+                    await agent.sandbox.start_async()
+                return await registry.dispatch_async(prompt_text, ctx)
+
+            result = asyncio.run(_run_slash())
             if result.output:
                 print(result.output)
             return 0

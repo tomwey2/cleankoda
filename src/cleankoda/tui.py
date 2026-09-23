@@ -463,8 +463,14 @@ class TUI:
 
     def run(self) -> None:
         self.update_status_line()
+
+        async def _run() -> None:
+            if self.agent.sandbox:
+                await self.agent.sandbox.start_async()
+            await self.app.run_async()
+
         try:
-            asyncio.run(self.app.run_async())
+            asyncio.run(_run())
         finally:
             if self.agent.sandbox:
                 self.agent.sandbox.stop()

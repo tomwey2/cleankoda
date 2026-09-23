@@ -69,8 +69,10 @@ AVAILABLE_IMAGES_BY_ID: dict[str, SandboxImageOption] = {
     img.id: img for img in AVAILABLE_IMAGES
 }
 
-def get_standbox_image(id):
-    """Returns the corresponded SandboxImageOption of an id"""
-    host: SandboxImageOption = AVAILABLE_IMAGES_BY_ID.get("host")
-    image: SandboxImageOption | None = AVAILABLE_IMAGES_BY_ID.get(id)
-    return image if image else host
+def get_standbox_image(id: str | None) -> SandboxImageOption:
+    """Returns the corresponding SandboxImageOption of an id."""
+    if not id or id == "host":
+        return AVAILABLE_IMAGES_BY_ID["host"]
+    if id in AVAILABLE_IMAGES_BY_ID:
+        return AVAILABLE_IMAGES_BY_ID[id]
+    return SandboxImageOption(id=id, name=id, description=f"Docker image ({id})")

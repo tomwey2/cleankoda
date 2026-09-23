@@ -25,6 +25,12 @@ class Sandbox:
         if default_image_id and default_image_id != "host":
             self.current_env = DockerEnvironment(default_image_id, self.workspace)
 
+    async def start_async(self) -> None:
+        """Starts the configured execution environment if it is a Docker environment."""
+        image_id = self.get_sandbox_image().id
+        if image_id and image_id != "host":
+            await self.switch_environment(image_id)
+
     async def switch_environment(self, image_id: str | None) -> str:
         """Stops the active environment and asynchronously switches to host or docker image."""
         self.current_env.stop()
