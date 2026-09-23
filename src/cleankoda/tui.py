@@ -289,7 +289,7 @@ class TUI:
         sb_image = self.agent.sandbox.get_sandbox_image()
         sb_status = sb_image.name if sb_image and sb_image.id != "host" else "no Sandbox"
         state = get_session_state()
-        return f"State: [{state.activity.name}] | Model: [{config.model}] | Sandbox: [{sb_status}]"
+        return f"State: [{state.activity.value}] | Model: [{config.model}] | Sandbox: [{sb_status}]"
 
     def _get_status_line_2(self) -> str:
         state = get_session_state()

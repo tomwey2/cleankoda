@@ -6,13 +6,13 @@ from cleankoda.its.config import IssueState
 
 
 class AgentActivity(Enum):
-    IDLE = "IDLE"
-    PLANNING = "PLANNING"
-    REVIEWING_PLAN = "REVIEWING_PLAN"
-    CODING = "CODING"
-    TESTING = "TESTING"
-    REVIEWING_CODE = "REVIEWING_CODE"
-    ERROR = "ERROR"
+    IDLE = "Idle"
+    PLANNING = "Planning"
+    REVIEWING_PLAN = "Reviewing Plan"
+    CODING = "Coding"
+    TESTING = "Testing"
+    REVIEWING_CODE = "Reviewing Code"
+    ERROR = "Error"
 
 
 @dataclass

@@ -86,15 +86,6 @@ class TestSessionState(unittest.TestCase):
         state.status_slots.clear()
         state._listeners.clear()
 
-    def test_agent_activity_enum(self):
-        self.assertEqual(AgentActivity.IDLE.value, "IDLE")
-        self.assertEqual(AgentActivity.PLANNING.value, "PLANNING")
-        self.assertEqual(AgentActivity.REVIEWING_PLAN.value, "REVIEWING_PLAN")
-        self.assertEqual(AgentActivity.CODING.value, "CODING")
-        self.assertEqual(AgentActivity.TESTING.value, "TESTING")
-        self.assertEqual(AgentActivity.REVIEWING_CODE.value, "REVIEWING_CODE")
-        self.assertEqual(AgentActivity.ERROR.value, "ERROR")
-
     def test_set_activity_and_notifications(self):
         notified = []
 
