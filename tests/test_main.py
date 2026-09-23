@@ -107,9 +107,8 @@ class TestMainDualMode(unittest.TestCase):
             tui.update_status_line()
             lines = tui.status_line.text.splitlines()
             self.assertGreaterEqual(len(lines), 2)
-            self.assertIn("Provider:", lines[0])
             self.assertIn("Model:", lines[0])
-            self.assertEqual(lines[1], "[No active Issue]")
+            self.assertEqual(lines[1], "Issue: [No active Issue]")
             self.assertEqual(tui.status_line.window.height, 2)
 
     @patch("cleankoda.main.run_tui")

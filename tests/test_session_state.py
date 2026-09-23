@@ -89,7 +89,7 @@ class TestSessionState(unittest.TestCase):
     def test_agent_activity_enum(self):
         self.assertEqual(AgentActivity.IDLE.value, "IDLE")
         self.assertEqual(AgentActivity.PLANNING.value, "PLANNING")
-        self.assertEqual(AgentActivity.EXECUTING.value, "EXECUTING")
+        self.assertEqual(AgentActivity.CODING.value, "CODING")
         self.assertEqual(AgentActivity.TESTING.value, "TESTING")
         self.assertEqual(AgentActivity.REVIEWING.value, "REVIEWING")
         self.assertEqual(AgentActivity.ERROR.value, "ERROR")

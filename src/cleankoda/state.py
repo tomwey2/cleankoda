@@ -8,7 +8,7 @@ from cleankoda.its.config import IssueState
 class AgentActivity(Enum):
     IDLE = "IDLE"
     PLANNING = "PLANNING"
-    EXECUTING = "EXECUTING"
+    CODING = "CODING"
     TESTING = "TESTING"
     REVIEWING = "REVIEWING"
     ERROR = "ERROR"
@@ -117,4 +117,3 @@ def clear_status(source: str) -> None:
     if source in _session_state.status_slots:
         del _session_state.status_slots[source]
         _session_state.notify()
-

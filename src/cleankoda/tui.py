@@ -224,7 +224,7 @@ class TUI:
 
         self.status_line = TextArea(
             height=2,
-            text=f"{self.get_session_status_text()}\n{self._get_bottom_toolbar_text()}",
+            text=f"{self._get_status_line_1()}\n{self._get_status_line_2()}",
             multiline=True,
             wrap_lines=True,
         )
@@ -272,12 +272,6 @@ class TUI:
         except Exception:
             pass
 
-    def _get_bottom_toolbar_text(self) -> str:
-        active = get_active_issue()
-        if active:
-            return f"[Issue: #{active.id} {active.title}]"
-        return "[No active Issue]"
-
     def on_status_changed(self, status: str = "") -> None:
         self._on_state_updated(get_session_state())
 
@@ -287,34 +281,24 @@ class TUI:
             self._cancel_event = asyncio.Event()
         return self._cancel_event
 
-    def get_session_status_text(self) -> str:
+    def _get_status_line_1(self) -> str:
         sb_image = self.agent.sandbox.get_sandbox_image()
-        sb_status = "Sandbox: " + sb_image.name if sb_image and sb_image.id != "host" else "no Sandbox"
+        sb_status = sb_image.name if sb_image and sb_image.id != "host" else "no Sandbox"
         state = get_session_state()
-        activity_str = f"[{state.activity.name}]"
-        #if state.current_task_description:
-        #    activity_str += f" {state.current_task_description}"
-        return f"Provider: {config.provider} | Model: {config.model} | Temp: {config.temperature} | {sb_status} | State: {activity_str}"
+        return f"State: [{state.activity.name}] | Model: [{config.model}] | Sandbox: [{sb_status}]"
+
+    def _get_status_line_2(self) -> str:
+        state = get_session_state()
+        combined_status = state.get_combined_status()
+        if combined_status:
+            return combined_status
+        else:
+            active = get_active_issue()
+            return f"Issue: [#{active.id} {active.title}]" if active else "Issue: [No active Issue]"
+
 
     def update_status_line(self) -> None:
-        session_text = self.get_session_status_text()
-        issue_text = self._get_bottom_toolbar_text()
-        if self.showing_shortcuts:
-            self.status_line.window.height = 5
-            self.status_line.text = (
-                f"{session_text}\n"
-                "Shortcuts & Help (ESC to close):\n"
-                "• Enter   : Send message\n"
-                "• Ctrl+C  : Exit application\n"
-                "• Ctrl+Q  : Exit application"
-            )
-        else:
-            active_status = get_session_state().get_combined_status()
-            self.status_line.window.height = 2
-            if active_status:
-                self.status_line.text = f"{session_text}\n{active_status}"
-            else:
-                self.status_line.text = f"{session_text}\n{issue_text}"
+        self.status_line.text = f"{self._get_status_line_1()}\n{self._get_status_line_2()}"
 
     def _register_keybindings(self) -> None:
         @self.kb.add("c-c")

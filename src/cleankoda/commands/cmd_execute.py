@@ -148,7 +148,7 @@ async def cmd_execute(args: list[str], ctx: CommandContext) -> CommandResult:
                     )
                 )
 
-            set_activity(AgentActivity.EXECUTING, next_task.description)
+            set_activity(AgentActivity.CODING, next_task.description)
             task_header = f"▶ [{next_task.index + 1}/{total_tasks}] Executing: {next_task.description}"
 
             if tui:
