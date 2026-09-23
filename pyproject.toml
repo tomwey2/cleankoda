@@ -1,6 +1,6 @@
 [project]
 name = "cleankoda"
-version = "0.4.0"
+version = "0.4.1"
 description = "Coding agent harness for clean code software development"
 readme = "README.md"
 authors = [
