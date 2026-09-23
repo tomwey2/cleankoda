@@ -3,6 +3,7 @@ import inspect
 from dataclasses import dataclass
 from typing import Any, Callable
 
+from cleankoda.state import is_command_allowed, get_allowed_commands, get_activity
 
 @dataclass
 class CommandContext:
@@ -111,6 +112,18 @@ class CommandRegistry:
             return err_res
 
         assert cmd is not None
+
+        # --- State-Guard: Prüfen, ob das gefundene Kommando erlaubt ist ---
+        cmd_identifier = f"/{cmd.name.lower()}"
+        if not is_command_allowed(cmd_identifier):
+            allowed = ", ".join(sorted(get_allowed_commands()))
+            return CommandResult(
+                output=(
+                    f"Command '{cmd_identifier}' is not allowed in state"
+                    f" '{get_activity().name}'.\nAllowed commands: {allowed}"
+                )
+            )
+
         try:
             res = cmd.handler(args, ctx)
             if inspect.isawaitable(res):

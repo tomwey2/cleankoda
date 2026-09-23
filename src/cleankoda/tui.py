@@ -26,6 +26,7 @@ from cleankoda.state import (
     get_session_state,
     set_activity,
     set_status,
+    get_allowed_commands,
 )
 
 BANNER = """
@@ -59,10 +60,18 @@ class SlashCommandCompleter(Completer):
 
     def get_completions(self, document, complete_event):
         text_before_cursor = document.text_before_cursor
+        allowed = get_allowed_commands()
 
+        # 1. Sub-Commands (z.B. /sandbox off) nur anbieten, wenn das Kommando erlaubt ist
         if text_before_cursor.startswith("/sandbox "):
+            if "/sandbox" not in allowed:
+                return
             parts = text_before_cursor.split()
-            word = parts[-1] if len(parts) > 1 and not text_before_cursor.endswith(" ") else ""
+            word = (
+                parts[-1]
+                if len(parts) > 1 and not text_before_cursor.endswith(" ")
+                else ""
+            )
             word_lower = word.lower()
             if "off".startswith(word_lower):
                 yield Completion(
@@ -73,6 +82,7 @@ class SlashCommandCompleter(Completer):
                 )
             return
 
+        # 2. Wort vor dem Cursor ermitteln
         if text_before_cursor.endswith((" ", "\t", "\n")):
             word = ""
         else:
@@ -82,10 +92,12 @@ class SlashCommandCompleter(Completer):
         if not word.startswith("/"):
             return
 
+        # 3. Befehle filtern: Prefix-Match UND im aktuellen State erlaubt
         commands_map = self._get_commands()
         word_lower = word.lower()
+
         for cmd, desc in commands_map.items():
-            if cmd.lower().startswith(word_lower):
+            if cmd in allowed and cmd.lower().startswith(word_lower):
                 yield Completion(
                     text=cmd,
                     start_position=-len(word),

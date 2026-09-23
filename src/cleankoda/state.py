@@ -118,3 +118,47 @@ def clear_status(source: str) -> None:
     if source in _session_state.status_slots:
         del _session_state.status_slots[source]
         _session_state.notify()
+
+
+GLOBAL_COMMANDS = {"/help", "/exit", "/quit", "/clear"}
+
+ALLOWED_COMMANDS: dict[AgentActivity, set[str]] = {
+    AgentActivity.IDLE: {
+        *GLOBAL_COMMANDS,
+        # Konfiguration
+        "/provider",
+        "/model",
+        "/temp",
+        "/sandbox",
+        "/issue",
+        # Workflow-Start
+        "/plan",
+        "/execute",
+    },
+    AgentActivity.REVIEWING_PLAN: {
+        *GLOBAL_COMMANDS,
+        "/execute",  # Plan akzeptieren & starten
+        "/abort",  # Plan verwerfen -> IDLE
+    },
+    AgentActivity.REVIEWING_CODE: {
+        *GLOBAL_COMMANDS,
+        "/execute",  # Meilenstein akzeptieren & weiter coden
+        "/abort",  # Pause bestätigen -> IDLE
+        "/diff",  # Änderungen prüfen
+    },
+    AgentActivity.PLANNING: set(),
+    AgentActivity.CODING: set(),
+    AgentActivity.TESTING: set(),
+    AgentActivity.ERROR: {*GLOBAL_COMMANDS, "/abort"},
+}
+
+
+def get_allowed_commands() -> set[str]:
+  """Gibt alle im aktuellen Zustand zulässigen Slash-Kommandos zurück."""
+  return ALLOWED_COMMANDS.get(_session_state.activity, set())
+
+
+def is_command_allowed(command_name: str) -> bool:
+  """Prüft, ob ein konkretes Kommando (z.B. '/plan') gerade erlaubt ist."""
+  cmd = command_name.strip().split()[0].lower()
+  return cmd in get_allowed_commands()
