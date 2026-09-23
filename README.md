@@ -2,6 +2,9 @@
 
 `cleankoda` is a terminal-based AI coding agent for clean code software development. It features a full TUI (Terminal User Interface) with multi-provider LLM support, interactive tool execution (listing files, reading/writing files, running shell commands), secure credentials management, and isolated Docker sandbox environments.
 
+### Show Case
+![Show Case](./cleankoda-showcase.gif)
+
 ## Features
 
 - **Multi-Provider LLM Support (LiteLLM)**: Seamlessly switch between **Mistral**, **OpenAI**, **Anthropic**, **Ollama**, and **Google Gemini**.
